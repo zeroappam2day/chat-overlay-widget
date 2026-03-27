@@ -1,6 +1,7 @@
 import * as pty from 'node-pty';
 import type WebSocket from 'ws';
 import type { ServerMessage } from './protocol.js';
+import { SessionRecorder } from './sessionRecorder.js';
 
 function send(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
@@ -12,6 +13,7 @@ export class PTYSession {
   private ptyProcess: pty.IPty;
   private dataDisposable: pty.IDisposable;
   private exitDisposable: pty.IDisposable;
+  private recorder: SessionRecorder;
 
   constructor(
     private ws: WebSocket,
@@ -28,11 +30,15 @@ export class PTYSession {
       useConpty: true,
     });
 
+    this.recorder = new SessionRecorder(shellExe, process.env['USERPROFILE'] || 'C:\\');
+
     this.dataDisposable = this.ptyProcess.onData((data: string) => {
       send(ws, { type: 'output', data });
+      this.recorder.append(data);
     });
 
     this.exitDisposable = this.ptyProcess.onExit(({ exitCode }) => {
+      this.recorder.end();
       send(ws, { type: 'pty-exit', exitCode });
     });
 
@@ -48,8 +54,13 @@ export class PTYSession {
   }
 
   destroy(): void {
+    this.recorder.end();
     this.dataDisposable.dispose();
     this.exitDisposable.dispose();
     try { this.ptyProcess.kill(); } catch { /* already dead */ }
+  }
+
+  get sessionId(): number {
+    return this.recorder.getSessionId();
   }
 }

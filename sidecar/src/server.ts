@@ -3,6 +3,12 @@ import type WebSocket from 'ws';
 import type { ClientMessage, ServerMessage } from './protocol.js';
 import { PTYSession } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
+import { openDb, markOrphans } from './historyStore.js';
+
+// Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
+openDb();
+markOrphans();
+console.log('[sidecar] SQLite session database initialized');
 
 const wss = new WebSocketServer({ host: '127.0.0.1', port: 0 });
 
@@ -60,6 +66,7 @@ wss.on('connection', (ws: WebSocket) => {
           const session = new PTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24);
           activeSessions.set(ws, session);
           console.log(`[sidecar] PTY session created successfully`);
+          console.log(`[sidecar] session started: id=${session.sessionId}`);
         } catch (err) {
           console.error(`[sidecar] PTY spawn failed: ${err}`);
           sendMsg(ws, { type: 'error', message: `Failed to spawn shell: ${err}` });
