@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { SearchAddon } from '@xterm/addon-search';
 import '@xterm/xterm/css/xterm.css';
 
 interface UseTerminalOptions {
@@ -12,12 +13,14 @@ interface UseTerminalReturn {
   containerRef: React.RefObject<HTMLDivElement>;
   writeToTerminal: (data: string) => void;
   getTerminalDimensions: () => { cols: number; rows: number };
+  searchAddonRef: React.RefObject<SearchAddon | null>;
 }
 
 export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTerminalReturn {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
+  const searchAddonRef = useRef<SearchAddon | null>(null);
 
   // Store callbacks in refs to avoid re-running effect on callback identity change
   const onDataRef = useRef(onData);
@@ -31,6 +34,7 @@ export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTermin
 
     const term = new Terminal({
       cursorBlink: true,
+      scrollback: 10000,
       fontSize: 14,
       fontFamily: 'Consolas, "Courier New", monospace',
       theme: {
@@ -42,6 +46,11 @@ export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTermin
 
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
+
+    const searchAddon = new SearchAddon();
+    term.loadAddon(searchAddon);
+    searchAddonRef.current = searchAddon;
+
     term.open(container);
 
     // Gate first fit on nonzero dimensions (Pitfall 2 from RESEARCH.md)
@@ -51,6 +60,36 @@ export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTermin
 
     termRef.current = term;
     fitRef.current = fitAddon;
+
+    // Clipboard handlers via attachCustomKeyEventHandler (D-12, TERM-03, TERM-04)
+    // Must be after term.open() so the terminal DOM is available
+    term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+      // Ctrl+Shift+C — copy selection (TERM-03)
+      if (event.type === 'keydown' && event.ctrlKey && event.shiftKey && event.code === 'KeyC') {
+        const selection = term.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).catch(console.error);
+        }
+        return false;
+      }
+      // Ctrl+Shift+V — paste from clipboard into PTY (TERM-04)
+      if (event.type === 'keydown' && event.ctrlKey && event.shiftKey && event.code === 'KeyV') {
+        navigator.clipboard.readText().then(text => {
+          onDataRef.current(text);
+        }).catch(console.error);
+        return false;
+      }
+      return true;
+    });
+
+    // Right-click paste handler
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      navigator.clipboard.readText().then(text => {
+        onDataRef.current(text);
+      }).catch(console.error);
+    };
+    container.addEventListener('contextmenu', handleContextMenu);
 
     // Forward keystrokes to caller (which sends to PTY via WebSocket)
     const dataDisposable = term.onData((data: string) => {
@@ -77,11 +116,13 @@ export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTermin
     return () => {
       clearTimeout(resizeTimer);
       observer.disconnect();
+      container.removeEventListener('contextmenu', handleContextMenu);
       dataDisposable.dispose();
       resizeDisposable.dispose();
       term.dispose();
       termRef.current = null;
       fitRef.current = null;
+      searchAddonRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -95,5 +136,5 @@ export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTermin
     return { cols: 80, rows: 24 };
   }, []);
 
-  return { containerRef, writeToTerminal, getTerminalDimensions };
+  return { containerRef, writeToTerminal, getTerminalDimensions, searchAddonRef };
 }
