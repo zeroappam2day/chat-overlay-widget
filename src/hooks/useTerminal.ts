@@ -35,6 +35,7 @@ export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTermin
     const term = new Terminal({
       cursorBlink: true,
       scrollback: 10000,
+      allowProposedApi: true,
       fontSize: 14,
       fontFamily: 'Consolas, "Courier New", monospace',
       theme: {
@@ -64,8 +65,14 @@ export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTermin
     // Clipboard handlers via attachCustomKeyEventHandler (D-12, TERM-03, TERM-04)
     // Must be after term.open() so the terminal DOM is available
     term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-      // Ctrl+Shift+C — copy selection (TERM-03)
-      if (event.type === 'keydown' && event.ctrlKey && event.shiftKey && event.code === 'KeyC') {
+      // Ctrl+F — toggle search overlay (intercept before xterm.js consumes it)
+      if (event.type === 'keydown' && event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'KeyF') {
+        // Dispatch a custom event that TerminalPane listens for
+        document.dispatchEvent(new CustomEvent('terminal-toggle-search'));
+        return false;
+      }
+      // Ctrl+Alt+C — copy selection (TERM-03)
+      if (event.type === 'keydown' && event.ctrlKey && event.altKey && event.code === 'KeyC') {
         const selection = term.getSelection();
         if (selection) {
           navigator.clipboard.writeText(selection).catch(console.error);

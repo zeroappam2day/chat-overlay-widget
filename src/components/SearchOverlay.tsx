@@ -48,13 +48,15 @@ export function SearchOverlay({ searchAddon, onClose }: SearchOverlayProps) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
-    if (value) {
-      searchAddon?.findNext(value, {
+    console.log(`[search] query="${value}", searchAddon=${searchAddon ? 'loaded' : 'null'}`);
+    if (value && searchAddon) {
+      const result = searchAddon.findNext(value, {
         incremental: true,
         caseSensitive: false,
         decorations: SEARCH_DECORATIONS,
       });
-    } else {
+      console.log(`[search] findNext result:`, result);
+    } else if (!value) {
       searchAddon?.clearDecorations();
     }
   };

@@ -119,8 +119,11 @@ export function TerminalPane() {
   }, [state, shells, sendMessage, getTerminalDimensions]);
 
   // Intercept Ctrl+F at document level to prevent WebView2 native find-in-page (D-15)
+  // Also listen for custom event from xterm.js key handler (when terminal has focus)
   // Also handle Escape to return focus from terminal to input box (D-02)
   useEffect(() => {
+    const toggleSearch = () => setSearchOpen(prev => !prev);
+    document.addEventListener('terminal-toggle-search', toggleSearch);
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.code === 'KeyF') {
         e.preventDefault();
@@ -133,7 +136,10 @@ export function TerminalPane() {
       }
     };
     document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    return () => {
+      document.removeEventListener('keydown', handler);
+      document.removeEventListener('terminal-toggle-search', toggleSearch);
+    };
   }, [searchOpen]);
 
   // Fetch sessions when the sidebar is opened
