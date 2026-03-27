@@ -68,8 +68,8 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Decompose TerminalPane, add scrollback + clipboard + search (TERM-01 through TERM-05)
-- [ ] 03-02-PLAN.md — SQLite session persistence in sidecar with batched writes (HIST-01, HIST-02)
+- [x] 03-01-PLAN.md — Decompose TerminalPane, add scrollback + clipboard + search (TERM-01 through TERM-05)
+- [x] 03-02-PLAN.md — SQLite session persistence in sidecar with batched writes (HIST-01, HIST-02)
 - [ ] 03-03-PLAN.md — Chat input overlay with shadow typing and focus management (INPUT-01 through INPUT-03)
 - [ ] 03-04-PLAN.md — History sidebar and read-only session replay viewer (HIST-04)
 
@@ -109,6 +109,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Scaffolding | 3/3 | Complete | 2026-03-27 |
 | 2. PTY Bridge | 1/3 | In Progress|  |
-| 3. Chat Overlay MVP | 0/4 | Not started | - |
+| 3. Chat Overlay MVP | 2/4 | In Progress|  |
 | 4. Differentiating Features | 0/TBD | Not started | - |
 | 5. Production Hardening | 0/TBD | Not started | - |
