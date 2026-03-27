@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useSessionHistory } from '../hooks/useSessionHistory';
 import { TerminalHeader } from './TerminalHeader';
 import { SearchOverlay } from './SearchOverlay';
 import { ChatInputBar } from './ChatInputBar';
+import { HistorySidebar } from './HistorySidebar';
+import { HistoryViewer } from './HistoryViewer';
 import type { ServerMessage } from '../protocol';
 
 export function TerminalPane() {
@@ -16,6 +19,11 @@ export function TerminalPane() {
   const getDimensionsRef = useRef<() => { cols: number; rows: number }>(() => ({ cols: 80, rows: 24 }));
   const writeRef = useRef<(data: string) => void>(() => { /* noop until terminal mounts */ });
   const sendMessageRef = useRef<(msg: Parameters<ReturnType<typeof useWebSocket>['sendMessage']>[0]) => void>(() => { /* noop until ws connects */ });
+
+  // handleHistoryMessage is initialized after useSessionHistory below.
+  // Use a ref so handleServerMessage's useCallback can call it without
+  // re-creating the callback on every render.
+  const handleHistoryMessageRef = useRef<(msg: ServerMessage) => boolean>(() => false);
 
   const handleServerMessage = useCallback((msg: ServerMessage) => {
     switch (msg.type) {
@@ -51,11 +59,29 @@ export function TerminalPane() {
         console.error(`[terminal] server error: ${msg.message}`);
         writeRef.current(`\r\n[Error: ${msg.message}]\r\n`);
         break;
+      default:
+        // Delegate history-sessions, history-chunk, history-end, session-start
+        handleHistoryMessageRef.current(msg);
+        break;
     }
   }, [shells]);
 
   const { state, sendMessage } = useWebSocket({ onMessage: handleServerMessage });
   sendMessageRef.current = sendMessage;
+
+  const {
+    sessions,
+    replaySessionId,
+    replayChunks,
+    replayComplete,
+    fetchSessions,
+    startReplay,
+    closeReplay,
+    handleHistoryMessage,
+  } = useSessionHistory({ sendMessage });
+
+  // Keep ref in sync so handleServerMessage can call it without stale closure
+  handleHistoryMessageRef.current = handleHistoryMessage;
 
   const handleTerminalData = useCallback((data: string) => {
     sendMessage({ type: 'input', data });
@@ -110,6 +136,13 @@ export function TerminalPane() {
     return () => document.removeEventListener('keydown', handler);
   }, [searchOpen]);
 
+  // Fetch sessions when the sidebar is opened
+  useEffect(() => {
+    if (sidebarOpen) {
+      fetchSessions();
+    }
+  }, [sidebarOpen, fetchSessions]);
+
   // Route input box text to PTY as real keystrokes (shadow typing, D-04)
   const handleSendInput = useCallback((text: string) => {
     sendMessage({ type: 'input', data: text });
@@ -124,35 +157,63 @@ export function TerminalPane() {
     }
   }, [currentShell, sendMessage, getTerminalDimensions]);
 
-  // Suppress unused variable warning for sidebarOpen until sidebar is built
-  void sidebarOpen;
+  // Find session metadata for HistoryViewer header
+  const replayMeta = replaySessionId !== null
+    ? sessions.find(s => s.id === replaySessionId) ?? null
+    : null;
 
   return (
-    <div className="flex flex-col h-screen bg-[#1e1e1e]">
-      <TerminalHeader
-        connectionState={connectionState}
-        currentShell={currentShell}
-        shells={shells}
-        onShellChange={handleShellChange}
-        onToggleSidebar={() => setSidebarOpen(s => !s)}
-      />
+    <div className="flex h-screen bg-[#1e1e1e]">
+      {/* Collapsible history sidebar (D-05) */}
+      {sidebarOpen && (
+        <HistorySidebar
+          sessions={sessions}
+          onSelect={(id) => startReplay(id)}
+          onClose={() => setSidebarOpen(false)}
+          onRefresh={fetchSessions}
+        />
+      )}
 
-      {/* Terminal container — relative positioned so SearchOverlay can position absolutely */}
-      <div className="relative flex-1 min-h-0">
-        {searchOpen && (
-          <SearchOverlay
-            searchAddon={searchAddonRef.current}
-            onClose={() => setSearchOpen(false)}
+      <div className="flex flex-col flex-1 min-w-0">
+        <TerminalHeader
+          connectionState={connectionState}
+          currentShell={currentShell}
+          shells={shells}
+          onShellChange={handleShellChange}
+          onToggleSidebar={() => setSidebarOpen(s => !s)}
+        />
+
+        {/* Replay viewer — only mounted when a session is selected (D-07) */}
+        {replaySessionId !== null && (
+          <HistoryViewer
+            chunks={replayChunks}
+            complete={replayComplete}
+            sessionMeta={replayMeta ? { startedAt: replayMeta.startedAt, shell: replayMeta.shell } : null}
+            onClose={closeReplay}
           />
         )}
-        {/* Terminal mount point — must have explicit height for xterm.js FitAddon */}
-        <div ref={containerRef} className="h-full" />
-      </div>
 
-      <ChatInputBar
-        onSend={handleSendInput}
-        disabled={connectionState !== 'connected'}
-      />
+        {/* Live terminal area — hidden via CSS (NOT unmounted) during replay.
+            xterm.js Terminal is bound to its container DOM element via term.open(container).
+            Unmounting the container severs the binding; CSS 'hidden' keeps the element in DOM
+            so the Terminal reference stays valid. ResizeObserver refits automatically when
+            the container transitions from hidden to visible (150ms debounce). */}
+        <div className={`relative flex-1 min-h-0 ${replaySessionId !== null ? 'hidden' : ''}`}>
+          {searchOpen && (
+            <SearchOverlay
+              searchAddon={searchAddonRef.current}
+              onClose={() => setSearchOpen(false)}
+            />
+          )}
+          {/* Terminal mount point — must have explicit height for xterm.js FitAddon */}
+          <div ref={containerRef} className="h-full" />
+        </div>
+
+        <ChatInputBar
+          onSend={handleSendInput}
+          disabled={connectionState !== 'connected' || replaySessionId !== null}
+        />
+      </div>
     </div>
   );
 }
