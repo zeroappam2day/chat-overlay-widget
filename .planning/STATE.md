@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-chat-overlay-mvp-02-PLAN.md
-last_updated: "2026-03-27T13:17:40.270Z"
+stopped_at: Completed 03-chat-overlay-mvp-03-PLAN.md
+last_updated: "2026-03-27T13:21:04.834Z"
 last_activity: 2026-03-27
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 ## Current Position
 
 Phase: 03 (chat-overlay-mvp) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-03-27
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-pty-bridge P02 | 5 | 2 tasks | 6 files |
 | Phase 03-chat-overlay-mvp P01 | 127 | 2 tasks | 5 files |
 | Phase 03-chat-overlay-mvp P02 | 15 | 2 tasks | 5 files |
+| Phase 03 P03 | 69 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase 03-chat-overlay-mvp]: SearchAddon ref exposed from useTerminal hook so SearchOverlay calls methods imperatively
 - [Phase 03-chat-overlay-mvp]: Ctrl+F intercepted at document level to block WebView2 native find-in-page dialog
 - [Phase 03-chat-overlay-mvp]: Use recorder.end() in PTYSession.destroy() not destroy() — ensures ended_at is written on normal close; crash-only sessions become orphans caught by markOrphans() on restart
+- [Phase 03]: CSS class selector (.chat-input-textarea) for Escape-to-focus — avoids ref prop drilling from TerminalPane into ChatInputBar
+- [Phase 03]: Escape handler co-located with Ctrl+F effect, searchOpen as dependency — gates Escape so it doesn't steal focus when search overlay is open
 
 ### Pending Todos
 
@@ -97,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T13:17:40.265Z
-Stopped at: Completed 03-chat-overlay-mvp-02-PLAN.md
+Last session: 2026-03-27T13:21:04.828Z
+Stopped at: Completed 03-chat-overlay-mvp-03-PLAN.md
 Resume file: None

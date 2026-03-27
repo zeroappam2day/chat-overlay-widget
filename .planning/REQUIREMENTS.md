@@ -33,9 +33,9 @@
 
 ### Input & Shadow Typing
 
-- [ ] **INPUT-01**: GUI input box for typing commands
-- [ ] **INPUT-02**: Shadow typing — input sent to PTY as real keystrokes, CLI cannot distinguish
-- [ ] **INPUT-03**: Enter key sends command, preserves input box focus
+- [x] **INPUT-01**: GUI input box for typing commands
+- [x] **INPUT-02**: Shadow typing — input sent to PTY as real keystrokes, CLI cannot distinguish
+- [x] **INPUT-03**: Enter key sends command, preserves input box focus
 
 ### Chat History
 
@@ -116,9 +116,9 @@
 | TERM-03 | Phase 3 | Complete |
 | TERM-04 | Phase 3 | Complete |
 | TERM-05 | Phase 3 | Complete |
-| INPUT-01 | Phase 3 | Pending |
-| INPUT-02 | Phase 3 | Pending |
-| INPUT-03 | Phase 3 | Pending |
+| INPUT-01 | Phase 3 | Complete |
+| INPUT-02 | Phase 3 | Complete |
+| INPUT-03 | Phase 3 | Complete |
 | HIST-01 | Phase 3 | Complete |
 | HIST-02 | Phase 3 | Complete |
 | HIST-04 | Phase 3 | Pending |
