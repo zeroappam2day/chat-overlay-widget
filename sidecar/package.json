@@ -8,11 +8,13 @@
     "bundle": "npx @appthreat/caxa --input . --output ../src-tauri/binaries/sidecar-x86_64-pc-windows-msvc.exe -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/dist/server.js\""
   },
   "dependencies": {
+    "better-sqlite3": "^12.8.0",
     "node-pty": "1.1.0",
     "ws": "8.18.0"
   },
   "devDependencies": {
     "@appthreat/caxa": "^2.0.13",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.0.0",
     "typescript": "^5.0.0"
