@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-chat-overlay-mvp-03-PLAN.md
-last_updated: "2026-03-27T13:21:04.834Z"
+status: verifying
+stopped_at: Completed 03-chat-overlay-mvp-04-PLAN.md
+last_updated: "2026-03-27T13:37:38.702Z"
 last_activity: 2026-03-27
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 
 Phase: 03 (chat-overlay-mvp) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-27
 
 Progress: [░░░░░░░░░░] 0%
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-chat-overlay-mvp P01 | 127 | 2 tasks | 5 files |
 | Phase 03-chat-overlay-mvp P02 | 15 | 2 tasks | 5 files |
 | Phase 03 P03 | 69 | 2 tasks | 2 files |
+| Phase 03-chat-overlay-mvp P04 | 25 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 03-chat-overlay-mvp]: Use recorder.end() in PTYSession.destroy() not destroy() — ensures ended_at is written on normal close; crash-only sessions become orphans caught by markOrphans() on restart
 - [Phase 03]: CSS class selector (.chat-input-textarea) for Escape-to-focus — avoids ref prop drilling from TerminalPane into ChatInputBar
 - [Phase 03]: Escape handler co-located with Ctrl+F effect, searchOpen as dependency — gates Escape so it doesn't steal focus when search overlay is open
+- [Phase 03-chat-overlay-mvp]: CSS hidden class (not unmount) for live terminal during replay — xterm.js Terminal.open() binds to DOM; unmounting severs reference causing blank terminal on return
+- [Phase 03-chat-overlay-mvp]: handleHistoryMessageRef pattern — stable ref bridges useSessionHistory callback into handleServerMessage useCallback without coupling deps
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T13:21:04.828Z
-Stopped at: Completed 03-chat-overlay-mvp-03-PLAN.md
+Last session: 2026-03-27T13:37:38.697Z
+Stopped at: Completed 03-chat-overlay-mvp-04-PLAN.md
 Resume file: None
