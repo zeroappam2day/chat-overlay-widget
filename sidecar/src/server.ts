@@ -1,9 +1,9 @@
 import { WebSocketServer } from 'ws';
 import type WebSocket from 'ws';
-import type { ClientMessage, ServerMessage } from './protocol.js';
+import type { ClientMessage, ServerMessage, SessionMeta } from './protocol.js';
 import { PTYSession } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
-import { openDb, markOrphans } from './historyStore.js';
+import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -67,6 +67,7 @@ wss.on('connection', (ws: WebSocket) => {
           activeSessions.set(ws, session);
           console.log(`[sidecar] PTY session created successfully`);
           console.log(`[sidecar] session started: id=${session.sessionId}`);
+          sendMsg(ws, { type: 'session-start', sessionId: session.sessionId });
         } catch (err) {
           console.error(`[sidecar] PTY spawn failed: ${err}`);
           sendMsg(ws, { type: 'error', message: `Failed to spawn shell: ${err}` });
@@ -89,6 +90,27 @@ wss.on('connection', (ws: WebSocket) => {
           session.destroy();
           activeSessions.delete(ws);
         }
+        break;
+      }
+      case 'history-list': {
+        const rows = listSessions();
+        const sessions: SessionMeta[] = rows.map(r => ({
+          id: r.id,
+          shell: r.shell,
+          cwd: r.cwd,
+          startedAt: r.started_at,
+          endedAt: r.ended_at,
+          isOrphan: r.is_orphan === 1,
+        }));
+        sendMsg(ws, { type: 'history-sessions', sessions });
+        break;
+      }
+      case 'history-replay': {
+        const chunks = getSessionChunks(msg.sessionId);
+        for (const chunk of chunks) {
+          sendMsg(ws, { type: 'history-chunk', data: chunk.data.toString('utf-8') });
+        }
+        sendMsg(ws, { type: 'history-end', sessionId: msg.sessionId });
         break;
       }
     }
