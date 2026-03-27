@@ -3,6 +3,7 @@ import { useTerminal } from '../hooks/useTerminal';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { TerminalHeader } from './TerminalHeader';
 import { SearchOverlay } from './SearchOverlay';
+import { ChatInputBar } from './ChatInputBar';
 import type { ServerMessage } from '../protocol';
 
 export function TerminalPane() {
@@ -92,16 +93,27 @@ export function TerminalPane() {
   }, [state, shells, sendMessage, getTerminalDimensions]);
 
   // Intercept Ctrl+F at document level to prevent WebView2 native find-in-page (D-15)
+  // Also handle Escape to return focus from terminal to input box (D-02)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.code === 'KeyF') {
         e.preventDefault();
         setSearchOpen(prev => !prev);
       }
+      // Escape returns focus to input box when search is not open (D-02)
+      if (e.code === 'Escape' && !searchOpen) {
+        const input = document.querySelector<HTMLTextAreaElement>('.chat-input-textarea');
+        input?.focus();
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, []);
+  }, [searchOpen]);
+
+  // Route input box text to PTY as real keystrokes (shadow typing, D-04)
+  const handleSendInput = useCallback((text: string) => {
+    sendMessage({ type: 'input', data: text });
+  }, [sendMessage]);
 
   const handleShellChange = useCallback((newShell: string) => {
     if (newShell && newShell !== currentShell) {
@@ -137,7 +149,10 @@ export function TerminalPane() {
         <div ref={containerRef} className="h-full" />
       </div>
 
-      {/* ChatInputBar will go here — Plan 03 */}
+      <ChatInputBar
+        onSend={handleSendInput}
+        disabled={connectionState !== 'connected'}
+      />
     </div>
   );
 }
