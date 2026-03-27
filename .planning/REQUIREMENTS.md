@@ -39,8 +39,8 @@
 
 ### Chat History
 
-- [ ] **HIST-01**: Chat history persisted within current session (in-memory + display)
-- [ ] **HIST-02**: Chat history persisted across app sessions (SQLite on disk)
+- [x] **HIST-01**: Chat history persisted within current session (in-memory + display)
+- [x] **HIST-02**: Chat history persisted across app sessions (SQLite on disk)
 - [ ] **HIST-03**: Per-pane chat history in multi-pane mode (separate history per split pane)
 - [ ] **HIST-04**: User can browse and scroll through past conversations
 
@@ -119,8 +119,8 @@
 | INPUT-01 | Phase 3 | Pending |
 | INPUT-02 | Phase 3 | Pending |
 | INPUT-03 | Phase 3 | Pending |
-| HIST-01 | Phase 3 | Pending |
-| HIST-02 | Phase 3 | Pending |
+| HIST-01 | Phase 3 | Complete |
+| HIST-02 | Phase 3 | Complete |
 | HIST-04 | Phase 3 | Pending |
 | SCRN-01 | Phase 4 | Pending |
 | SCRN-02 | Phase 4 | Pending |
