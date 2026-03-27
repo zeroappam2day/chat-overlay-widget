@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { TerminalHeader } from './TerminalHeader';
+import { SearchOverlay } from './SearchOverlay';
 import type { ServerMessage } from '../protocol';
 
 export function TerminalPane() {
   const [shells, setShells] = useState<string[]>([]);
   const [currentShell, setCurrentShell] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<string>('waiting');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const spawnedRef = useRef(false);
   const getDimensionsRef = useRef<() => { cols: number; rows: number }>(() => ({ cols: 80, rows: 24 }));
   const writeRef = useRef<(data: string) => void>(() => { /* noop until terminal mounts */ });
@@ -60,7 +64,7 @@ export function TerminalPane() {
     sendMessage({ type: 'resize', cols, rows });
   }, [sendMessage]);
 
-  const { containerRef, writeToTerminal, getTerminalDimensions } = useTerminal({
+  const { containerRef, writeToTerminal, getTerminalDimensions, searchAddonRef } = useTerminal({
     onData: handleTerminalData,
     onResize: handleTerminalResize,
   });
@@ -87,49 +91,53 @@ export function TerminalPane() {
     }
   }, [state, shells, sendMessage, getTerminalDimensions]);
 
+  // Intercept Ctrl+F at document level to prevent WebView2 native find-in-page (D-15)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.code === 'KeyF') {
+        e.preventDefault();
+        setSearchOpen(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  const handleShellChange = useCallback((newShell: string) => {
+    if (newShell && newShell !== currentShell) {
+      spawnedRef.current = true;
+      sendMessage({ type: 'kill' });
+      const dims = getTerminalDimensions();
+      sendMessage({ type: 'spawn', shell: newShell, cols: dims.cols, rows: dims.rows });
+    }
+  }, [currentShell, sendMessage, getTerminalDimensions]);
+
+  // Suppress unused variable warning for sidebarOpen until sidebar is built
+  void sidebarOpen;
+
   return (
     <div className="flex flex-col h-screen bg-[#1e1e1e]">
-      {/* Terminal header bar */}
-      <div className="flex items-center h-10 px-3 bg-[#2d2d2d] border-b border-[#404040] text-sm text-gray-300 shrink-0">
-        <div className="flex items-center gap-2">
-          <div
-            className={`h-2 w-2 rounded-full ${
-              connectionState === 'connected' ? 'bg-green-400' :
-              connectionState === 'error' ? 'bg-red-400' : 'bg-yellow-400'
-            }`}
+      <TerminalHeader
+        connectionState={connectionState}
+        currentShell={currentShell}
+        shells={shells}
+        onShellChange={handleShellChange}
+        onToggleSidebar={() => setSidebarOpen(s => !s)}
+      />
+
+      {/* Terminal container — relative positioned so SearchOverlay can position absolutely */}
+      <div className="relative flex-1 min-h-0">
+        {searchOpen && (
+          <SearchOverlay
+            searchAddon={searchAddonRef.current}
+            onClose={() => setSearchOpen(false)}
           />
-          <span className="text-xs text-gray-500">
-            {currentShell ?? 'No shell'}
-          </span>
-          {shells.length > 1 && (
-            <select
-              value={currentShell ?? ''}
-              onChange={(e) => {
-                const newShell = e.target.value;
-                if (newShell && newShell !== currentShell) {
-                  spawnedRef.current = true;
-                  sendMessage({ type: 'kill' });
-                  const dims = getTerminalDimensions();
-                  sendMessage({ type: 'spawn', shell: newShell, cols: dims.cols, rows: dims.rows });
-                }
-              }}
-              className="ml-3 bg-[#3c3c3c] text-gray-300 text-xs border border-[#555] rounded px-2 py-1 outline-none cursor-pointer hover:bg-[#4c4c4c]"
-            >
-              {shells.map((shell) => (
-                <option key={shell} value={shell}>
-                  {shell}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+        )}
+        {/* Terminal mount point — must have explicit height for xterm.js FitAddon */}
+        <div ref={containerRef} className="h-full" />
       </div>
 
-      {/* Terminal container — must have explicit height for xterm.js FitAddon */}
-      <div
-        ref={containerRef}
-        className="flex-1 min-h-0"
-      />
+      {/* ChatInputBar will go here — Plan 03 */}
     </div>
   );
 }
