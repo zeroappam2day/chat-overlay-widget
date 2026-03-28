@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+sidecar/dist/
+
+# Rust / Tauri build
+src-tauri/target/
+
+# Bundled sidecar binary (build artifact — rebuild with: cd sidecar && npm run bundle)
+src-tauri/binaries/sidecar-x86_64-pc-windows-msvc.exe
+src-tauri/binaries/binary-metadata.json
+
+# Cargo config (local overrides)
+.cargo/
+src-tauri/.cargo/
+
+# Lock files (sidecar has its own)
+sidecar/package-lock.json
+
+# Claude Code tooling (not part of the application)
+.claude/
+
+# Planning artifacts (development docs, not application code)
+.planning/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Environment
+.env
+.env.local
