@@ -8,7 +8,8 @@ export type ClientMessage =
   | { type: 'spawn'; shell: string; cols?: number; rows?: number }
   | { type: 'kill' }
   | { type: 'history-list' }
-  | { type: 'history-replay'; sessionId: number };
+  | { type: 'history-replay'; sessionId: number }
+  | { type: 'save-image'; base64: string; ext: string };
 
 export interface SessionMeta {
   id: number;
@@ -29,4 +30,5 @@ export type ServerMessage =
   | { type: 'session-start'; sessionId: number }
   | { type: 'history-sessions'; sessions: SessionMeta[] }
   | { type: 'history-chunk'; data: string }
-  | { type: 'history-end'; sessionId: number };
+  | { type: 'history-end'; sessionId: number }
+  | { type: 'save-image-result'; path: string };
