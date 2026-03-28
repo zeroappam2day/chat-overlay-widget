@@ -44,24 +44,37 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     if (!onImagePaste) return;
 
-    // Strategy 1: Check DataTransferItemList for image items
+    // Debug: log what WebView2 exposes in the paste event
     const items = Array.from(e.clipboardData.items);
+    const files = Array.from(e.clipboardData.files);
+    console.log('[paste] items:', items.map(i => ({ kind: i.kind, type: i.type })));
+    console.log('[paste] files:', files.map(f => ({ name: f.name, type: f.type, size: f.size })));
+    console.log('[paste] types:', e.clipboardData.types);
+
+    // Strategy 1: Check DataTransferItemList for image items
     const imageItem = items.find(item => item.type.startsWith('image/'));
 
     // Strategy 2: Check FileList (WebView2 may expose snipping tool images here)
-    const files = Array.from(e.clipboardData.files);
     const imageFile = files.find(f => f.type.startsWith('image/'));
 
     const blob = imageItem?.getAsFile() ?? imageFile ?? null;
-    if (!blob) return; // no image found — let normal text paste proceed
+    if (!blob) {
+      console.log('[paste] no image found in clipboard data');
+      return; // no image found — let normal text paste proceed
+    }
 
+    console.log('[paste] image blob found:', blob.type, blob.size, 'bytes');
     e.preventDefault(); // block default paste behavior for images
 
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
       const base64 = result.split(',')[1];
-      if (!base64) return;
+      if (!base64) {
+        console.log('[paste] FileReader produced no base64');
+        return;
+      }
+      console.log('[paste] sending save-image, base64 length:', base64.length);
       const ext = blob.type.split('/')[1] || 'png';
       onImagePaste(base64, ext);
     };
