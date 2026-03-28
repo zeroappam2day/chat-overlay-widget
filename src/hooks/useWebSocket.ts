@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/tauri';
 import type { ClientMessage, ServerMessage } from '../protocol';
 
-type ConnectionState = 'waiting' | 'connecting' | 'connected' | 'error';
+type ConnectionState = 'waiting' | 'connecting' | 'connected' | 'reconnecting' | 'error';
 
 interface UseWebSocketOptions {
   onMessage: (msg: ServerMessage) => void;
@@ -49,9 +49,12 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
 
   useEffect(() => {
     let cancelled = false;
+    let portRef: number | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    async function connect(port: number) {
-      setState('connecting');
+    async function connect(port: number, isReconnect = false) {
+      portRef = port;
+      setState(isReconnect ? 'reconnecting' : 'connecting');
       try {
         const ws = await connectWithRetry(port);
         if (cancelled) { ws.close(); return; }
@@ -69,7 +72,13 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
         };
 
         ws.onclose = () => {
-          if (!cancelled) setState('error');
+          if (!cancelled && portRef) {
+            console.log('[ws] connection lost — reconnecting in 2s');
+            setState('reconnecting');
+            reconnectTimer = setTimeout(() => {
+              if (!cancelled && portRef) connect(portRef, true);
+            }, 2000);
+          }
         };
       } catch {
         if (!cancelled) setState('error');
@@ -86,6 +95,7 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
 
     return () => {
       cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       wsRef.current?.close();
       unlisten.then(fn => fn());
     };

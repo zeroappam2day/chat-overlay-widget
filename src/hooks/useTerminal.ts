@@ -7,6 +7,7 @@ import '@xterm/xterm/css/xterm.css';
 interface UseTerminalOptions {
   onData: (data: string) => void;
   onResize: (cols: number, rows: number) => void;
+  // TODO: add onImagePaste callback for terminal-focus clipboard image paste
 }
 
 interface UseTerminalReturn {

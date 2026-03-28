@@ -15,6 +15,25 @@ console.log('[sidecar] SQLite session database initialized');
 
 const wss = new WebSocketServer({ host: '127.0.0.1', port: 0 });
 
+// Heartbeat: ping every 30s, terminate if no pong within 10s (Phase 5 hardening)
+const HEARTBEAT_INTERVAL = 30_000;
+const HEARTBEAT_TIMEOUT = 10_000;
+const aliveClients = new WeakMap<WebSocket, boolean>();
+
+const heartbeatTimer = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (aliveClients.get(ws) === false) {
+      console.log('[sidecar] client failed heartbeat — terminating');
+      ws.terminate();
+      continue;
+    }
+    aliveClients.set(ws, false);
+    ws.ping();
+  }
+}, HEARTBEAT_INTERVAL);
+
+wss.on('close', () => clearInterval(heartbeatTimer));
+
 wss.on('listening', () => {
   const addr = wss.address() as { port: number };
   // PORT: prefix — Tauri Rust core reads this via CommandEvent::Stdout
@@ -46,6 +65,8 @@ async function sweepScreenshotTempFiles(): Promise<void> {
 
 wss.on('connection', (ws: WebSocket) => {
   console.log('[sidecar] client connected');
+  aliveClients.set(ws, true);
+  ws.on('pong', () => { aliveClients.set(ws, true); });
 
   // Send available shells immediately on connection (D-01)
   const shells = detectShells();
