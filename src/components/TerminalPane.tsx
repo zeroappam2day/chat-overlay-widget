@@ -167,9 +167,35 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       }
     };
     document.addEventListener('keydown', handler);
+
+    // Document-level paste listener for clipboard images (SCRN-02)
+    // Catches Ctrl+V when terminal has focus (not textarea) — e.g. Snipping Tool paste
+    const handleDocPaste = (e: ClipboardEvent) => {
+      if (!isActiveRef.current) return;
+      if (!e.clipboardData) return;
+      const items = Array.from(e.clipboardData.items);
+      const imageItem = items.find(item => item.type.startsWith('image/'));
+      const files = Array.from(e.clipboardData.files);
+      const imageFile = files.find(f => f.type.startsWith('image/'));
+      const blob = imageItem?.getAsFile() ?? imageFile ?? null;
+      if (!blob) return; // no image — let default paste proceed
+      e.preventDefault();
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        if (!base64) return;
+        const ext = blob.type.split('/')[1] || 'png';
+        sendMessageRef.current({ type: 'save-image', base64, ext });
+      };
+      reader.readAsDataURL(blob);
+    };
+    document.addEventListener('paste', handleDocPaste);
+
     return () => {
       document.removeEventListener('keydown', handler);
       document.removeEventListener('terminal-toggle-search', gatedToggleSearch);
+      document.removeEventListener('paste', handleDocPaste);
     };
   }, [searchOpen]);
 

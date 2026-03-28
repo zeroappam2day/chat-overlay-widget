@@ -39,25 +39,30 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
   }, [value, onSend]);
 
   // Handle clipboard paste for images (SCRN-02)
-  // Use onPaste on the outer div (NOT the textarea) per D-02, Pitfall 5 —
-  // avoids navigator.clipboard.read() permission dialog
+  // Checks both clipboardData.items (standard) and clipboardData.files (WebView2 fallback)
+  // to support Windows Snipping Tool, PrtScn, and browser copy-image
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     if (!onImagePaste) return;
+
+    // Strategy 1: Check DataTransferItemList for image items
     const items = Array.from(e.clipboardData.items);
     const imageItem = items.find(item => item.type.startsWith('image/'));
-    if (!imageItem) return; // not an image — let normal text paste proceed
+
+    // Strategy 2: Check FileList (WebView2 may expose snipping tool images here)
+    const files = Array.from(e.clipboardData.files);
+    const imageFile = files.find(f => f.type.startsWith('image/'));
+
+    const blob = imageItem?.getAsFile() ?? imageFile ?? null;
+    if (!blob) return; // no image found — let normal text paste proceed
 
     e.preventDefault(); // block default paste behavior for images
-
-    const blob = imageItem.getAsFile();
-    if (!blob) return;
 
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
       const base64 = result.split(',')[1];
       if (!base64) return;
-      const ext = imageItem.type.split('/')[1] || 'png';
+      const ext = blob.type.split('/')[1] || 'png';
       onImagePaste(base64, ext);
     };
     reader.readAsDataURL(blob);
