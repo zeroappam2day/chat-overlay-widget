@@ -1,11 +1,14 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface ChatInputBarProps {
   onSend: (text: string) => void;
   disabled?: boolean;
+  onImagePaste?: (base64: string, ext: string) => void;
+  pendingImagePath?: string | null;
+  onImagePathConsumed?: () => void;
 }
 
-export function ChatInputBar({ onSend, disabled }: ChatInputBarProps) {
+export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath, onImagePathConsumed }: ChatInputBarProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -35,8 +38,45 @@ export function ChatInputBar({ onSend, disabled }: ChatInputBarProps) {
     // Shift+Enter: do nothing special — default textarea behavior inserts newline
   }, [value, onSend]);
 
+  // Handle clipboard paste for images (SCRN-02)
+  // Use onPaste on the outer div (NOT the textarea) per D-02, Pitfall 5 —
+  // avoids navigator.clipboard.read() permission dialog
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    if (!onImagePaste) return;
+    const items = Array.from(e.clipboardData.items);
+    const imageItem = items.find(item => item.type.startsWith('image/'));
+    if (!imageItem) return; // not an image — let normal text paste proceed
+
+    e.preventDefault(); // block default paste behavior for images
+
+    const blob = imageItem.getAsFile();
+    if (!blob) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      if (!base64) return;
+      const ext = imageItem.type.split('/')[1] || 'png';
+      onImagePaste(base64, ext);
+    };
+    reader.readAsDataURL(blob);
+  }, [onImagePaste]);
+
+  // Inject pending image path into the input box when it changes (SCRN-01, SCRN-02)
+  useEffect(() => {
+    if (pendingImagePath) {
+      setValue(prev => {
+        const prefix = prev.trim() ? prev.trim() + ' ' : '';
+        return prefix + pendingImagePath;
+      });
+      onImagePathConsumed?.();
+      textareaRef.current?.focus();
+    }
+  }, [pendingImagePath, onImagePathConsumed]);
+
   return (
-    <div className="shrink-0 px-3 py-2 bg-[#2d2d2d] border-t border-[#404040]">
+    <div className="shrink-0 px-3 py-2 bg-[#2d2d2d] border-t border-[#404040]" onPaste={handlePaste}>
       <textarea
         ref={textareaRef}
         value={value}

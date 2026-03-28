@@ -12,14 +12,18 @@ import type { ServerMessage } from '../protocol';
 
 interface TerminalPaneProps {
   paneId: string;
+  droppedImagePath?: string | null;
+  onDroppedPathConsumed?: () => void;
 }
 
-export function TerminalPane({ paneId }: TerminalPaneProps) {
+export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }: TerminalPaneProps) {
   const [shells, setShells] = useState<string[]>([]);
   const [currentShell, setCurrentShell] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<string>('waiting');
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Pending image path from clipboard paste (sidecar save-image-result response)
+  const [pendingImagePath, setPendingImagePath] = useState<string | null>(null);
   const spawnedRef = useRef(false);
   const getDimensionsRef = useRef<() => { cols: number; rows: number }>(() => ({ cols: 80, rows: 24 }));
   const writeRef = useRef<(data: string) => void>(() => { /* noop until terminal mounts */ });
@@ -74,6 +78,10 @@ export function TerminalPane({ paneId }: TerminalPaneProps) {
       case 'error':
         console.error(`[terminal:${paneId}] server error: ${msg.message}`);
         writeRef.current(`\r\n[Error: ${msg.message}]\r\n`);
+        break;
+      case 'save-image-result':
+        // Clipboard paste flow: sidecar saved the temp file, inject its path into input box
+        setPendingImagePath(msg.path);
         break;
       default:
         // Delegate history-sessions, history-chunk, history-end, session-start
@@ -248,6 +256,9 @@ export function TerminalPane({ paneId }: TerminalPaneProps) {
       <ChatInputBar
         onSend={handleSendInput}
         disabled={connectionState !== 'connected' || replaySessionId !== null}
+        pendingImagePath={pendingImagePath ?? droppedImagePath}
+        onImagePathConsumed={() => { setPendingImagePath(null); onDroppedPathConsumed?.(); }}
+        onImagePaste={(b64, ext) => sendMessage({ type: 'save-image', base64: b64, ext })}
       />
     </div>
   );
