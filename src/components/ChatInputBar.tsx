@@ -76,12 +76,13 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
   }, [pendingImagePath, onImagePathConsumed]);
 
   return (
-    <div className="shrink-0 px-3 py-2 bg-[#2d2d2d] border-t border-[#404040]" onPaste={handlePaste}>
+    <div className="shrink-0 px-3 py-2 bg-[#2d2d2d] border-t border-[#404040]">
       <textarea
         ref={textareaRef}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         rows={1}
         disabled={disabled}
         className="chat-input-textarea w-full bg-[#1e1e1e] text-gray-200 text-sm resize-none outline-none rounded px-3 py-2 overflow-y-auto border border-[#404040] focus:border-[#007acc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
