@@ -138,7 +138,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Shell path quoting utility, ChatInputBar integration, UUID-only filenames
+- [x] 06-01-PLAN.md — Shell path quoting utility, ChatInputBar integration, UUID-only filenames
 - [ ] 06-02-PLAN.md — Taller default input bar with drag-resizable height
 
 **UI hint**: yes
@@ -190,7 +190,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Chat Overlay MVP | v1.0 | 4/4 | Complete | 2026-03-28 |
 | 4. Differentiating Features | v1.0 | 4/4 | Complete | 2026-03-28 |
 | 5. Production Hardening | v1.0 | 1/1 | Complete | 2026-03-28 |
-| 6. Shell Path Formatting & Input Bar | v1.1 | 0/2 | Planning | - |
+| 6. Shell Path Formatting & Input Bar | v1.1 | 1/2 | In Progress|  |
 | 7. Capture HTTP Server | v1.1 | 0/? | Not started | - |
 | 8. Window Screenshot Capture | v1.1 | 0/? | Not started | - |
 | 9. Browser CDP Capture & CLI Wrapper | v1.1 | 0/? | Not started | - |

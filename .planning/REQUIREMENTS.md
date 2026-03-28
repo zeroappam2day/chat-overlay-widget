@@ -20,8 +20,8 @@
 - [x] **PTY-03**: node-pty ConPTY spawning Git Bash as alternative shell (if installed)
 - [x] **PTY-04**: Full keystroke → PTY → shell → output roundtrip verified
 - [x] **PTY-05**: PTY resize chain — xterm.js onResize → WebSocket → ptyProcess.resize(cols, rows)
-- [ ] **PTY-06**: Sidecar process cleanup on app close (no orphan node.exe processes)
-- [ ] **PTY-07**: Shell selector UI to choose between available shells
+- [x] **PTY-06**: Sidecar process cleanup on app close (no orphan node.exe processes)
+- [x] **PTY-07**: Shell selector UI to choose between available shells
 
 ### Terminal Rendering
 
@@ -46,8 +46,8 @@
 
 ### Screenshots
 
-- [ ] **SCRN-01**: User can drag and drop image onto the app to send to CLI
-- [ ] **SCRN-02**: User can paste image from clipboard to send to CLI
+- [x] **SCRN-01**: User can drag and drop image onto the app to send to CLI
+- [x] **SCRN-02**: User can paste image from clipboard to send to CLI
 - [x] **SCRN-03**: Images saved to temp folder, file path passed to CLI as input
 - [x] **SCRN-04**: Temp screenshot files automatically deleted on session close
 
@@ -60,9 +60,50 @@
 
 ### Window Management
 
-- [ ] **WIN-01**: Always-on-top toggle (pin window above all others)
-- [ ] **WIN-02**: Adaptive layout responsive to screen size and window shape
+- [x] **WIN-01**: Always-on-top toggle (pin window above all others)
+- [x] **WIN-02**: Adaptive layout responsive to screen size and window shape
 - [x] **WIN-03**: xterm.js terminal auto-fits to available pane size on resize
+
+## v1.1 Requirements
+
+Requirements for Screenshot Automation & Input Polish milestone.
+
+### Path Insertion
+
+- [x] **PATH-01**: Screenshot file paths are quoted per active shell (PS single-quote, cmd double-quote, bash forward-slash + single-quote)
+- [x] **PATH-02**: Temp screenshot filenames use UUID-only format (no special characters that need escaping)
+
+### Input Bar
+
+- [ ] **INBAR-01**: Chat input bar default height is ~144px (3x current 48px)
+- [ ] **INBAR-02**: User can drag-resize the chat input bar height via a drag handle
+- [ ] **INBAR-03**: xterm.js terminal re-fits correctly when input bar height changes (debounce + offsetHeight guard)
+
+### Capture Infrastructure
+
+- [ ] **CAPI-01**: Sidecar exposes HTTP REST API alongside existing WebSocket server
+- [ ] **CAPI-02**: Port discovery file written to %TEMP%/chat-overlay-api with port + auth token
+- [ ] **CAPI-03**: HTTP API requires Bearer token authentication on all endpoints
+- [ ] **CAPI-04**: Port discovery file is atomically deleted on sidecar shutdown
+
+### Window Capture
+
+- [ ] **WCAP-01**: HTTP endpoint captures a window screenshot by title
+- [ ] **WCAP-02**: HTTP endpoint lists available windows with titles and process names
+- [ ] **WCAP-03**: Window capture is DPI-aware on 125%+ scaled displays
+- [ ] **WCAP-04**: Captured image saved to temp dir, absolute filepath returned in response
+
+### Browser Capture
+
+- [ ] **BCAP-01**: HTTP endpoint captures full-page browser screenshot via CDP (puppeteer-core)
+- [ ] **BCAP-02**: Automatically falls back to window capture when CDP unavailable
+- [ ] **BCAP-03**: Connects to Chrome or Edge debug port (default 9222, configurable)
+
+### CLI Wrapper
+
+- [ ] **CLIP-01**: overlay-capture script discovers sidecar port + token from discovery file
+- [ ] **CLIP-02**: overlay-capture supports window, browser, list, and help commands
+- [ ] **CLIP-03**: Prints captured filepath to stdout for AI CLI tool consumption
 
 ## v2 Requirements
 
@@ -109,8 +150,8 @@
 | PTY-03 | Phase 2 | Complete |
 | PTY-04 | Phase 2 | Complete |
 | PTY-05 | Phase 2 | Complete |
-| PTY-06 | Phase 2 | Pending |
-| PTY-07 | Phase 2 | Pending |
+| PTY-06 | Phase 2 | Complete |
+| PTY-07 | Phase 2 | Complete |
 | TERM-01 | Phase 3 | Complete |
 | TERM-02 | Phase 3 | Complete |
 | TERM-03 | Phase 3 | Complete |
@@ -122,8 +163,8 @@
 | HIST-01 | Phase 3 | Complete |
 | HIST-02 | Phase 3 | Complete |
 | HIST-04 | Phase 3 | Complete |
-| SCRN-01 | Phase 4 | Pending |
-| SCRN-02 | Phase 4 | Pending |
+| SCRN-01 | Phase 4 | Complete |
+| SCRN-02 | Phase 4 | Complete |
 | SCRN-03 | Phase 4 | Complete |
 | SCRN-04 | Phase 4 | Complete |
 | HIST-03 | Phase 4 | Complete |
@@ -131,15 +172,34 @@
 | PSMUX-02 | Phase 4 | Complete |
 | PSMUX-03 | Phase 4 | Complete |
 | PSMUX-04 | Phase 4 | Complete |
-| WIN-01 | Phase 4 | Pending |
-| WIN-02 | Phase 4 | Pending |
+| WIN-01 | Phase 4 | Complete |
+| WIN-02 | Phase 4 | Complete |
 | WIN-03 | Phase 4 | Complete |
+| PATH-01 | Phase 6 | Complete |
+| PATH-02 | Phase 6 | Complete |
+| INBAR-01 | Phase 6 | Pending |
+| INBAR-02 | Phase 6 | Pending |
+| INBAR-03 | Phase 6 | Pending |
+| CAPI-01 | Phase 7 | Pending |
+| CAPI-02 | Phase 7 | Pending |
+| CAPI-03 | Phase 7 | Pending |
+| CAPI-04 | Phase 7 | Pending |
+| WCAP-01 | Phase 8 | Pending |
+| WCAP-02 | Phase 8 | Pending |
+| WCAP-03 | Phase 8 | Pending |
+| WCAP-04 | Phase 8 | Pending |
+| BCAP-01 | Phase 9 | Pending |
+| BCAP-02 | Phase 9 | Pending |
+| BCAP-03 | Phase 9 | Pending |
+| CLIP-01 | Phase 9 | Pending |
+| CLIP-02 | Phase 9 | Pending |
+| CLIP-03 | Phase 9 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 35
+- v1 requirements: 35 total — mapped to phases 1-5, all complete
+- v1.1 requirements: 19 total — mapped to phases 6-9, all pending
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-27*
-*Last updated: 2026-03-27 — Phase 1 complete, all INFRA requirements verified*
+*Last updated: 2026-03-28 — v1.1 traceability added (Phases 6-9, 19 requirements)*

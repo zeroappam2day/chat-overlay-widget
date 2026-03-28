@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Screenshot Automation & Input Polish
-status: planning
-stopped_at: Phase 6 context gathered (assumptions mode)
-last_updated: "2026-03-28T11:34:44.361Z"
-last_activity: 2026-03-28 — v1.1 roadmap created (Phases 6-9)
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-28T12:02:35.330Z"
+last_activity: 2026-03-28
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** v1.1 roadmap defined — ready to plan Phase 6
+**Current focus:** Phase 06 — shell-path-formatting-input-bar
 
 ## Current Position
 
-Phase: Phase 6 (Shell Path Formatting & Input Bar) — Not started
-Plan: —
-Status: Roadmap defined, awaiting phase planning
-Last activity: 2026-03-28 — v1.1 roadmap created (Phases 6-9)
+Phase: 06 (shell-path-formatting-input-bar) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-28
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Last activity: 2026-03-28 — v1.1 roadmap created (Phases 6-9)
 | Phase 04-differentiating-features P01 | 4 | 2 tasks | 5 files |
 | Phase 04-differentiating-features P02 | 8 | 2 tasks | 2 files |
 | Phase 04-differentiating-features P03 | 12 | 2 tasks | 4 files |
+| Phase 06 P01 | 8 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [v1.1 Roadmap]: shellPath.ts formatPathForShell pure function needed in sidecar before Phase 8 uses it in HTTP responses — build it in Phase 6 even though Phase 6 has no HTTP server
 - [v1.1 Roadmap]: Phase 7 uses Node.js built-in http module — no new npm deps; puppeteer-core added in Phase 9 triggers caxa rebuild
 - [v1.1 Roadmap]: Port discovery file at %TEMP%/chat-overlay-api — write atomically (tmp-then-rename), bearer token required on all HTTP endpoints, file deleted on clean shutdown (CAPI-04)
+- [Phase 06]: quotePathForShell applied at pendingImagePath injection time (useEffect), not at send time — per D-04
+- [Phase 06]: UUID-only filenames for temp screenshots (removed sessionId prefix) — PATH-02 compliance
+- [Phase 06]: vitest@4.1.2 added as dev dep for src/ unit tests; vitest.config.ts targets src/**/*.test.ts
 
 ### Pending Todos
 
@@ -115,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T11:34:44.356Z
-Stopped at: Phase 6 context gathered (assumptions mode)
-Resume file: .planning/phases/06-shell-path-formatting-input-bar/06-CONTEXT.md
+Last session: 2026-03-28T12:02:35.324Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
