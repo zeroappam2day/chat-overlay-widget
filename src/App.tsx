@@ -1,7 +1,7 @@
-import { TerminalPane } from './components/TerminalPane';
+import { PaneContainer } from './components/PaneContainer';
 
 function App() {
-  return <TerminalPane />;
+  return <PaneContainer />;
 }
 
 export default App;
