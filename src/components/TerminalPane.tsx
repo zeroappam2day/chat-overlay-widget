@@ -24,6 +24,10 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Pending image path from clipboard paste (sidecar save-image-result response)
   const [pendingImagePath, setPendingImagePath] = useState<string | null>(null);
+  const [inputBarHeight, setInputBarHeight] = useState(144); // INBAR-01: ~144px default
+  const isDraggingRef = useRef(false);
+  const dragStartYRef = useRef(0);
+  const dragStartHeightRef = useRef(144);
   const spawnedRef = useRef(false);
   const getDimensionsRef = useRef<() => { cols: number; rows: number }>(() => ({ cols: 80, rows: 24 }));
   const writeRef = useRef<(data: string) => void>(() => { /* noop until terminal mounts */ });
@@ -220,6 +224,32 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     }
   }, [currentShell, sendMessage, getTerminalDimensions]);
 
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    isDraggingRef.current = true;
+    dragStartYRef.current = e.clientY;
+    dragStartHeightRef.current = inputBarHeight;
+    e.preventDefault(); // prevent text selection during drag
+  }, [inputBarHeight]);
+
+  // Input bar drag resize — document-level listeners for mouseup-outside-window safety (Pitfall 1)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const delta = dragStartYRef.current - e.clientY; // dragging up = taller input bar
+      const newHeight = Math.max(80, dragStartHeightRef.current + delta); // 80px min floor
+      setInputBarHeight(newHeight);
+    };
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []); // stable — uses refs only, no deps needed (Pitfall 2)
+
   // Find session metadata for HistoryViewer header
   const replayMeta = replaySessionId !== null
     ? sessions.find(s => s.id === replaySessionId) ?? null
@@ -268,7 +298,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
           Unmounting the container severs the binding; CSS 'hidden' keeps the element in DOM
           so the Terminal reference stays valid. ResizeObserver refits automatically when
           the container transitions from hidden to visible (150ms debounce). */}
-      <div className={`relative flex-1 min-h-0 ${replaySessionId !== null ? 'hidden' : ''}`}>
+      <div className={`relative flex-1 min-h-[60px] ${replaySessionId !== null ? 'hidden' : ''}`}>
         {searchOpen && (
           <SearchOverlay
             searchAddon={searchAddonRef.current}
@@ -279,6 +309,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         <div ref={containerRef} className="h-full" />
       </div>
 
+      {/* Input bar drag handle — INBAR-02 (per D-09) */}
+      <div
+        className="shrink-0 h-1 bg-[#404040] hover:bg-[#007acc] transition-colors cursor-row-resize"
+        onMouseDown={handleDragStart}
+      />
+
       <ChatInputBar
         onSend={handleSendInput}
         disabled={connectionState !== 'connected' || replaySessionId !== null}
@@ -286,6 +322,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         onImagePathConsumed={() => { setPendingImagePath(null); onDroppedPathConsumed?.(); }}
         onImagePaste={(b64, ext) => sendMessage({ type: 'save-image', base64: b64, ext })}
         currentShell={currentShell}
+        height={inputBarHeight}
       />
     </div>
   );
