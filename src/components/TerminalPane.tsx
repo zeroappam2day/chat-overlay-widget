@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useSessionHistory } from '../hooks/useSessionHistory';
+import { usePaneStore } from '../store/paneStore';
 import { TerminalHeader } from './TerminalHeader';
 import { SearchOverlay } from './SearchOverlay';
 import { ChatInputBar } from './ChatInputBar';
@@ -9,7 +10,11 @@ import { HistorySidebar } from './HistorySidebar';
 import { HistoryViewer } from './HistoryViewer';
 import type { ServerMessage } from '../protocol';
 
-export function TerminalPane() {
+interface TerminalPaneProps {
+  paneId: string;
+}
+
+export function TerminalPane({ paneId }: TerminalPaneProps) {
   const [shells, setShells] = useState<string[]>([]);
   const [currentShell, setCurrentShell] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<string>('waiting');
@@ -19,6 +24,17 @@ export function TerminalPane() {
   const getDimensionsRef = useRef<() => { cols: number; rows: number }>(() => ({ cols: 80, rows: 24 }));
   const writeRef = useRef<(data: string) => void>(() => { /* noop until terminal mounts */ });
   const sendMessageRef = useRef<(msg: Parameters<ReturnType<typeof useWebSocket>['sendMessage']>[0]) => void>(() => { /* noop until ws connects */ });
+
+  // Pane store bindings
+  const setActivePane = usePaneStore(state => state.setActivePane);
+  const isActive = usePaneStore(state => state.activePaneId === paneId);
+  const splitPane = usePaneStore(state => state.splitPane);
+  const closePane = usePaneStore(state => state.closePane);
+  const paneCount = usePaneStore(state => state.getPaneCount());
+
+  // Use a ref for isActive so keyboard handlers don't have stale closure issues
+  const isActiveRef = useRef(isActive);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
   // handleHistoryMessage is initialized after useSessionHistory below.
   // Use a ref so handleServerMessage's useCallback can call it without
@@ -31,12 +47,12 @@ export function TerminalPane() {
         writeRef.current(msg.data);
         break;
       case 'pty-ready': {
-        console.log(`[terminal] PTY ready: pid=${msg.pid}, shell=${msg.shell}`);
+        console.log(`[terminal:${paneId}] PTY ready: pid=${msg.pid}, shell=${msg.shell}`);
         // Match full exe path back to short name from shell-list
         // pty-ready sends full path (e.g. C:\Windows\...\powershell.exe)
         // but dropdown options use short names (e.g. powershell.exe)
         const shortName = shells.find(s => msg.shell.toLowerCase().endsWith(s.toLowerCase())) ?? msg.shell;
-        console.log(`[terminal] resolved shell name: ${shortName}`);
+        console.log(`[terminal:${paneId}] resolved shell name: ${shortName}`);
         setCurrentShell(shortName);
         break;
       }
@@ -52,11 +68,11 @@ export function TerminalPane() {
         }, 1000);
         break;
       case 'shell-list':
-        console.log('[terminal] shell-list received:', msg.shells);
+        console.log(`[terminal:${paneId}] shell-list received:`, msg.shells);
         setShells(msg.shells);
         break;
       case 'error':
-        console.error(`[terminal] server error: ${msg.message}`);
+        console.error(`[terminal:${paneId}] server error: ${msg.message}`);
         writeRef.current(`\r\n[Error: ${msg.message}]\r\n`);
         break;
       default:
@@ -64,7 +80,7 @@ export function TerminalPane() {
         handleHistoryMessageRef.current(msg);
         break;
     }
-  }, [shells]);
+  }, [shells, paneId]);
 
   const { state, sendMessage } = useWebSocket({ onMessage: handleServerMessage });
   sendMessageRef.current = sendMessage;
@@ -106,25 +122,32 @@ export function TerminalPane() {
 
   // Auto-spawn default shell when connected and shells are available
   useEffect(() => {
-    console.log(`[terminal] auto-spawn check: state=${state}, shells=${shells.length}, spawned=${spawnedRef.current}`);
+    console.log(`[terminal:${paneId}] auto-spawn check: state=${state}, shells=${shells.length}, spawned=${spawnedRef.current}`);
     if (state === 'connected' && shells.length > 0 && !spawnedRef.current) {
       spawnedRef.current = true;
       // Small delay to ensure xterm.js has measured dimensions
       requestAnimationFrame(() => {
         const dims = getTerminalDimensions();
-        console.log(`[terminal] auto-spawning: shell=${shells[0]}, cols=${dims.cols}, rows=${dims.rows}`);
+        console.log(`[terminal:${paneId}] auto-spawning: shell=${shells[0]}, cols=${dims.cols}, rows=${dims.rows}`);
         sendMessage({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows });
       });
     }
-  }, [state, shells, sendMessage, getTerminalDimensions]);
+  }, [state, shells, sendMessage, getTerminalDimensions, paneId]);
 
   // Intercept Ctrl+F at document level to prevent WebView2 native find-in-page (D-15)
   // Also listen for custom event from xterm.js key handler (when terminal has focus)
   // Also handle Escape to return focus from terminal to input box (D-02)
+  // All handlers are gated: only the ACTIVE pane responds (Pitfall 3 from research)
   useEffect(() => {
-    const toggleSearch = () => setSearchOpen(prev => !prev);
-    document.addEventListener('terminal-toggle-search', toggleSearch);
+    // Gated toggle: only active pane responds to terminal-toggle-search custom event
+    const gatedToggleSearch = () => {
+      if (!isActiveRef.current) return;
+      setSearchOpen(prev => !prev);
+    };
+    document.addEventListener('terminal-toggle-search', gatedToggleSearch);
+
     const handler = (e: KeyboardEvent) => {
+      if (!isActiveRef.current) return; // only active pane responds
       if (e.ctrlKey && e.code === 'KeyF') {
         e.preventDefault();
         setSearchOpen(prev => !prev);
@@ -138,7 +161,7 @@ export function TerminalPane() {
     document.addEventListener('keydown', handler);
     return () => {
       document.removeEventListener('keydown', handler);
-      document.removeEventListener('terminal-toggle-search', toggleSearch);
+      document.removeEventListener('terminal-toggle-search', gatedToggleSearch);
     };
   }, [searchOpen]);
 
@@ -169,7 +192,10 @@ export function TerminalPane() {
     : null;
 
   return (
-    <div className="flex h-screen bg-[#1e1e1e]">
+    <div
+      className={`flex flex-col h-full bg-[#1e1e1e] ${isActive ? 'border-l-2 border-l-[#007acc]' : 'border-l-2 border-l-transparent'}`}
+      onClick={() => setActivePane(paneId)}
+    >
       {/* Collapsible history sidebar (D-05) */}
       {sidebarOpen && (
         <HistorySidebar
@@ -180,46 +206,49 @@ export function TerminalPane() {
         />
       )}
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <TerminalHeader
-          connectionState={connectionState}
-          currentShell={currentShell}
-          shells={shells}
-          onShellChange={handleShellChange}
-          onToggleSidebar={() => setSidebarOpen(s => !s)}
-        />
+      <TerminalHeader
+        connectionState={connectionState}
+        currentShell={currentShell}
+        shells={shells}
+        onShellChange={handleShellChange}
+        onToggleSidebar={() => setSidebarOpen(s => !s)}
+        onSplitHorizontal={() => splitPane(paneId, 'h')}
+        onSplitVertical={() => splitPane(paneId, 'v')}
+        onClose={() => closePane(paneId)}
+        canSplit={paneCount < 4}
+        canClose={paneCount > 1}
+      />
 
-        {/* Replay viewer — only mounted when a session is selected (D-07) */}
-        {replaySessionId !== null && (
-          <HistoryViewer
-            chunks={replayChunks}
-            complete={replayComplete}
-            sessionMeta={replayMeta ? { startedAt: replayMeta.startedAt, shell: replayMeta.shell } : null}
-            onClose={closeReplay}
+      {/* Replay viewer — only mounted when a session is selected (D-07) */}
+      {replaySessionId !== null && (
+        <HistoryViewer
+          chunks={replayChunks}
+          complete={replayComplete}
+          sessionMeta={replayMeta ? { startedAt: replayMeta.startedAt, shell: replayMeta.shell } : null}
+          onClose={closeReplay}
+        />
+      )}
+
+      {/* Live terminal area — hidden via CSS (NOT unmounted) during replay.
+          xterm.js Terminal is bound to its container DOM element via term.open(container).
+          Unmounting the container severs the binding; CSS 'hidden' keeps the element in DOM
+          so the Terminal reference stays valid. ResizeObserver refits automatically when
+          the container transitions from hidden to visible (150ms debounce). */}
+      <div className={`relative flex-1 min-h-0 ${replaySessionId !== null ? 'hidden' : ''}`}>
+        {searchOpen && (
+          <SearchOverlay
+            searchAddon={searchAddonRef.current}
+            onClose={() => setSearchOpen(false)}
           />
         )}
-
-        {/* Live terminal area — hidden via CSS (NOT unmounted) during replay.
-            xterm.js Terminal is bound to its container DOM element via term.open(container).
-            Unmounting the container severs the binding; CSS 'hidden' keeps the element in DOM
-            so the Terminal reference stays valid. ResizeObserver refits automatically when
-            the container transitions from hidden to visible (150ms debounce). */}
-        <div className={`relative flex-1 min-h-0 ${replaySessionId !== null ? 'hidden' : ''}`}>
-          {searchOpen && (
-            <SearchOverlay
-              searchAddon={searchAddonRef.current}
-              onClose={() => setSearchOpen(false)}
-            />
-          )}
-          {/* Terminal mount point — must have explicit height for xterm.js FitAddon */}
-          <div ref={containerRef} className="h-full" />
-        </div>
-
-        <ChatInputBar
-          onSend={handleSendInput}
-          disabled={connectionState !== 'connected' || replaySessionId !== null}
-        />
+        {/* Terminal mount point — must have explicit height for xterm.js FitAddon */}
+        <div ref={containerRef} className="h-full" />
       </div>
+
+      <ChatInputBar
+        onSend={handleSendInput}
+        disabled={connectionState !== 'connected' || replaySessionId !== null}
+      />
     </div>
   );
 }
