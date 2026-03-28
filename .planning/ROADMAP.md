@@ -89,7 +89,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Install deps, Zustand pane store, protocol type extensions for screenshots
-- [ ] 04-02-PLAN.md — Screenshot sidecar backend: save-image handler, temp file tracking, orphan sweep
+- [x] 04-02-PLAN.md — Screenshot sidecar backend: save-image handler, temp file tracking, orphan sweep
 - [ ] 04-03-PLAN.md — PaneContainer, TerminalPane multi-pane refactor, split/close/resize UI
 - [ ] 04-04-PLAN.md — Screenshot frontend (drag-drop + paste), always-on-top toggle, adaptive layout
 
@@ -117,5 +117,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Scaffolding | 3/3 | Complete | 2026-03-27 |
 | 2. PTY Bridge | 3/3 | Complete | 2026-03-27 |
 | 3. Chat Overlay MVP | 4/4 | Complete | 2026-03-28 |
-| 4. Differentiating Features | 1/4 | Executing | - |
+| 4. Differentiating Features | 2/4 | In Progress|  |
 | 5. Production Hardening | 0/TBD | Not started | - |

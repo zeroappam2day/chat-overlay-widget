@@ -41,15 +41,15 @@
 
 - [x] **HIST-01**: Chat history persisted within current session (in-memory + display)
 - [x] **HIST-02**: Chat history persisted across app sessions (SQLite on disk)
-- [ ] **HIST-03**: Per-pane chat history in multi-pane mode (separate history per split pane)
+- [x] **HIST-03**: Per-pane chat history in multi-pane mode (separate history per split pane)
 - [x] **HIST-04**: User can browse and scroll through past conversations
 
 ### Screenshots
 
 - [ ] **SCRN-01**: User can drag and drop image onto the app to send to CLI
 - [ ] **SCRN-02**: User can paste image from clipboard to send to CLI
-- [ ] **SCRN-03**: Images saved to temp folder, file path passed to CLI as input
-- [ ] **SCRN-04**: Temp screenshot files automatically deleted on session close
+- [x] **SCRN-03**: Images saved to temp folder, file path passed to CLI as input
+- [x] **SCRN-04**: Temp screenshot files automatically deleted on session close
 
 ### Multi-Pane (psmux)
 
@@ -124,9 +124,9 @@
 | HIST-04 | Phase 3 | Complete |
 | SCRN-01 | Phase 4 | Pending |
 | SCRN-02 | Phase 4 | Pending |
-| SCRN-03 | Phase 4 | Pending |
-| SCRN-04 | Phase 4 | Pending |
-| HIST-03 | Phase 4 | Pending |
+| SCRN-03 | Phase 4 | Complete |
+| SCRN-04 | Phase 4 | Complete |
+| HIST-03 | Phase 4 | Complete |
 | PSMUX-01 | Phase 4 | Pending |
 | PSMUX-02 | Phase 4 | Pending |
 | PSMUX-03 | Phase 4 | Pending |

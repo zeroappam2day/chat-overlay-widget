@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-28T04:53:25.546Z"
-last_activity: 2026-03-28 -- Phase 04 execution started
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-28T05:06:46.184Z"
+last_activity: 2026-03-28
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 14
-  completed_plans: 10
+  completed_plans: 12
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 ## Current Position
 
 Phase: 04 (differentiating-features) — EXECUTING
-Plan: 2 of 4
-Status: Executing Phase 04
-Last activity: 2026-03-28 -- Phase 04 Plan 01 complete (04-01: pane store + protocol contracts)
+Plan: 3 of 4
+Status: Ready to execute
+Last activity: 2026-03-28
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P03 | 69 | 2 tasks | 2 files |
 | Phase 03-chat-overlay-mvp P04 | 25 | 3 tasks | 7 files |
 | Phase 04-differentiating-features P01 | 4 | 2 tasks | 5 files |
+| Phase 04-differentiating-features P02 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,8 @@ Recent decisions affecting current work:
 - [Phase 04-differentiating-features P01]: 4-pane soft cap in splitPane — if getPaneCount() >= 4 return without splitting (research open question 1)
 - [Phase 04-differentiating-features P01]: No cleanup-images protocol message — PTYSession.destroy() on WS close handles SCRN-04 implicitly
 - [Phase 04-differentiating-features P01]: removeFromTree collapses SplitNode with single child — replace with remaining child, not empty split
+- [Phase 04-differentiating-features]: saveImage async, cleanupTempFiles fire-and-forget unlink; SCREENSHOT_DIR exported from ptySession.ts for single-source path reference
+- [Phase 04-differentiating-features]: sweepScreenshotTempFiles() called at sidecar startup after markOrphans(); no cleanup-images message — destroy-on-close is the single SCRN-04 cleanup path
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T04:57:00Z
-Stopped at: Completed 04-01-PLAN.md
-Resume file: .planning/phases/04-differentiating-features/04-02-PLAN.md
+Last session: 2026-03-28T05:06:46.178Z
+Stopped at: Completed 04-02-PLAN.md
+Resume file: None
