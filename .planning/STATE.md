@@ -1,42 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-03-28T05:09:16.599Z"
-last_activity: 2026-03-28
+milestone: v1.1
+milestone_name: Screenshot Automation & Input Polish
+status: planning
+stopped_at: Phase 6 context gathered (assumptions mode)
+last_updated: "2026-03-28T11:34:44.361Z"
+last_activity: 2026-03-28 — v1.1 roadmap created (Phases 6-9)
 progress:
-  total_phases: 5
-  completed_phases: 3
-  total_plans: 14
-  completed_plans: 13
-  percent: 0
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-26)
+See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 04 — differentiating-features
+**Current focus:** v1.1 roadmap defined — ready to plan Phase 6
 
 ## Current Position
 
-Phase: 04 (differentiating-features) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-03-28
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Phase 6 (Shell Path Formatting & Input Bar) — Not started
+Plan: —
+Status: Roadmap defined, awaiting phase planning
+Last activity: 2026-03-28 — v1.1 roadmap created (Phases 6-9)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 0 (v1.1)
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -101,6 +98,10 @@ Recent decisions affecting current work:
 - [Phase 04-differentiating-features P03]: react-resizable-panels v4 exports Group/Panel/Separator (not PanelGroup/PanelResizeHandle as in v1/v2); orientation prop not direction
 - [Phase 04-differentiating-features P03]: isActiveRef pattern: stable ref updated from reactive state used in document event handlers to avoid stale closures in multi-pane keyboard gating
 - [Phase 04-differentiating-features P03]: gatedToggleSearch: terminal-toggle-search custom event gated to active pane — prevents Ctrl+F from opening search in all panes simultaneously
+- [v1.1 Roadmap]: Phase 6 (shell path + input bar) has no new npm deps — zero caxa rebuild required until Phase 7
+- [v1.1 Roadmap]: shellPath.ts formatPathForShell pure function needed in sidecar before Phase 8 uses it in HTTP responses — build it in Phase 6 even though Phase 6 has no HTTP server
+- [v1.1 Roadmap]: Phase 7 uses Node.js built-in http module — no new npm deps; puppeteer-core added in Phase 9 triggers caxa rebuild
+- [v1.1 Roadmap]: Port discovery file at %TEMP%/chat-overlay-api — write atomically (tmp-then-rename), bearer token required on all HTTP endpoints, file deleted on clean shutdown (CAPI-04)
 
 ### Pending Todos
 
@@ -108,12 +109,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: caxa + node-pty + Windows x64 has limited documented examples — spike caxa bundling early in Phase 1 before any other sidecar work
-- [Phase 2]: Validate that ConPTY via node-pty satisfies Claude Code's TTY detection check before investing in full UI
-- [Phase 4]: psmux event listener lifecycle (node-pty disposable pattern) needs enforcement from the start — MaxListenersExceededWarning risk
+- [Phase 8]: DPI capture validation — SetHighDpiMode(PerMonitorV2) interaction with CopyFromScreen on 125%+ scaled displays is MEDIUM confidence. Must validate on non-100% display before accepting Phase 8.
+- [Phase 9]: Chrome CDP single-process constraint — Chrome running without --remote-debugging-port cannot be attached to; flag ignored if Chrome already running. Treat browser capture as best-effort opt-in; always fall back to window capture.
+- [v1.1 general]: caxa extraction + Windows Defender — extend existing Defender workaround (see MEMORY.md: project_windows_defender_cargo_fix.md) to caxa extraction directory when adding puppeteer-core in Phase 9.
 
 ## Session Continuity
 
-Last session: 2026-03-28T05:09:16.594Z
-Stopped at: Completed 04-03-PLAN.md
-Resume file: None
+Last session: 2026-03-28T11:34:44.356Z
+Stopped at: Phase 6 context gathered (assumptions mode)
+Resume file: .planning/phases/06-shell-path-formatting-input-bar/06-CONTEXT.md
