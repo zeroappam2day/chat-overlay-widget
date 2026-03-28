@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-chat-overlay-mvp-04-PLAN.md
-last_updated: "2026-03-27T13:41:47.266Z"
-last_activity: 2026-03-27
+status: executing
+stopped_at: Phase 4 context gathered
+last_updated: "2026-03-28T04:53:25.546Z"
+last_activity: 2026-03-28 -- Phase 04 execution started
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 10
+  total_plans: 14
   completed_plans: 10
   percent: 0
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 03 — chat-overlay-mvp
+**Current focus:** Phase 04 — differentiating-features
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-03-27
+Phase: 04 (differentiating-features) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 04
+Last activity: 2026-03-28 -- Phase 04 Plan 01 complete (04-01: pane store + protocol contracts)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-chat-overlay-mvp P02 | 15 | 2 tasks | 5 files |
 | Phase 03 P03 | 69 | 2 tasks | 2 files |
 | Phase 03-chat-overlay-mvp P04 | 25 | 3 tasks | 7 files |
+| Phase 04-differentiating-features P01 | 4 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Escape handler co-located with Ctrl+F effect, searchOpen as dependency — gates Escape so it doesn't steal focus when search overlay is open
 - [Phase 03-chat-overlay-mvp]: CSS hidden class (not unmount) for live terminal during replay — xterm.js Terminal.open() binds to DOM; unmounting severs reference causing blank terminal on return
 - [Phase 03-chat-overlay-mvp]: handleHistoryMessageRef pattern — stable ref bridges useSessionHistory callback into handleServerMessage useCallback without coupling deps
+- [Phase 04-differentiating-features P01]: 4-pane soft cap in splitPane — if getPaneCount() >= 4 return without splitting (research open question 1)
+- [Phase 04-differentiating-features P01]: No cleanup-images protocol message — PTYSession.destroy() on WS close handles SCRN-04 implicitly
+- [Phase 04-differentiating-features P01]: removeFromTree collapses SplitNode with single child — replace with remaining child, not empty split
 
 ### Pending Todos
 
@@ -103,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T13:37:38.697Z
-Stopped at: Completed 03-chat-overlay-mvp-04-PLAN.md
-Resume file: None
+Last session: 2026-03-28T04:57:00Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: .planning/phases/04-differentiating-features/04-02-PLAN.md

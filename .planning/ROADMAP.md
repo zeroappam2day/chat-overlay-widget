@@ -13,8 +13,8 @@ Five phases, strictly dependency-ordered. The PTY bridge is the root dependency 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Scaffolding** - Tauri + Node.js sidecar compiling cleanly with node-pty, WebSocket bridge established
-- [ ] **Phase 2: PTY Bridge** - Single-pane PTY session: keystroke → shell → xterm.js roundtrip verified end-to-end
-- [ ] **Phase 3: Chat Overlay MVP** - Chat input overlay, terminal rendering features, and session-scoped history complete the usable app
+- [x] **Phase 2: PTY Bridge** - Single-pane PTY session: keystroke → shell → xterm.js roundtrip verified end-to-end
+- [x] **Phase 3: Chat Overlay MVP** - Chat input overlay, terminal rendering features, and session-scoped history complete the usable app
 - [ ] **Phase 4: Differentiating Features** - Screenshots, multi-pane, persistent history, and always-on-top make the app distinctively useful
 - [ ] **Phase 5: Production Hardening** - Packaged .exe validated, WebSocket reconnect, process cleanup, and UX polish verified
 
@@ -85,7 +85,14 @@ Plans:
   3. User can close a pane and no orphaned shell processes or event listener warnings occur
   4. User can toggle always-on-top and the window stays above other applications until toggled off
   5. Resizing the app window causes each terminal pane to resize proportionally and xterm.js fits to the available space
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [x] 04-01-PLAN.md — Install deps, Zustand pane store, protocol type extensions for screenshots
+- [ ] 04-02-PLAN.md — Screenshot sidecar backend: save-image handler, temp file tracking, orphan sweep
+- [ ] 04-03-PLAN.md — PaneContainer, TerminalPane multi-pane refactor, split/close/resize UI
+- [ ] 04-04-PLAN.md — Screenshot frontend (drag-drop + paste), always-on-top toggle, adaptive layout
+
 **UI hint**: yes
 
 ### Phase 5: Production Hardening
@@ -108,7 +115,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Scaffolding | 3/3 | Complete | 2026-03-27 |
-| 2. PTY Bridge | 1/3 | In Progress|  |
-| 3. Chat Overlay MVP | 3/4 | In Progress|  |
-| 4. Differentiating Features | 0/TBD | Not started | - |
+| 2. PTY Bridge | 3/3 | Complete | 2026-03-27 |
+| 3. Chat Overlay MVP | 4/4 | Complete | 2026-03-28 |
+| 4. Differentiating Features | 1/4 | Executing | - |
 | 5. Production Hardening | 0/TBD | Not started | - |
