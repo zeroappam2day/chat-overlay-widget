@@ -4,6 +4,7 @@ import { appWindow } from '@tauri-apps/api/window';
 import { usePaneStore } from '../store/paneStore';
 import type { LayoutNode, SplitNode } from '../store/paneStore';
 import { TerminalPane } from './TerminalPane';
+import { AppHeader } from './AppHeader';
 
 function renderLayout(
   node: LayoutNode,
@@ -97,6 +98,7 @@ export function PaneContainer() {
 
   return (
     <div className="flex flex-col h-screen bg-[#1e1e1e]" ref={containerRef}>
+      <AppHeader />
       <div className="flex-1 min-h-0">
         {renderLayout(layout, isNarrow, activePaneId, droppedImagePath, clearDroppedPath)}
       </div>
