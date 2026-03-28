@@ -1,13 +1,16 @@
 import { WebSocketServer } from 'ws';
 import type WebSocket from 'ws';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { ClientMessage, ServerMessage, SessionMeta } from './protocol.js';
-import { PTYSession } from './ptySession.js';
+import { PTYSession, SCREENSHOT_DIR } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
 markOrphans();
+sweepScreenshotTempFiles();
 console.log('[sidecar] SQLite session database initialized');
 
 const wss = new WebSocketServer({ host: '127.0.0.1', port: 0 });
@@ -24,6 +27,20 @@ const activeSessions = new Map<WebSocket, PTYSession>();
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
     ws.send(JSON.stringify(msg));
+  }
+}
+
+async function sweepScreenshotTempFiles(): Promise<void> {
+  try {
+    const files = await fs.promises.readdir(SCREENSHOT_DIR);
+    await Promise.all(
+      files.map(f => fs.promises.unlink(path.join(SCREENSHOT_DIR, f)).catch(() => {}))
+    );
+    if (files.length > 0) {
+      console.log(`[sidecar] swept ${files.length} orphan screenshot temp files`);
+    }
+  } catch {
+    /* directory doesn't exist — that's fine */
   }
 }
 
@@ -111,6 +128,21 @@ wss.on('connection', (ws: WebSocket) => {
           sendMsg(ws, { type: 'history-chunk', data: chunk.data.toString('utf-8') });
         }
         sendMsg(ws, { type: 'history-end', sessionId: msg.sessionId });
+        break;
+      }
+      case 'save-image': {
+        const session = activeSessions.get(ws);
+        if (!session) {
+          sendMsg(ws, { type: 'error', message: 'No active session for save-image' });
+          break;
+        }
+        session.saveImage(msg.base64, msg.ext)
+          .then(filePath => {
+            sendMsg(ws, { type: 'save-image-result', path: filePath });
+          })
+          .catch(err => {
+            sendMsg(ws, { type: 'error', message: `Failed to save image: ${err}` });
+          });
         break;
       }
     }

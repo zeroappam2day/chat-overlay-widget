@@ -1,7 +1,13 @@
 import * as pty from 'node-pty';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import * as crypto from 'node:crypto';
 import type WebSocket from 'ws';
 import type { ServerMessage } from './protocol.js';
 import { SessionRecorder } from './sessionRecorder.js';
+
+export const SCREENSHOT_DIR = path.join(os.tmpdir(), 'chat-overlay-screenshots');
 
 function send(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
@@ -14,6 +20,7 @@ export class PTYSession {
   private dataDisposable: pty.IDisposable;
   private exitDisposable: pty.IDisposable;
   private recorder: SessionRecorder;
+  private tempFiles: string[] = [];
 
   constructor(
     private ws: WebSocket,
@@ -53,7 +60,25 @@ export class PTYSession {
     this.ptyProcess.resize(cols, rows);
   }
 
+  async saveImage(base64: string, ext: string): Promise<string> {
+    await fs.promises.mkdir(SCREENSHOT_DIR, { recursive: true });
+    const filename = `${this.sessionId}-${crypto.randomUUID()}.${ext}`;
+    const filePath = path.join(SCREENSHOT_DIR, filename);
+    const buffer = Buffer.from(base64, 'base64');
+    await fs.promises.writeFile(filePath, buffer);
+    this.tempFiles.push(filePath);
+    return filePath;
+  }
+
+  private cleanupTempFiles(): void {
+    for (const f of this.tempFiles) {
+      fs.unlink(f, () => {}); // async fire-and-forget
+    }
+    this.tempFiles = [];
+  }
+
   destroy(): void {
+    this.cleanupTempFiles();
     this.recorder.end();
     this.dataDisposable.dispose();
     this.exitDisposable.dispose();
