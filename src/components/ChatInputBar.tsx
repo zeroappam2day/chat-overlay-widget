@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { quotePathForShell } from '../utils/shellQuote';
 
 interface ChatInputBarProps {
   onSend: (text: string) => void;
@@ -6,9 +7,10 @@ interface ChatInputBarProps {
   onImagePaste?: (base64: string, ext: string) => void;
   pendingImagePath?: string | null;
   onImagePathConsumed?: () => void;
+  currentShell?: string | null;
 }
 
-export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath, onImagePathConsumed }: ChatInputBarProps) {
+export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath, onImagePathConsumed, currentShell }: ChatInputBarProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -82,16 +84,17 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
   }, [onImagePaste]);
 
   // Inject pending image path into the input box when it changes (SCRN-01, SCRN-02)
+  // Path is shell-quoted at injection time so it executes correctly in the active shell (PATH-01)
   useEffect(() => {
     if (pendingImagePath) {
       setValue(prev => {
         const prefix = prev.trim() ? prev.trim() + ' ' : '';
-        return prefix + pendingImagePath;
+        return prefix + quotePathForShell(pendingImagePath, currentShell ?? null);
       });
       onImagePathConsumed?.();
       textareaRef.current?.focus();
     }
-  }, [pendingImagePath, onImagePathConsumed]);
+  }, [pendingImagePath, onImagePathConsumed, currentShell]);
 
   return (
     <div className="shrink-0 px-3 py-2 bg-[#2d2d2d] border-t border-[#404040]">

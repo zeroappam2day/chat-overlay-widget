@@ -285,6 +285,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         pendingImagePath={pendingImagePath ?? droppedImagePath}
         onImagePathConsumed={() => { setPendingImagePath(null); onDroppedPathConsumed?.(); }}
         onImagePaste={(b64, ext) => sendMessage({ type: 'save-image', base64: b64, ext })}
+        currentShell={currentShell}
       />
     </div>
   );
