@@ -55,9 +55,15 @@ export function useTerminal({ onData, onResize }: UseTerminalOptions): UseTermin
     term.open(container);
 
     // Gate first fit on nonzero dimensions (Pitfall 2 from RESEARCH.md)
-    if (container.offsetWidth > 0 && container.offsetHeight > 0) {
-      fitAddon.fit();
-    }
+    // Defer to requestAnimationFrame — xterm.js RenderService needs a frame to
+    // initialize internal dimensions after term.open(). Without this, fitAddon.fit()
+    // triggers RenderService.dimensions access before it's ready, causing:
+    // "Cannot read properties of undefined (reading 'dimensions')"
+    requestAnimationFrame(() => {
+      if (container.offsetWidth > 0 && container.offsetHeight > 0) {
+        fitAddon.fit();
+      }
+    });
 
     termRef.current = term;
     fitRef.current = fitAddon;
