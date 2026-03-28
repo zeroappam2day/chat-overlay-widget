@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-28T05:06:46.184Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-03-28T05:09:16.599Z"
 last_activity: 2026-03-28
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 ## Current Position
 
 Phase: 04 (differentiating-features) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-03-28
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-chat-overlay-mvp P04 | 25 | 3 tasks | 7 files |
 | Phase 04-differentiating-features P01 | 4 | 2 tasks | 5 files |
 | Phase 04-differentiating-features P02 | 8 | 2 tasks | 2 files |
+| Phase 04-differentiating-features P03 | 12 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ Recent decisions affecting current work:
 - [Phase 04-differentiating-features P01]: removeFromTree collapses SplitNode with single child — replace with remaining child, not empty split
 - [Phase 04-differentiating-features]: saveImage async, cleanupTempFiles fire-and-forget unlink; SCREENSHOT_DIR exported from ptySession.ts for single-source path reference
 - [Phase 04-differentiating-features]: sweepScreenshotTempFiles() called at sidecar startup after markOrphans(); no cleanup-images message — destroy-on-close is the single SCRN-04 cleanup path
+- [Phase 04-differentiating-features P03]: react-resizable-panels v4 exports Group/Panel/Separator (not PanelGroup/PanelResizeHandle as in v1/v2); orientation prop not direction
+- [Phase 04-differentiating-features P03]: isActiveRef pattern: stable ref updated from reactive state used in document event handlers to avoid stale closures in multi-pane keyboard gating
+- [Phase 04-differentiating-features P03]: gatedToggleSearch: terminal-toggle-search custom event gated to active pane — prevents Ctrl+F from opening search in all panes simultaneously
 
 ### Pending Todos
 
@@ -110,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T05:06:46.178Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-03-28T05:09:16.594Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

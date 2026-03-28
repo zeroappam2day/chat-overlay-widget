@@ -53,16 +53,16 @@
 
 ### Multi-Pane (psmux)
 
-- [ ] **PSMUX-01**: User can create multiple terminal panes in split layout
-- [ ] **PSMUX-02**: Each pane runs an independent PTY session (own shell process)
-- [ ] **PSMUX-03**: User can close individual panes (PTY session cleaned up)
-- [ ] **PSMUX-04**: User can resize panes by dragging dividers
+- [x] **PSMUX-01**: User can create multiple terminal panes in split layout
+- [x] **PSMUX-02**: Each pane runs an independent PTY session (own shell process)
+- [x] **PSMUX-03**: User can close individual panes (PTY session cleaned up)
+- [x] **PSMUX-04**: User can resize panes by dragging dividers
 
 ### Window Management
 
 - [ ] **WIN-01**: Always-on-top toggle (pin window above all others)
 - [ ] **WIN-02**: Adaptive layout responsive to screen size and window shape
-- [ ] **WIN-03**: xterm.js terminal auto-fits to available pane size on resize
+- [x] **WIN-03**: xterm.js terminal auto-fits to available pane size on resize
 
 ## v2 Requirements
 
@@ -127,13 +127,13 @@
 | SCRN-03 | Phase 4 | Complete |
 | SCRN-04 | Phase 4 | Complete |
 | HIST-03 | Phase 4 | Complete |
-| PSMUX-01 | Phase 4 | Pending |
-| PSMUX-02 | Phase 4 | Pending |
-| PSMUX-03 | Phase 4 | Pending |
-| PSMUX-04 | Phase 4 | Pending |
+| PSMUX-01 | Phase 4 | Complete |
+| PSMUX-02 | Phase 4 | Complete |
+| PSMUX-03 | Phase 4 | Complete |
+| PSMUX-04 | Phase 4 | Complete |
 | WIN-01 | Phase 4 | Pending |
 | WIN-02 | Phase 4 | Pending |
-| WIN-03 | Phase 4 | Pending |
+| WIN-03 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 35 total
