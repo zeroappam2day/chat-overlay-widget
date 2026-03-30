@@ -171,7 +171,9 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   2. A `capture-window-with-metadata` request message and its response type are defined and exported from both protocol files
   3. TypeScript compiler accepts imports of the new types in sidecar server.ts and frontend useWebSocket.ts without errors
   4. Existing WS message types (pty-input, pty-output, resize, etc.) are unaffected — no regressions in running app
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [x] 16-01-PLAN.md -- Protocol types for batch thumbnails and enriched capture
 **UI hint**: no
 
 ### Phase 17: Batch Thumbnail Backend
@@ -183,7 +185,9 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   2. Thumbnails are visually recognizable mini-captures of each window (240x180 via PrintWindow PW_RENDERFULLCONTENT)
   3. A second `list-windows-with-thumbnails` request within the cache TTL returns immediately (no second PowerShell spawn observable in sidecar logs)
   4. Thumbnail generation uses a single async PowerShell spawn for the entire batch — not one spawn per window
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 17-01-PLAN.md -- Batch thumbnail module (TDD) + server.ts wiring
 
 ### Phase 18: Enriched Capture Backend
 **Goal**: Window capture via WebSocket returns pixel-accurate bounds, DPI scale, and capture dimensions alongside the file path; existing HTTP endpoints continue working unchanged
@@ -234,7 +238,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 | 13. Window Capture | v1.2 | Complete | 2026-03-30 |
 | 14. CLI Wrapper | v1.2 | Complete | 2026-03-30 |
 | 15. Claude Skill | v1.2 | Complete | 2026-03-30 |
-| 16. Protocol Extension | 1/1 | Complete   | 2026-03-30 |
+| 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
 | 17. Batch Thumbnail Backend | v1.3 | Not started | — |
 | 18. Enriched Capture Backend | v1.3 | Not started | — |
 | 19. Window Picker UI | v1.3 | Not started | — |
