@@ -127,6 +127,35 @@ Requirements for Live App Awareness & Capture milestone.
 - [x] **SKIL-02**: Skill dynamically injects current window list via overlay-capture list
 - [x] **SKIL-03**: Skill captures selected window and returns file path for Claude to reference
 
+## v1.3 Requirements
+
+Requirements for Window Picker & LLM-Actionable Capture milestone.
+
+### Thumbnails
+
+- [ ] **THUMB-01**: User can request batch thumbnails of all visible windows via a single async operation
+- [ ] **THUMB-02**: Each thumbnail is a mini-capture (240x180) returned as base64 with window title and process name
+- [ ] **THUMB-03**: Thumbnails are briefly cached to avoid re-capturing on picker reopen
+- [ ] **THUMB-04**: User can filter windows by title or process name in the picker
+
+### Picker
+
+- [ ] **PICK-01**: User can open a window picker popover/panel from the UI showing thumbnail grid
+- [ ] **PICK-02**: User can navigate the thumbnail grid with arrow keys and select with Enter
+- [ ] **PICK-03**: User can manually refresh the window list without closing the picker
+
+### Capture
+
+- [ ] **CAPT-01**: Capture result includes window bounds (x, y, w, h), capture dimensions, and DPI scale
+- [ ] **CAPT-02**: Structured metadata block is formatted alongside the image path in ChatInputBar
+- [ ] **CAPT-03**: Metadata follows Claude computer_use coordinate conventions for LLM spatial reasoning
+
+### Integration
+
+- [x] **INTG-01**: New WebSocket message types (list-windows-with-thumbnails, capture-window-with-metadata) added to protocol
+- [ ] **INTG-02**: Existing HTTP endpoints (/list-windows, /capture/window, /health) continue working for CLI wrapper
+- [ ] **INTG-03**: Captured path + metadata injected into active pane's ChatInputBar on window selection
+
 ## v2 Requirements
 
 ### Input Enhancements
@@ -158,16 +187,21 @@ Requirements for Live App Awareness & Capture milestone.
 | Mobile / tablet support | Desktop only |
 | Tauri v2 migration | v1.7.2 is stable and sufficient |
 | Browser CDP capture | Dropped from v1.1 — window capture covers the use case without CDP complexity |
-| Window thumbnail previews | DWM thumbnail API + Rust bridge — disproportionate effort for marginal gain |
+| DWM live thumbnails | WebView2 compositor constraint — cannot compose DWM thumbnails in HTML DOM. Using PrintWindow mini-captures instead (v1.3) |
 | Hover-to-highlight window detection | Overlay app steals focus; title-based selection is deterministic |
 | Screenshot annotation/markup | Separate product category; use OS tools |
 | Auto-capture on every prompt | Side effects without user intent; Claude decides when to use skill |
+| Automation execution (nut.js/SendInput) | Future milestone — v1.3 metadata format is forward-compatible |
+| Computer Use API bridge | Separate Claude API agent loop — future milestone |
+| Video/screen recording | Different product category |
+| Multi-monitor window grouping | Complexity vs. value — defer |
+| Window manipulation (minimize/resize/move) | Out of scope for capture tool |
 
 ## Traceability
 
 v1 (35 reqs): INFRA-01–05 → Phase 1; PTY-01–07 → Phase 2; TERM-01–05, INPUT-01–03, HIST-01/02/04 → Phase 3; SCRN-01–04, HIST-03, PSMUX-01–04, WIN-01–03 → Phase 4. All complete.
 
-v1.1 (5 reqs): PATH-01/02 → Phase 6 (complete); INBAR-01–03 → Phase 6 (pending). Original v1.1 CAPI/WCAP/BCAP/CLIP superseded by v1.2.
+v1.1 (5 reqs): PATH-01/02 → Phase 6 (complete); INBAR-01–03 → Phase 6 (complete). Original v1.1 CAPI/WCAP/BCAP/CLIP superseded by v1.2.
 
 v1.2 (20 reqs):
 
@@ -198,5 +232,25 @@ v1.2 (20 reqs):
 
 Coverage: 20/20 v1.2 requirements mapped. No orphans.
 
+v1.3 (13 reqs):
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INTG-01 | Phase 16 | Complete |
+| THUMB-01 | Phase 17 | Pending |
+| THUMB-02 | Phase 17 | Pending |
+| THUMB-03 | Phase 17 | Pending |
+| CAPT-01 | Phase 18 | Pending |
+| INTG-02 | Phase 18 | Pending |
+| PICK-01 | Phase 19 | Pending |
+| PICK-02 | Phase 19 | Pending |
+| PICK-03 | Phase 19 | Pending |
+| THUMB-04 | Phase 19 | Pending |
+| CAPT-02 | Phase 20 | Pending |
+| CAPT-03 | Phase 20 | Pending |
+| INTG-03 | Phase 20 | Pending |
+
+Coverage: 13/13 v1.3 requirements mapped. No orphans.
+
 ---
-*Defined: 2026-03-27 | Updated: 2026-03-30 after Phase 15 completion*
+*Defined: 2026-03-27 | Updated: 2026-03-30 — v1.3 roadmap created (Phases 16-20)*

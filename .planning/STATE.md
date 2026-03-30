@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Live App Awareness & Capture
-status: complete
-stopped_at: v1.2 milestone complete
-last_updated: "2026-03-30"
+milestone: v1.0
+milestone_name: Core Application
+status: verifying
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-03-30T16:07:29.306Z"
 last_activity: 2026-03-30
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
 ---
 
 # Project State
@@ -20,16 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** v1.2 milestone complete
+**Current focus:** Phase 16 — protocol-extension
 
 ## Current Position
 
-Phase: 15 (complete)
-Plan: All complete
-Status: v1.2 milestone complete
+Phase: 16 (protocol-extension) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
 Last activity: 2026-03-30
-
-Progress bar: [##########] 6/6 phases complete
 
 ## Performance Metrics
 
@@ -87,7 +85,7 @@ Phase-specific decisions affecting current/future work:
 - [v1.2]: SetProcessDpiAwarenessContext must be first call in capture PS script (P19)
 - [Phase 10]: react-resizable-panels v4 uses onLayoutChanged(Layout map) not onLayout(number[]) — adapted with Panel id= prop and map-to-array conversion
 - [Phase 10]: Counter suffix on pane/split IDs prevents Date.now() collision on rapid splits in tests
-- [Phase Phase 10]: All 4 manual tests passed — PTY session survives split, scrollback preserved, stty size correct, onLayout persistence confirmed
+- [Phase 10]: All 4 manual tests passed — PTY session survives split, scrollback preserved, stty size correct, onLayout persistence confirmed
 - [Phase 11]: Shared HTTP+WS port via WebSocketServer({ server: httpServer }) — CAPI-01 authoritative over STATE.md todo
 - [Phase 11]: Discovery file at %APPDATA%/chat-overlay-widget/api.port with JSON { port, token } format
 - [Phase 11]: Bearer auth on all HTTP endpoints; crypto.randomBytes(32) token; log char count only, never value
@@ -95,18 +93,23 @@ Phase-specific decisions affecting current/future work:
 - [Phase 12-window-enumeration]: GetWindowLongPtr (64-bit aware) not GetWindowLong — required on 64-bit Windows 11; WS_EX_TOOLWINDOW declared as long
 - [Phase 13]: buildCaptureScript exported for testability — allows PS script content assertions in unit tests without running PowerShell
 - [Phase 13]: fs.mkdirSync used for SCREENSHOT_DIR creation (not PS mkdir spawnSync) — simpler, consistent with ptySession.ts pattern
+- [v1.3 roadmap]: Thumbnail batch must use single async PS spawn (not spawnSync, not per-window spawns) — THUMB-01 constraint
+- [v1.3 roadmap]: Thumbnail size: 240x180 via PrintWindow PW_RENDERFULLCONTENT — same technique as window capture but scaled
+- [v1.3 roadmap]: Enriched capture metadata format: { path, bounds: {x,y,w,h}, captureSize: {w,h}, dpiScale } — computer_use compatible
+- [v1.3 roadmap]: Protocol extension in Phase 16 must land in both sidecar/src/protocol.ts and src/protocol.ts before Phase 17/19 start
+- [Phase 16]: WindowThumbnail as named interface (not inline) for reuse in Phase 17/19 handlers
 
 ### Todos
 
-(None — v1.2 complete)
+- Plan Phase 16 (Protocol Extension) to unblock Phase 17 and Phase 19 work
 
 ### Blockers/Concerns
 
-(None — v1.2 complete)
+(None)
 
 ## Session Continuity
 
-Last session: 2026-03-30
-Stopped at: v1.2 milestone complete
+Last session: 2026-03-30T16:07:29.298Z
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None
-Next action: /gsd:new-milestone
+Next action: `/gsd:plan-phase 16`
