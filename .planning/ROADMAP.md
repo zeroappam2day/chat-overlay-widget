@@ -81,7 +81,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 
 ### Phases
 
-- [ ] **Phase 10: Split Pane Preservation** — Fix React unmount destroying PTY session on split
+- [x] **Phase 10: Split Pane Preservation** — Fix React unmount destroying PTY session on split (completed 2026-03-30)
 - [ ] **Phase 11: Capture Infrastructure** — Sidecar HTTP server + port/token discovery file
 - [ ] **Phase 12: Window Enumeration** — List visible taskbar apps via PowerShell, 5s cache, HTTP endpoint
 - [ ] **Phase 13: Window Capture** — Capture any window by title, DPI-aware, PrintWindow for occluded windows
@@ -100,7 +100,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   3. xterm.js in both panes refits to their new panel dimensions after split (stty size reports correct cols/rows)
 **Plans**: 2 plans
 - [x] 10-01-PLAN.md — CSS visibility flat-render refactor + paneStore tests + onLayout wiring
-- [ ] 10-02-PLAN.md — Manual verification of split preservation (checkpoint)
+- [x] 10-02-PLAN.md — Manual verification of split preservation (checkpoint)
 **UI hint**: yes
 
 ### Phase 11: Capture Infrastructure
@@ -165,7 +165,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 | 7. Capture HTTP Server | v1.1 | Not started | |
 | 8. Window Screenshot Capture | v1.1 | Not started | |
 | 9. Browser CDP & CLI Wrapper | v1.1 | Not started | |
-| 10. Split Pane Preservation | 1/2 | In Progress|  |
+| 10. Split Pane Preservation | 2/2 | Complete   | 2026-03-30 |
 | 11. Capture Infrastructure | v1.2 | Not started | |
 | 12. Window Enumeration | v1.2 | Not started | |
 | 13. Window Capture | v1.2 | Not started | |

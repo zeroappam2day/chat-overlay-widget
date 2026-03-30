@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
-status: executing
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-03-30T04:24:34.771Z"
+status: verifying
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-03-30T05:04:37.113Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 
 Phase: 10 (split-pane-preservation) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-30
 
 Progress bar: [··········] 0/6 phases complete
@@ -87,6 +87,7 @@ Phase-specific decisions affecting current/future work:
 - [v1.2]: SetProcessDpiAwarenessContext must be first call in capture PS script (P19)
 - [Phase 10]: react-resizable-panels v4 uses onLayoutChanged(Layout map) not onLayout(number[]) — adapted with Panel id= prop and map-to-array conversion
 - [Phase 10]: Counter suffix on pane/split IDs prevents Date.now() collision on rapid splits in tests
+- [Phase Phase 10]: All 4 manual tests passed — PTY session survives split, scrollback preserved, stty size correct, onLayout persistence confirmed
 
 ### Todos
 
@@ -105,7 +106,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-30T04:24:34.764Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-03-30T05:04:37.107Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 10
