@@ -1,3 +1,5 @@
+import * as http from 'node:http';
+import * as crypto from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import type WebSocket from 'ws';
 import * as fs from 'node:fs';
@@ -6,6 +8,7 @@ import type { ClientMessage, ServerMessage, SessionMeta } from './protocol.js';
 import { PTYSession, SCREENSHOT_DIR } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
+import { writeDiscoveryFile, deleteDiscoveryFile } from './discoveryFile.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -13,7 +16,28 @@ markOrphans();
 sweepScreenshotTempFiles();
 console.log('[sidecar] SQLite session database initialized');
 
-const wss = new WebSocketServer({ host: '127.0.0.1', port: 0 });
+const authToken = crypto.randomBytes(32).toString('hex');
+let portFilePath: string | null = null;
+
+function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+  const auth = req.headers['authorization'] ?? '';
+  if (!auth.startsWith('Bearer ') || auth.slice(7) !== authToken) {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Unauthorized' }));
+    return;
+  }
+  // Route dispatch
+  if (req.method === 'GET' && req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+  res.writeHead(404, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: 'Not found' }));
+}
+
+const httpServer = http.createServer(handleHttpRequest);
+const wss = new WebSocketServer({ server: httpServer });
 
 // Heartbeat: ping every 30s, terminate if no pong within 10s (Phase 5 hardening)
 const HEARTBEAT_INTERVAL = 30_000;
@@ -32,13 +56,15 @@ const heartbeatTimer = setInterval(() => {
   }
 }, HEARTBEAT_INTERVAL);
 
-wss.on('close', () => clearInterval(heartbeatTimer));
+httpServer.on('close', () => clearInterval(heartbeatTimer));
 
-wss.on('listening', () => {
-  const addr = wss.address() as { port: number };
+httpServer.listen(0, '127.0.0.1', () => {
+  const addr = httpServer.address() as { port: number };
   // PORT: prefix — Tauri Rust core reads this via CommandEvent::Stdout
   process.stdout.write(`PORT:${addr.port}\n`);
-  console.log(`[sidecar] WebSocket server listening on 127.0.0.1:${addr.port}`);
+  console.log(`[sidecar] server listening on 127.0.0.1:${addr.port}`);
+  console.log(`[sidecar] auth token generated (${authToken.length} chars)`);
+  portFilePath = writeDiscoveryFile(addr.port, authToken);
 });
 
 const activeSessions = new Map<WebSocket, PTYSession>();
@@ -179,10 +205,13 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
-// Cleanup all PTY sessions on sidecar exit (D-08)
+// Cleanup all PTY sessions and discovery file on sidecar exit (D-08, CAPI-04)
 process.on('exit', () => {
   for (const session of activeSessions.values()) {
     session.destroy();
+  }
+  if (portFilePath) {
+    deleteDiscoveryFile(portFilePath);
   }
 });
 process.on('SIGTERM', () => process.exit(0));
