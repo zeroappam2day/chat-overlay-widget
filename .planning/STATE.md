@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
-status: verifying
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-03-30T07:56:19.900Z"
+status: executing
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-30T09:07:52.396Z"
 last_activity: 2026-03-30
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 20
+  total_plans: 9
+  completed_plans: 21
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 12 — window-enumeration
+**Current focus:** Phase 13 — window-capture
 
 ## Current Position
 
-Phase: 12 (window-enumeration) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 13 (window-capture) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-03-30
 
 Progress bar: [··········] 0/6 phases complete
@@ -93,6 +93,8 @@ Phase-specific decisions affecting current/future work:
 - [Phase 11]: Bearer auth on all HTTP endpoints; crypto.randomBytes(32) token; log char count only, never value
 - [Phase 12-window-enumeration]: spawnSync with args array (not execSync) for PS inline C# — avoids shell quoting escapes in multi-line heredoc
 - [Phase 12-window-enumeration]: GetWindowLongPtr (64-bit aware) not GetWindowLong — required on 64-bit Windows 11; WS_EX_TOOLWINDOW declared as long
+- [Phase 13]: buildCaptureScript exported for testability — allows PS script content assertions in unit tests without running PowerShell
+- [Phase 13]: fs.mkdirSync used for SCREENSHOT_DIR creation (not PS mkdir spawnSync) — simpler, consistent with ptySession.ts pattern
 
 ### Todos
 
@@ -111,7 +113,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-30T07:56:19.894Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-03-30T09:07:52.390Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 10

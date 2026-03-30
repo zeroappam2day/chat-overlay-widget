@@ -102,11 +102,11 @@ Requirements for Live App Awareness & Capture milestone.
 
 ### Window Capture
 
-- [ ] **WCAP-01**: User can capture a window screenshot by title (exact or substring match)
-- [ ] **WCAP-02**: Capture is DPI-aware on 125%+ scaled displays (DwmGetWindowAttribute bounds)
-- [ ] **WCAP-03**: Minimized or occluded windows captured via PrintWindow PW_RENDERFULLCONTENT
-- [ ] **WCAP-04**: Captured PNG saved to temp dir with UUID filename, absolute path returned
-- [ ] **WCAP-05**: Capture failure returns error response (never crashes sidecar)
+- [x] **WCAP-01**: User can capture a window screenshot by title (exact or substring match)
+- [x] **WCAP-02**: Capture is DPI-aware on 125%+ scaled displays (DwmGetWindowAttribute bounds)
+- [x] **WCAP-03**: Minimized or occluded windows captured via PrintWindow PW_RENDERFULLCONTENT
+- [x] **WCAP-04**: Captured PNG saved to temp dir with UUID filename, absolute path returned
+- [x] **WCAP-05**: Capture failure returns error response (never crashes sidecar)
 
 ### Capture Infrastructure
 
@@ -184,11 +184,11 @@ v1.2 (20 reqs):
 | ENUM-02 | Phase 12 | Complete |
 | ENUM-03 | Phase 12 | Complete |
 | ENUM-04 | Phase 12 | Complete |
-| WCAP-01 | Phase 13 | Pending |
-| WCAP-02 | Phase 13 | Pending |
-| WCAP-03 | Phase 13 | Pending |
-| WCAP-04 | Phase 13 | Pending |
-| WCAP-05 | Phase 13 | Pending |
+| WCAP-01 | Phase 13 | Complete |
+| WCAP-02 | Phase 13 | Complete |
+| WCAP-03 | Phase 13 | Complete |
+| WCAP-04 | Phase 13 | Complete |
+| WCAP-05 | Phase 13 | Complete |
 | CLIP-01 | Phase 14 | Pending |
 | CLIP-02 | Phase 14 | Pending |
 | CLIP-03 | Phase 14 | Pending |

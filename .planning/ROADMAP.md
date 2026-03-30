@@ -138,7 +138,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   3. A minimized Chrome window is captured via PrintWindow PW_RENDERFULLCONTENT — PNG shows the actual window content, not a black rectangle
   4. POST /capture/window with a title that matches no window returns an error JSON response; sidecar continues serving requests
 **Plans**: 2 plans
-- [ ] 13-01-PLAN.md — windowCapture.ts module with TDD: PS inline C#, PrintWindow, DPI awareness, minimized fallback
+- [x] 13-01-PLAN.md — windowCapture.ts module with TDD: PS inline C#, PrintWindow, DPI awareness, minimized fallback
 - [ ] 13-02-PLAN.md — POST /capture/window route in server.ts + manual DPI/minimized verification
 
 ### Phase 14: CLI Wrapper
@@ -173,6 +173,6 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 | 10. Split Pane Preservation | 2/2 | Complete    | 2026-03-30 |
 | 11. Capture Infrastructure | 1/2 | Complete    | 2026-03-30 |
 | 12. Window Enumeration | 1/1 | Complete    | 2026-03-30 |
-| 13. Window Capture | v1.2 | In Progress (0/2 plans) | |
+| 13. Window Capture | 1/2 | In Progress|  |
 | 14. CLI Wrapper | v1.2 | Not started | |
 | 15. Claude Skill | v1.2 | Not started | |
