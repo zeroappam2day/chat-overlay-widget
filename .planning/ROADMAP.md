@@ -99,7 +99,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   2. Terminal scrollback and ANSI output in the original pane remain visible after split completes
   3. xterm.js in both panes refits to their new panel dimensions after split (stty size reports correct cols/rows)
 **Plans**: 2 plans
-- [ ] 10-01-PLAN.md — CSS visibility flat-render refactor + paneStore tests + onLayout wiring
+- [x] 10-01-PLAN.md — CSS visibility flat-render refactor + paneStore tests + onLayout wiring
 - [ ] 10-02-PLAN.md — Manual verification of split preservation (checkpoint)
 **UI hint**: yes
 
@@ -165,7 +165,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 | 7. Capture HTTP Server | v1.1 | Not started | |
 | 8. Window Screenshot Capture | v1.1 | Not started | |
 | 9. Browser CDP & CLI Wrapper | v1.1 | Not started | |
-| 10. Split Pane Preservation | v1.2 | Planned (2 plans) | |
+| 10. Split Pane Preservation | 1/2 | In Progress|  |
 | 11. Capture Infrastructure | v1.2 | Not started | |
 | 12. Window Enumeration | v1.2 | Not started | |
 | 13. Window Capture | v1.2 | Not started | |

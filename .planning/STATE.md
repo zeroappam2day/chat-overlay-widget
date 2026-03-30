@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
-status: planning
-stopped_at: Phase 10 context gathered (assumptions mode)
-last_updated: "2026-03-29T10:17:22.736Z"
-last_activity: 2026-03-29 — v1.2 roadmap created (Phases 10-15)
+status: executing
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-03-30T04:24:34.771Z"
+last_activity: 2026-03-30
 progress:
-  total_phases: 10
+  total_phases: 6
   completed_phases: 0
-  total_plans: 2
-  completed_plans: 1
+  total_plans: 4
+  completed_plans: 16
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 10 — Split Pane Preservation (first v1.2 phase)
+**Current focus:** Phase 10 — split-pane-preservation
 
 ## Current Position
 
-Phase: 10 — Split Pane Preservation
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-29 — v1.2 roadmap created (Phases 10-15)
+Phase: 10 (split-pane-preservation) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-30
 
 Progress bar: [··········] 0/6 phases complete
 
@@ -85,6 +85,8 @@ Phase-specific decisions affecting current/future work:
 - [v1.2]: ENUM filter chain (in order): IsWindowVisible + non-empty title + DwmGetWindowAttribute DWMWA_CLOAKED + not WS_EX_TOOLWINDOW
 - [v1.2]: PrintWindow PW_RENDERFULLCONTENT (0x2) required for GPU-composited windows (Chrome, VS Code); BitBlt returns black
 - [v1.2]: SetProcessDpiAwarenessContext must be first call in capture PS script (P19)
+- [Phase 10]: react-resizable-panels v4 uses onLayoutChanged(Layout map) not onLayout(number[]) — adapted with Panel id= prop and map-to-array conversion
+- [Phase 10]: Counter suffix on pane/split IDs prevents Date.now() collision on rapid splits in tests
 
 ### Todos
 
@@ -103,7 +105,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-29T10:17:22.730Z
-Stopped at: Phase 10 context gathered (assumptions mode)
-Resume file: .planning/phases/10-split-pane-preservation/10-CONTEXT.md
+Last session: 2026-03-30T04:24:34.764Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: None
 Next action: /gsd:plan-phase 10

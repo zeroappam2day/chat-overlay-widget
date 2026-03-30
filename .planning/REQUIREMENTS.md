@@ -79,31 +79,53 @@ Requirements for Screenshot Automation & Input Polish milestone.
 - [ ] **INBAR-02**: User can drag-resize the chat input bar height via a drag handle
 - [ ] **INBAR-03**: xterm.js terminal re-fits correctly when input bar height changes (debounce + offsetHeight guard)
 
-### Capture Infrastructure
+### Capture Infrastructure (superseded by v1.2 CAPI)
 
-- [ ] **CAPI-01**: Sidecar exposes HTTP REST API alongside existing WebSocket server
-- [ ] **CAPI-02**: Port discovery file written to %TEMP%/chat-overlay-api with port + auth token
-- [ ] **CAPI-03**: HTTP API requires Bearer token authentication on all endpoints
-- [ ] **CAPI-04**: Port discovery file is atomically deleted on sidecar shutdown
+~~CAPI-01–04, WCAP-01–04, BCAP-01–03, CLIP-01–03~~ — Replaced by v1.2 approach (direct UI + Claude skill instead of HTTP-only API). See v1.2 requirements below.
+
+## v1.2 Requirements
+
+Requirements for Live App Awareness & Capture milestone.
+
+### Split Pane Preservation
+
+- [x] **SPLIT-01**: User can split a pane without losing the live PTY session in the original pane
+- [x] **SPLIT-02**: Terminal content (scrollback, ANSI output) preserved after split
+- [x] **SPLIT-03**: xterm.js correctly refits to new panel dimensions after split completes
+
+### Window Enumeration
+
+- [ ] **ENUM-01**: User can retrieve a list of visible taskbar applications with title and process name
+- [ ] **ENUM-02**: System windows, tooltips, and background services are filtered from the list
+- [ ] **ENUM-03**: Window list results are cached (5s TTL) to avoid redundant PowerShell spawns
+- [ ] **ENUM-04**: Sidecar exposes GET /list-windows HTTP endpoint returning JSON array
 
 ### Window Capture
 
-- [ ] **WCAP-01**: HTTP endpoint captures a window screenshot by title
-- [ ] **WCAP-02**: HTTP endpoint lists available windows with titles and process names
-- [ ] **WCAP-03**: Window capture is DPI-aware on 125%+ scaled displays
-- [ ] **WCAP-04**: Captured image saved to temp dir, absolute filepath returned in response
+- [ ] **WCAP-01**: User can capture a window screenshot by title (exact or substring match)
+- [ ] **WCAP-02**: Capture is DPI-aware on 125%+ scaled displays (DwmGetWindowAttribute bounds)
+- [ ] **WCAP-03**: Minimized or occluded windows captured via PrintWindow PW_RENDERFULLCONTENT
+- [ ] **WCAP-04**: Captured PNG saved to temp dir with UUID filename, absolute path returned
+- [ ] **WCAP-05**: Capture failure returns error response (never crashes sidecar)
 
-### Browser Capture
+### Capture Infrastructure
 
-- [ ] **BCAP-01**: HTTP endpoint captures full-page browser screenshot via CDP (puppeteer-core)
-- [ ] **BCAP-02**: Automatically falls back to window capture when CDP unavailable
-- [ ] **BCAP-03**: Connects to Chrome or Edge debug port (default 9222, configurable)
+- [ ] **CAPI-01**: Sidecar exposes HTTP REST API alongside existing WebSocket server (shared port)
+- [ ] **CAPI-02**: Port discovery file written to %APPDATA%\chat-overlay-widget\ with port + auth token
+- [ ] **CAPI-03**: HTTP API requires Bearer token authentication on all endpoints
+- [ ] **CAPI-04**: Port discovery file atomically deleted on sidecar shutdown
 
 ### CLI Wrapper
 
 - [ ] **CLIP-01**: overlay-capture script discovers sidecar port + token from discovery file
-- [ ] **CLIP-02**: overlay-capture supports window, browser, list, and help commands
-- [ ] **CLIP-03**: Prints captured filepath to stdout for AI CLI tool consumption
+- [ ] **CLIP-02**: overlay-capture supports list and window --title commands
+- [ ] **CLIP-03**: Prints captured filepath to stdout for CLI consumption
+
+### Claude Skill
+
+- [ ] **SKIL-01**: .claude/skills/capture-app/SKILL.md registers /capture-app slash command
+- [ ] **SKIL-02**: Skill dynamically injects current window list via overlay-capture list
+- [ ] **SKIL-03**: Skill captures selected window and returns file path for Claude to reference
 
 ## v2 Requirements
 
@@ -135,71 +157,46 @@ Requirements for Screenshot Automation & Input Polish milestone.
 | SSH terminal management | Not a general terminal app |
 | Mobile / tablet support | Desktop only |
 | Tauri v2 migration | v1.7.2 is stable and sufficient |
+| Browser CDP capture | Dropped from v1.1 — window capture covers the use case without CDP complexity |
+| Window thumbnail previews | DWM thumbnail API + Rust bridge — disproportionate effort for marginal gain |
+| Hover-to-highlight window detection | Overlay app steals focus; title-based selection is deterministic |
+| Screenshot annotation/markup | Separate product category; use OS tools |
+| Auto-capture on every prompt | Side effects without user intent; Claude decides when to use skill |
 
 ## Traceability
 
+v1 (35 reqs): INFRA-01–05 → Phase 1; PTY-01–07 → Phase 2; TERM-01–05, INPUT-01–03, HIST-01/02/04 → Phase 3; SCRN-01–04, HIST-03, PSMUX-01–04, WIN-01–03 → Phase 4. All complete.
+
+v1.1 (5 reqs): PATH-01/02 → Phase 6 (complete); INBAR-01–03 → Phase 6 (pending). Original v1.1 CAPI/WCAP/BCAP/CLIP superseded by v1.2.
+
+v1.2 (20 reqs):
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Complete |
-| INFRA-02 | Phase 1 | Complete |
-| INFRA-03 | Phase 1 | Complete |
-| INFRA-04 | Phase 1 | Complete |
-| INFRA-05 | Phase 1 | Complete |
-| PTY-01 | Phase 2 | Complete |
-| PTY-02 | Phase 2 | Complete |
-| PTY-03 | Phase 2 | Complete |
-| PTY-04 | Phase 2 | Complete |
-| PTY-05 | Phase 2 | Complete |
-| PTY-06 | Phase 2 | Complete |
-| PTY-07 | Phase 2 | Complete |
-| TERM-01 | Phase 3 | Complete |
-| TERM-02 | Phase 3 | Complete |
-| TERM-03 | Phase 3 | Complete |
-| TERM-04 | Phase 3 | Complete |
-| TERM-05 | Phase 3 | Complete |
-| INPUT-01 | Phase 3 | Complete |
-| INPUT-02 | Phase 3 | Complete |
-| INPUT-03 | Phase 3 | Complete |
-| HIST-01 | Phase 3 | Complete |
-| HIST-02 | Phase 3 | Complete |
-| HIST-04 | Phase 3 | Complete |
-| SCRN-01 | Phase 4 | Complete |
-| SCRN-02 | Phase 4 | Complete |
-| SCRN-03 | Phase 4 | Complete |
-| SCRN-04 | Phase 4 | Complete |
-| HIST-03 | Phase 4 | Complete |
-| PSMUX-01 | Phase 4 | Complete |
-| PSMUX-02 | Phase 4 | Complete |
-| PSMUX-03 | Phase 4 | Complete |
-| PSMUX-04 | Phase 4 | Complete |
-| WIN-01 | Phase 4 | Complete |
-| WIN-02 | Phase 4 | Complete |
-| WIN-03 | Phase 4 | Complete |
-| PATH-01 | Phase 6 | Complete |
-| PATH-02 | Phase 6 | Complete |
-| INBAR-01 | Phase 6 | Pending |
-| INBAR-02 | Phase 6 | Pending |
-| INBAR-03 | Phase 6 | Pending |
-| CAPI-01 | Phase 7 | Pending |
-| CAPI-02 | Phase 7 | Pending |
-| CAPI-03 | Phase 7 | Pending |
-| CAPI-04 | Phase 7 | Pending |
-| WCAP-01 | Phase 8 | Pending |
-| WCAP-02 | Phase 8 | Pending |
-| WCAP-03 | Phase 8 | Pending |
-| WCAP-04 | Phase 8 | Pending |
-| BCAP-01 | Phase 9 | Pending |
-| BCAP-02 | Phase 9 | Pending |
-| BCAP-03 | Phase 9 | Pending |
-| CLIP-01 | Phase 9 | Pending |
-| CLIP-02 | Phase 9 | Pending |
-| CLIP-03 | Phase 9 | Pending |
+| SPLIT-01 | Phase 10 | Complete |
+| SPLIT-02 | Phase 10 | Complete |
+| SPLIT-03 | Phase 10 | Complete |
+| CAPI-01 | Phase 11 | Pending |
+| CAPI-02 | Phase 11 | Pending |
+| CAPI-03 | Phase 11 | Pending |
+| CAPI-04 | Phase 11 | Pending |
+| ENUM-01 | Phase 12 | Pending |
+| ENUM-02 | Phase 12 | Pending |
+| ENUM-03 | Phase 12 | Pending |
+| ENUM-04 | Phase 12 | Pending |
+| WCAP-01 | Phase 13 | Pending |
+| WCAP-02 | Phase 13 | Pending |
+| WCAP-03 | Phase 13 | Pending |
+| WCAP-04 | Phase 13 | Pending |
+| WCAP-05 | Phase 13 | Pending |
+| CLIP-01 | Phase 14 | Pending |
+| CLIP-02 | Phase 14 | Pending |
+| CLIP-03 | Phase 14 | Pending |
+| SKIL-01 | Phase 15 | Pending |
+| SKIL-02 | Phase 15 | Pending |
+| SKIL-03 | Phase 15 | Pending |
 
-**Coverage:**
-- v1 requirements: 35 total — mapped to phases 1-5, all complete
-- v1.1 requirements: 19 total — mapped to phases 6-9, all pending
-- Unmapped: 0
+Coverage: 20/20 v1.2 requirements mapped. No orphans.
 
 ---
-*Requirements defined: 2026-03-27*
-*Last updated: 2026-03-28 — v1.1 traceability added (Phases 6-9, 19 requirements)*
+*Defined: 2026-03-27 | Updated: 2026-03-29 after v1.2 roadmap creation*
