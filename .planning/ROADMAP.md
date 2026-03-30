@@ -197,7 +197,9 @@ Plans:
   1. `capture-window-with-metadata` WS response includes a `bounds` object `{x, y, w, h}`, `captureSize` object `{w, h}`, and `dpiScale` number alongside the file path
   2. Bounds values are physical pixel coordinates (DwmGetWindowAttribute), correct on 125% scaled display
   3. Existing `POST /capture/window` and `GET /list-windows` HTTP endpoints return the same response shape as before Phase 18 — overlay-capture CLI still works without changes
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 18-01-PLAN.md -- captureWindowWithMetadata TDD + server.ts WS handler wiring
 
 ### Phase 19: Window Picker UI
 **Goal**: User can open a popover showing a live thumbnail grid of open windows, navigate it with keyboard or mouse, search/filter by title or process name, and manually refresh the list
@@ -239,7 +241,7 @@ Plans:
 | 14. CLI Wrapper | v1.2 | Complete | 2026-03-30 |
 | 15. Claude Skill | v1.2 | Complete | 2026-03-30 |
 | 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
-| 17. Batch Thumbnail Backend | 1/1 | Complete   | 2026-03-30 |
+| 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
 | 18. Enriched Capture Backend | v1.3 | Not started | — |
 | 19. Window Picker UI | v1.3 | Not started | — |
 | 20. Metadata Injection & Integration | v1.3 | Not started | — |
