@@ -156,7 +156,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 
 - [x] **Phase 16: Protocol Extension** — WebSocket message types for batch thumbnails and enriched capture (completed 2026-03-30)
 - [x] **Phase 17: Batch Thumbnail Backend** — Sidecar generates 240x180 thumbnails for all visible windows in a single async operation (completed 2026-03-30)
-- [ ] **Phase 18: Enriched Capture Backend** — Capture result includes bounds, DPI scale, capture dimensions; backward-compatible HTTP endpoints
+- [x] **Phase 18: Enriched Capture Backend** — Capture result includes bounds, DPI scale, capture dimensions; backward-compatible HTTP endpoints (completed 2026-03-30)
 - [ ] **Phase 19: Window Picker UI** — Thumbnail grid popover with keyboard navigation, search filter, and manual refresh
 - [ ] **Phase 20: Metadata Injection & Integration** — Structured computer_use metadata block injected into active pane's ChatInputBar on window selection
 
@@ -199,7 +199,7 @@ Plans:
   3. Existing `POST /capture/window` and `GET /list-windows` HTTP endpoints return the same response shape as before Phase 18 — overlay-capture CLI still works without changes
 **Plans**: 1 plan
 Plans:
-- [ ] 18-01-PLAN.md -- captureWindowWithMetadata TDD + server.ts WS handler wiring
+- [x] 18-01-PLAN.md -- captureWindowWithMetadata TDD + server.ts WS handler wiring
 
 ### Phase 19: Window Picker UI
 **Goal**: User can open a popover showing a live thumbnail grid of open windows, navigate it with keyboard or mouse, search/filter by title or process name, and manually refresh the list
@@ -242,6 +242,6 @@ Plans:
 | 15. Claude Skill | v1.2 | Complete | 2026-03-30 |
 | 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
-| 18. Enriched Capture Backend | v1.3 | Not started | — |
+| 18. Enriched Capture Backend | 1/1 | Complete   | 2026-03-30 |
 | 19. Window Picker UI | v1.3 | Not started | — |
 | 20. Metadata Injection & Integration | v1.3 | Not started | — |

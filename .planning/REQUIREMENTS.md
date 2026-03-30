@@ -146,14 +146,14 @@ Requirements for Window Picker & LLM-Actionable Capture milestone.
 
 ### Capture
 
-- [ ] **CAPT-01**: Capture result includes window bounds (x, y, w, h), capture dimensions, and DPI scale
+- [x] **CAPT-01**: Capture result includes window bounds (x, y, w, h), capture dimensions, and DPI scale
 - [ ] **CAPT-02**: Structured metadata block is formatted alongside the image path in ChatInputBar
 - [ ] **CAPT-03**: Metadata follows Claude computer_use coordinate conventions for LLM spatial reasoning
 
 ### Integration
 
 - [x] **INTG-01**: New WebSocket message types (list-windows-with-thumbnails, capture-window-with-metadata) added to protocol
-- [ ] **INTG-02**: Existing HTTP endpoints (/list-windows, /capture/window, /health) continue working for CLI wrapper
+- [x] **INTG-02**: Existing HTTP endpoints (/list-windows, /capture/window, /health) continue working for CLI wrapper
 - [ ] **INTG-03**: Captured path + metadata injected into active pane's ChatInputBar on window selection
 
 ## v2 Requirements
@@ -240,8 +240,8 @@ v1.3 (13 reqs):
 | THUMB-01 | Phase 17 | Complete |
 | THUMB-02 | Phase 17 | Complete |
 | THUMB-03 | Phase 17 | Complete |
-| CAPT-01 | Phase 18 | Pending |
-| INTG-02 | Phase 18 | Pending |
+| CAPT-01 | Phase 18 | Complete |
+| INTG-02 | Phase 18 | Complete |
 | PICK-01 | Phase 19 | Pending |
 | PICK-02 | Phase 19 | Pending |
 | PICK-03 | Phase 19 | Pending |
