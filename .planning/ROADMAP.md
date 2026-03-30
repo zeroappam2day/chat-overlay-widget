@@ -3,8 +3,8 @@
 ## Milestones
 
 - **v1.0 Core Application** — Phases 1-5 (shipped 2026-03-28)
-- **v1.1 Screenshot Automation & Input Polish** — Phases 6-9 (in progress)
-- **v1.2 Live App Awareness & Capture** — Phases 10-15 (planned)
+- **v1.1 Screenshot Automation & Input Polish** — Phases 6-9 (shipped 2026-03-30)
+- **v1.2 Live App Awareness & Capture** — Phases 10-15 (shipped 2026-03-30)
 
 ## v1.0 Core Application (SHIPPED)
 
@@ -25,7 +25,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 
 </details>
 
-## v1.1 Screenshot Automation & Input Polish (In Progress)
+## v1.1 Screenshot Automation & Input Polish (SHIPPED)
 
 **Milestone Goal:** Make the app a platform AI CLI tools can leverage for visual context — capture windows and browser pages, deliver paths shell-correctly into terminals, CLI wrapper for programmatic capture.
 
@@ -41,7 +41,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   5. After drag release, xterm.js cols/rows update without collapsing to zero
 **Plans**: 2 plans
 - [x] 06-01-PLAN.md — Shell path quoting utility, ChatInputBar integration, UUID-only filenames
-- [ ] 06-02-PLAN.md — Taller default input bar with drag-resizable height
+- [x] 06-02-PLAN.md — Taller default input bar with drag-resizable height
 
 ### Phase 7: Capture HTTP Server
 **Goal**: Sidecar exposes secure HTTP API discoverable by local processes for capture operations
@@ -75,7 +75,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   3. `overlay-capture window "Title"` prints filepath to stdout
   4. `overlay-capture list` prints titles; `overlay-capture help` prints usage
 
-## v1.2 Live App Awareness & Capture (Planned)
+## v1.2 Live App Awareness & Capture (SHIPPED)
 
 **Milestone Goal:** Fix session-killing split bug, let the app see and screenshot live Windows applications, and give Claude a skill to do the same automatically.
 
@@ -85,8 +85,8 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 - [x] **Phase 11: Capture Infrastructure** — Sidecar HTTP server + port/token discovery file (completed 2026-03-30)
 - [x] **Phase 12: Window Enumeration** — List visible taskbar apps via PowerShell, 5s cache, HTTP endpoint (completed 2026-03-30)
 - [x] **Phase 13: Window Capture** — Capture any window by title, DPI-aware, PrintWindow for occluded windows (completed 2026-03-30)
-- [ ] **Phase 14: CLI Wrapper** — overlay-capture script reads discovery file, issues HTTP, prints path to stdout
-- [ ] **Phase 15: Claude Skill** — capture-app SKILL.md registers /capture-app command with dynamic window list
+- [x] **Phase 14: CLI Wrapper** — overlay-capture script reads discovery file, issues HTTP, prints path to stdout (completed 2026-03-30)
+- [x] **Phase 15: Claude Skill** — capture-app SKILL.md registers /capture-app command with dynamic window list (completed 2026-03-30)
 
 ## Phase Details
 
@@ -149,7 +149,8 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   1. `node scripts/overlay-capture.js list` prints a human-readable list of visible window titles to stdout
   2. `node scripts/overlay-capture.js window --title "Chrome"` prints an absolute PNG path to stdout; file exists on disk
   3. Script exits with non-zero code when sidecar is unreachable or title has no match; stderr contains a human-readable error
-**Plans**: TBD
+**Plans**: 1 plan
+- [x] 14-01-PLAN.md — overlay-capture.cjs CLI script with list/window commands
 
 ### Phase 15: Claude Skill
 **Goal**: Claude Code can enumerate live Windows applications and capture a selected window autonomously using the /capture-app skill, without any user clipboard interaction
@@ -159,20 +160,21 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   1. `/capture-app` slash command is recognized in a Claude Code session and the skill loads without error
   2. Invoking `/capture-app Chrome` causes Claude to run overlay-capture, receive a file path, and reference the captured image in its response — with no manual user steps
   3. The skill's dynamic window list injection shows the current list of open apps at skill invocation time (not a static hardcoded list)
-**Plans**: TBD
+**Plans**: 1 plan
+- [x] 15-01-PLAN.md — Claude Code /capture-app skill with dynamic window list
 
 ## Progress
 
 | Phase | Milestone | Status | Completed |
 |-------|-----------|--------|-----------|
 | 1-5 | v1.0 | Complete | 2026-03-28 |
-| 6. Shell Path & Input Bar | v1.1 | In Progress (1/2 plans) | |
-| 7. Capture HTTP Server | v1.1 | Not started | |
-| 8. Window Screenshot Capture | v1.1 | Not started | |
-| 9. Browser CDP & CLI Wrapper | v1.1 | Not started | |
-| 10. Split Pane Preservation | 2/2 | Complete    | 2026-03-30 |
-| 11. Capture Infrastructure | 1/2 | Complete    | 2026-03-30 |
-| 12. Window Enumeration | 1/1 | Complete    | 2026-03-30 |
-| 13. Window Capture | 2/2 | Complete   | 2026-03-30 |
-| 14. CLI Wrapper | v1.2 | Not started | |
-| 15. Claude Skill | v1.2 | Not started | |
+| 6. Shell Path & Input Bar | v1.1 | Complete | 2026-03-30 |
+| 7. Capture HTTP Server | v1.1 | Superseded by v1.2 | — |
+| 8. Window Screenshot Capture | v1.1 | Superseded by v1.2 | — |
+| 9. Browser CDP & CLI Wrapper | v1.1 | Superseded by v1.2 | — |
+| 10. Split Pane Preservation | v1.2 | Complete | 2026-03-30 |
+| 11. Capture Infrastructure | v1.2 | Complete | 2026-03-30 |
+| 12. Window Enumeration | v1.2 | Complete | 2026-03-30 |
+| 13. Window Capture | v1.2 | Complete | 2026-03-30 |
+| 14. CLI Wrapper | v1.2 | Complete | 2026-03-30 |
+| 15. Claude Skill | v1.2 | Complete | 2026-03-30 |

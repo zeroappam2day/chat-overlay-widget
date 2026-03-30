@@ -75,9 +75,9 @@ Requirements for Screenshot Automation & Input Polish milestone.
 
 ### Input Bar
 
-- [ ] **INBAR-01**: Chat input bar default height is ~144px (3x current 48px)
-- [ ] **INBAR-02**: User can drag-resize the chat input bar height via a drag handle
-- [ ] **INBAR-03**: xterm.js terminal re-fits correctly when input bar height changes (debounce + offsetHeight guard)
+- [x] **INBAR-01**: Chat input bar default height is ~144px (3x current 48px)
+- [x] **INBAR-02**: User can drag-resize the chat input bar height via a drag handle
+- [x] **INBAR-03**: xterm.js terminal re-fits correctly when input bar height changes (debounce + offsetHeight guard)
 
 ### Capture Infrastructure (superseded by v1.2 CAPI)
 
@@ -117,15 +117,15 @@ Requirements for Live App Awareness & Capture milestone.
 
 ### CLI Wrapper
 
-- [ ] **CLIP-01**: overlay-capture script discovers sidecar port + token from discovery file
-- [ ] **CLIP-02**: overlay-capture supports list and window --title commands
-- [ ] **CLIP-03**: Prints captured filepath to stdout for CLI consumption
+- [x] **CLIP-01**: overlay-capture script discovers sidecar port + token from discovery file
+- [x] **CLIP-02**: overlay-capture supports list and window --title commands
+- [x] **CLIP-03**: Prints captured filepath to stdout for CLI consumption
 
 ### Claude Skill
 
-- [ ] **SKIL-01**: .claude/skills/capture-app/SKILL.md registers /capture-app slash command
-- [ ] **SKIL-02**: Skill dynamically injects current window list via overlay-capture list
-- [ ] **SKIL-03**: Skill captures selected window and returns file path for Claude to reference
+- [x] **SKIL-01**: .claude/skills/capture-app/SKILL.md registers /capture-app slash command
+- [x] **SKIL-02**: Skill dynamically injects current window list via overlay-capture list
+- [x] **SKIL-03**: Skill captures selected window and returns file path for Claude to reference
 
 ## v2 Requirements
 
@@ -189,14 +189,14 @@ v1.2 (20 reqs):
 | WCAP-03 | Phase 13 | Complete |
 | WCAP-04 | Phase 13 | Complete |
 | WCAP-05 | Phase 13 | Complete |
-| CLIP-01 | Phase 14 | Pending |
-| CLIP-02 | Phase 14 | Pending |
-| CLIP-03 | Phase 14 | Pending |
-| SKIL-01 | Phase 15 | Pending |
-| SKIL-02 | Phase 15 | Pending |
-| SKIL-03 | Phase 15 | Pending |
+| CLIP-01 | Phase 14 | Complete |
+| CLIP-02 | Phase 14 | Complete |
+| CLIP-03 | Phase 14 | Complete |
+| SKIL-01 | Phase 15 | Complete |
+| SKIL-02 | Phase 15 | Complete |
+| SKIL-03 | Phase 15 | Complete |
 
 Coverage: 20/20 v1.2 requirements mapped. No orphans.
 
 ---
-*Defined: 2026-03-27 | Updated: 2026-03-29 after v1.2 roadmap creation*
+*Defined: 2026-03-27 | Updated: 2026-03-30 after Phase 15 completion*

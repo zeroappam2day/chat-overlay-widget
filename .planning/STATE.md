@@ -1,35 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Core Application
-status: executing
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-03-30T09:07:52.396Z"
+milestone: v1.2
+milestone_name: Live App Awareness & Capture
+status: complete
+stopped_at: v1.2 milestone complete
+last_updated: "2026-03-30"
 last_activity: 2026-03-30
 progress:
-  total_phases: 9
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 21
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 8
+  completed_plans: 8
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-29)
+See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 13 — window-capture
+**Current focus:** v1.2 milestone complete
 
 ## Current Position
 
-Phase: 13 (window-capture) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
+Phase: 15 (complete)
+Plan: All complete
+Status: v1.2 milestone complete
 Last activity: 2026-03-30
 
-Progress bar: [··········] 0/6 phases complete
+Progress bar: [##########] 6/6 phases complete
 
 ## Performance Metrics
 
@@ -98,22 +98,15 @@ Phase-specific decisions affecting current/future work:
 
 ### Todos
 
-- Phase 10: Lift Terminal instance to stable store OR use CSS visibility + stable key (see P15 in PITFALLS.md)
-- Phase 11: HTTP server on separate random port from WS; write port + token file atomically (tmp-then-rename)
-- Phase 12: Apply full ENUM filter chain from day one — do not retrofit DwmGetWindowAttribute later
-- Phase 13: Test on 125%+ DPI display before marking complete (MEDIUM confidence area)
-- Phase 14: overlay-capture.js reads api.port file, exits non-zero on sidecar unreachable
-- Phase 15: Skill uses Bash tool per-invocation (not !`cmd` which runs once at load) for capture command
+(None — v1.2 complete)
 
 ### Blockers/Concerns
 
-- [Phase 13]: DPI capture validation — SetHighDpiMode(PerMonitorV2) + DwmGetWindowAttribute DWMWA_EXTENDED_FRAME_BOUNDS on 125%+ displays is MEDIUM confidence. Must validate before accepting.
-- [Phase 11]: caxa rebuild needed when adding puppeteer-core (Phase 9 concern carries forward if Phase 9 not yet shipped)
-- [v1.2]: Phases 10-15 depend on v1.1 Phase 6 being complete (INBAR-01–03 still pending)
+(None — v1.2 complete)
 
 ## Session Continuity
 
-Last session: 2026-03-30T09:07:52.390Z
-Stopped at: Completed 13-01-PLAN.md
+Last session: 2026-03-30
+Stopped at: v1.2 milestone complete
 Resume file: None
-Next action: /gsd:plan-phase 10
+Next action: /gsd:new-milestone
