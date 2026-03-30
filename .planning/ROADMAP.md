@@ -242,6 +242,6 @@ Plans:
 | 15. Claude Skill | v1.2 | Complete | 2026-03-30 |
 | 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
-| 18. Enriched Capture Backend | 1/1 | Complete   | 2026-03-30 |
+| 18. Enriched Capture Backend | 1/1 | Complete    | 2026-03-30 |
 | 19. Window Picker UI | v1.3 | Not started | — |
 | 20. Metadata Injection & Integration | v1.3 | Not started | — |
