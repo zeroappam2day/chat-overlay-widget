@@ -104,7 +104,7 @@ Requirements for Live App Awareness & Capture milestone.
 
 - [x] **WCAP-01**: User can capture a window screenshot by title (exact or substring match)
 - [x] **WCAP-02**: Capture is DPI-aware on 125%+ scaled displays (DwmGetWindowAttribute bounds)
-- [x] **WCAP-03**: Minimized or occluded windows captured via PrintWindow PW_RENDERFULLCONTENT
+- [x] **WCAP-03**: Minimized windows return ERROR:MINIMIZED (caller restores before capturing); occluded windows captured via PrintWindow PW_RENDERFULLCONTENT
 - [x] **WCAP-04**: Captured PNG saved to temp dir with UUID filename, absolute path returned
 - [x] **WCAP-05**: Capture failure returns error response (never crashes sidecar)
 

@@ -84,7 +84,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 - [x] **Phase 10: Split Pane Preservation** — Fix React unmount destroying PTY session on split (completed 2026-03-30)
 - [x] **Phase 11: Capture Infrastructure** — Sidecar HTTP server + port/token discovery file (completed 2026-03-30)
 - [x] **Phase 12: Window Enumeration** — List visible taskbar apps via PowerShell, 5s cache, HTTP endpoint (completed 2026-03-30)
-- [ ] **Phase 13: Window Capture** — Capture any window by title, DPI-aware, PrintWindow for occluded windows
+- [x] **Phase 13: Window Capture** — Capture any window by title, DPI-aware, PrintWindow for occluded windows (completed 2026-03-30)
 - [ ] **Phase 14: CLI Wrapper** — overlay-capture script reads discovery file, issues HTTP, prints path to stdout
 - [ ] **Phase 15: Claude Skill** — capture-app SKILL.md registers /capture-app command with dynamic window list
 
@@ -129,17 +129,17 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 - [x] 12-01-PLAN.md — Window enumerator module with filter chain, 5s cache, GET /list-windows route
 
 ### Phase 13: Window Capture
-**Goal**: Any visible (or minimized/occluded) window can be captured to a PNG file by title, with correct dimensions on high-DPI displays
+**Goal**: Any visible window can be captured to a PNG file by title, with correct dimensions on high-DPI displays; minimized windows return actionable error
 **Depends on**: Phase 11, Phase 12
 **Requirements**: WCAP-01, WCAP-02, WCAP-03, WCAP-04, WCAP-05
 **Success Criteria** (what must be TRUE):
   1. POST /capture/window with a title substring returns a JSON response containing an absolute path to a PNG file that exists on disk
   2. Captured PNG dimensions match the window's actual pixel size on a 125% DPI display (not the logical size)
-  3. A minimized Chrome window is captured via PrintWindow PW_RENDERFULLCONTENT — PNG shows the actual window content, not a black rectangle
+  3. A minimized Chrome window returns ERROR:MINIMIZED with HTTP 404 — caller restores window before capturing (PrintWindow cannot render minimized GPU-composited windows)
   4. POST /capture/window with a title that matches no window returns an error JSON response; sidecar continues serving requests
 **Plans**: 2 plans
 - [x] 13-01-PLAN.md — windowCapture.ts module with TDD: PS inline C#, PrintWindow, DPI awareness, minimized fallback
-- [ ] 13-02-PLAN.md — POST /capture/window route in server.ts + manual DPI/minimized verification
+- [x] 13-02-PLAN.md — POST /capture/window route in server.ts + manual DPI/minimized verification
 
 ### Phase 14: CLI Wrapper
 **Goal**: overlay-capture script callable from any shell, reads sidecar discovery file, and prints a captured file path to stdout for downstream consumers
@@ -173,6 +173,6 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 | 10. Split Pane Preservation | 2/2 | Complete    | 2026-03-30 |
 | 11. Capture Infrastructure | 1/2 | Complete    | 2026-03-30 |
 | 12. Window Enumeration | 1/1 | Complete    | 2026-03-30 |
-| 13. Window Capture | 1/2 | In Progress|  |
+| 13. Window Capture | 2/2 | Complete   | 2026-03-30 |
 | 14. CLI Wrapper | v1.2 | Not started | |
 | 15. Claude Skill | v1.2 | Not started | |
