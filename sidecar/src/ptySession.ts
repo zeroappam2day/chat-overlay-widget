@@ -60,9 +60,9 @@ export class PTYSession {
     this.ptyProcess.resize(cols, rows);
   }
 
-  async saveImage(base64: string, ext: string): Promise<string> {
+  async saveImage(base64: string): Promise<string> {
     await fs.promises.mkdir(SCREENSHOT_DIR, { recursive: true });
-    const filename = `${crypto.randomUUID()}.${ext}`;
+    const filename = `${crypto.randomUUID()}.png`;
     const filePath = path.join(SCREENSHOT_DIR, filename);
     const buffer = Buffer.from(base64, 'base64');
     await fs.promises.writeFile(filePath, buffer);

@@ -33,7 +33,7 @@ export function HistoryViewer({ chunks, complete, sessionMeta, onClose }: Histor
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(container);
-    fitAddon.fit();
+    try { fitAddon.fit(); } catch { /* ResizeObserver will retry */ }
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;

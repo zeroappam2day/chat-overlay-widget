@@ -4,7 +4,7 @@ import { quotePathForShell } from '../utils/shellQuote';
 interface ChatInputBarProps {
   onSend: (text: string) => void;
   disabled?: boolean;
-  onImagePaste?: (base64: string, ext: string) => void;
+  onImagePaste?: (base64: string) => void;
   pendingImagePath?: string | null;
   onImagePathConsumed?: () => void;
   currentShell?: string | null;
@@ -70,8 +70,7 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
         return;
       }
       console.log('[paste] sending save-image, base64 length:', base64.length);
-      const ext = blob.type.split('/')[1] || 'png';
-      onImagePaste(base64, ext);
+      onImagePaste(base64);
     };
     reader.readAsDataURL(blob);
   }, [onImagePaste]);

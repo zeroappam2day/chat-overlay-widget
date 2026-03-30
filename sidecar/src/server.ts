@@ -231,7 +231,7 @@ wss.on('connection', (ws: WebSocket) => {
           sendMsg(ws, { type: 'error', message: 'No active session for save-image' });
           break;
         }
-        session.saveImage(msg.base64, msg.ext)
+        session.saveImage(msg.base64)
           .then(filePath => {
             sendMsg(ws, { type: 'save-image-result', path: filePath });
           })

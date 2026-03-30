@@ -9,10 +9,10 @@ export type CaptureResult =
   | { ok: false; error: string };
 
 export function buildCaptureScript(titleQuery: string, outputPath: string): string {
-  // Sanitize title: strip chars that break PS string literals (" backtick CR LF)
-  const safeTitle = titleQuery.replace(/["`\r\n]/g, '');
-  // Escape backslashes in path for PS string literal
-  const safePath = outputPath.replace(/\\/g, '\\\\');
+  // Sanitize title: strip CR/LF (break script structure), escape ' for PS single-quoted strings
+  const safeTitle = titleQuery.replace(/[\r\n]/g, '').replace(/'/g, "''");
+  // Escape single quotes in path for PS single-quoted string (backslashes are literal)
+  const safePath = outputPath.replace(/'/g, "''");
 
   return `
 Add-Type -AssemblyName System.Drawing
@@ -109,7 +109,7 @@ public class WinCapture {
     }
 }
 "@ -ReferencedAssemblies System.Drawing
-\$result = [WinCapture]::CaptureWindow("${safeTitle}", "${safePath}")
+\$result = [WinCapture]::CaptureWindow('${safeTitle}', '${safePath}')
 Write-Output \$result
 `;
 }

@@ -189,8 +189,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         const result = reader.result as string;
         const base64 = result.split(',')[1];
         if (!base64) return;
-        const ext = blob.type.split('/')[1] || 'png';
-        sendMessageRef.current({ type: 'save-image', base64, ext });
+        sendMessageRef.current({ type: 'save-image', base64 });
       };
       reader.readAsDataURL(blob);
     };
@@ -218,7 +217,6 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   const handleShellChange = useCallback((newShell: string) => {
     if (newShell && newShell !== currentShell) {
       spawnedRef.current = true;
-      sendMessage({ type: 'kill' });
       const dims = getTerminalDimensions();
       sendMessage({ type: 'spawn', shell: newShell, cols: dims.cols, rows: dims.rows });
     }
@@ -320,7 +318,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         disabled={connectionState !== 'connected' || replaySessionId !== null}
         pendingImagePath={pendingImagePath ?? droppedImagePath}
         onImagePathConsumed={() => { setPendingImagePath(null); onDroppedPathConsumed?.(); }}
-        onImagePaste={(b64, ext) => sendMessage({ type: 'save-image', base64: b64, ext })}
+        onImagePaste={(b64) => sendMessage({ type: 'save-image', base64: b64 })}
         currentShell={currentShell}
         height={inputBarHeight}
       />

@@ -51,8 +51,11 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
     let cancelled = false;
     let portRef: number | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let connectingInProgress = false;
 
     async function connect(port: number, isReconnect = false) {
+      if (connectingInProgress) return;
+      connectingInProgress = true;
       portRef = port;
       setState(isReconnect ? 'reconnecting' : 'connecting');
       try {
@@ -82,6 +85,8 @@ export function useWebSocket({ onMessage }: UseWebSocketOptions): UseWebSocketRe
         };
       } catch {
         if (!cancelled) setState('error');
+      } finally {
+        connectingInProgress = false;
       }
     }
 

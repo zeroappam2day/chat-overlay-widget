@@ -6,7 +6,7 @@ export type ClientMessage =
   | { type: 'kill' }
   | { type: 'history-list' }
   | { type: 'history-replay'; sessionId: number }
-  | { type: 'save-image'; base64: string; ext: string };
+  | { type: 'save-image'; base64: string };
 
 export interface SessionMeta {
   id: number;

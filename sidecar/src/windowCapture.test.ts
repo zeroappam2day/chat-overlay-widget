@@ -98,19 +98,26 @@ describe('windowCapture', () => {
     expect(script).toContain('ERROR:MINIMIZED');
   });
 
-  it('Test 11: Title sanitization — captureWindow strips " and backtick from title before PS interpolation', async () => {
+  it('Test 11: Title sanitization — single-quoted PS strings, apostrophe escaped to double-apostrophe', async () => {
     mockSpawnSync.mockReturnValue(makeOkResult('ERROR:NO_MATCH') as ReturnType<typeof spawnSync>);
     const { captureWindow, buildCaptureScript } = await import('./windowCapture.js');
-    // Call captureWindow with a dangerous title
-    captureWindow('test"bad`title');
-    // Verify that spawnSync was called with a script that does NOT contain the dangerous chars
+    // Single quotes are escaped to '' (PS single-quote escaping)
+    const script1 = buildCaptureScript("user's file", 'C:\\temp\\test.png');
+    expect(script1).toContain("user''s file");
+    // $ passes through unchanged (harmless in single-quoted PS strings)
+    const script2 = buildCaptureScript('$(malicious)', 'C:\\temp\\test.png');
+    expect(script2).toContain("$(malicious)");
+    // " and backtick pass through unchanged (harmless in single-quoted PS strings)
+    const script3 = buildCaptureScript('test"bad`title', 'C:\\temp\\test.png');
+    expect(script3).toContain('test"bad`title');
+    // CR/LF still stripped from title
+    const script4 = buildCaptureScript('test\r\ntitle', 'C:\\temp\\test.png');
+    expect(script4).not.toContain('\r');
+    expect(script4).toContain('testtitle');
+    // Verify CaptureWindow call uses single-quoted strings
+    expect(script1).toMatch(/CaptureWindow\('/);
+    // captureWindow also works end-to-end
+    captureWindow("user's file");
     expect(mockSpawnSync).toHaveBeenCalledTimes(1);
-    const callArgs = mockSpawnSync.mock.calls[0];
-    const scriptArg = (callArgs[1] as string[])[3]; // 4th argument in the args array
-    expect(scriptArg).not.toContain('"bad`');
-    expect(scriptArg).not.toContain('`');
-    // Also verify buildCaptureScript directly sanitizes
-    const script = buildCaptureScript('test"bad`title', 'C:\\temp\\test.png');
-    expect(script).not.toContain('bad`');
   });
 });
