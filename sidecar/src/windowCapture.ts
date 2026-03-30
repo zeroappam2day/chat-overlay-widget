@@ -46,24 +46,8 @@ public class WinCapture {
     [DllImport("user32.dll")]
     public static extern bool IsIconic(IntPtr hWnd);
 
-    [DllImport("user32.dll")]
-    public static extern bool GetWindowPlacement(IntPtr hWnd, ref WINDOWPLACEMENT lpwndpl);
-
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT { public int Left, Top, Right, Bottom; }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct POINT { public int X, Y; }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct WINDOWPLACEMENT {
-        public int length;
-        public int flags;
-        public int showCmd;
-        public POINT ptMinPosition;
-        public POINT ptMaxPosition;
-        public RECT rcNormalPosition;
-    }
 
     private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     private const uint PW_RENDERFULLCONTENT = 0x2;
@@ -94,12 +78,7 @@ public class WinCapture {
             int width, height;
 
             if (IsIconic(target)) {
-                // Minimized window: DWMWA_EXTENDED_FRAME_BOUNDS returns zeros — use GetWindowPlacement
-                var placement = new WINDOWPLACEMENT();
-                placement.length = System.Runtime.InteropServices.Marshal.SizeOf(typeof(WINDOWPLACEMENT));
-                GetWindowPlacement(target, ref placement);
-                width  = placement.rcNormalPosition.Right  - placement.rcNormalPosition.Left;
-                height = placement.rcNormalPosition.Bottom - placement.rcNormalPosition.Top;
+                return "ERROR:MINIMIZED";
             } else {
                 // Normal window: use DwmGetWindowAttribute for true physical pixel bounds
                 RECT bounds;
@@ -129,7 +108,7 @@ public class WinCapture {
         }
     }
 }
-"@
+"@ -ReferencedAssemblies System.Drawing
 \$result = [WinCapture]::CaptureWindow("${safeTitle}", "${safePath}")
 Write-Output \$result
 `;

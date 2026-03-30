@@ -91,11 +91,11 @@ describe('windowCapture', () => {
     expect(script).toMatch(/DWMWA_EXTENDED_FRAME_BOUNDS\s*=\s*9/);
   });
 
-  it('Test 10: buildCaptureScript output contains IsIconic and GetWindowPlacement for minimized window handling', async () => {
+  it('Test 10: buildCaptureScript output contains IsIconic check that returns ERROR:MINIMIZED', async () => {
     const { buildCaptureScript } = await import('./windowCapture.js');
     const script = buildCaptureScript('Chrome', 'C:\\temp\\test.png');
     expect(script).toContain('IsIconic');
-    expect(script).toContain('GetWindowPlacement');
+    expect(script).toContain('ERROR:MINIMIZED');
   });
 
   it('Test 11: Title sanitization — captureWindow strips " and backtick from title before PS interpolation', async () => {
