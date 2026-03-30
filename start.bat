@@ -23,5 +23,7 @@ if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] App exited with errors. Running cleanup...
     bash scripts/kill-all.sh
     echo.
+    echo Diagnostic log: scripts\tauri-dev.log
+    echo.
     pause
 )

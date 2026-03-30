@@ -15,7 +15,15 @@ if [ -f "$DISCOVERY_FILE" ]; then
   rm -f "$DISCOVERY_FILE"
   echo "[kill-all] Cleaned discovery file: $DISCOVERY_FILE"
 fi
-wmic process where "CommandLine like '%sidecar%dist%server%'" call terminate 2>/dev/null && echo "[kill-all] Killed sidecar process" || true
+wmic process where "CommandLine like '%sidecar%dist%server%'" call terminate 2>/dev/null && echo "[kill-all] Killed sidecar process (wmic)" || true
+
+# 2b. Kill sidecar.exe by image name (the caxa-bundled exe in target/debug/ or binaries/)
+taskkill //F //IM "sidecar-x86_64-pc-windows-msvc.exe" 2>/dev/null && echo "[kill-all] Killed sidecar-x86_64 (taskkill)" || true
+# Also kill the short name copy that tauri-build places in target/debug/
+taskkill //F //IM "sidecar.exe" 2>/dev/null && echo "[kill-all] Killed sidecar.exe (taskkill)" || true
+
+# 2c. Kill caxa-extracted node processes (node.exe running from Temp\caxa\apps\sidecar*)
+wmic process where "Name='node.exe' and CommandLine like '%caxa%sidecar%'" call terminate 2>/dev/null && echo "[kill-all] Killed caxa-extracted sidecar node" || true
 
 # 3. Kill orphan node-pty shell processes (powershell/cmd spawned by node-pty via ConPTY)
 #    These are children of the sidecar — if sidecar dies uncleanly they become orphans

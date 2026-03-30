@@ -8,13 +8,23 @@
 
 $ErrorActionPreference = "Stop"
 
+# Self-elevate if not running as admin
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "Requesting administrator privileges..." -ForegroundColor Yellow
+    $scriptPath = $MyInvocation.MyCommand.Path
+    if (-not $scriptPath) { $scriptPath = $PSCommandPath }
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" -Verb RunAs -Wait
+    exit $LASTEXITCODE
+}
+
 Write-Host "Adding Windows Defender exclusions for Rust development..." -ForegroundColor Cyan
 Write-Host ""
 
 $exclusions = @(
     "$env:USERPROFILE\.cargo",
     "$env:USERPROFILE\.rustup",
-    "$PSScriptRoot\..\src-tauri\target"
+    "$PSScriptRoot\..\src-tauri\target",
+    "$PSScriptRoot\..\src-tauri\binaries"
 )
 
 $processExclusions = @(
