@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
 status: verifying
-stopped_at: Completed 10-02-PLAN.md
-last_updated: "2026-03-30T05:09:12.899Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-30T05:44:51.544Z"
 last_activity: 2026-03-30
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 17
+  total_plans: 6
+  completed_plans: 18
 ---
 
 # Project State
@@ -88,6 +88,9 @@ Phase-specific decisions affecting current/future work:
 - [Phase 10]: react-resizable-panels v4 uses onLayoutChanged(Layout map) not onLayout(number[]) — adapted with Panel id= prop and map-to-array conversion
 - [Phase 10]: Counter suffix on pane/split IDs prevents Date.now() collision on rapid splits in tests
 - [Phase Phase 10]: All 4 manual tests passed — PTY session survives split, scrollback preserved, stty size correct, onLayout persistence confirmed
+- [Phase 11]: Shared HTTP+WS port via WebSocketServer({ server: httpServer }) — CAPI-01 authoritative over STATE.md todo
+- [Phase 11]: Discovery file at %APPDATA%/chat-overlay-widget/api.port with JSON { port, token } format
+- [Phase 11]: Bearer auth on all HTTP endpoints; crypto.randomBytes(32) token; log char count only, never value
 
 ### Todos
 
@@ -106,7 +109,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-30T05:04:37.107Z
-Stopped at: Completed 10-02-PLAN.md
+Last session: 2026-03-30T05:44:51.539Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 10

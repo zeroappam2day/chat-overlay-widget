@@ -110,10 +110,10 @@ Requirements for Live App Awareness & Capture milestone.
 
 ### Capture Infrastructure
 
-- [ ] **CAPI-01**: Sidecar exposes HTTP REST API alongside existing WebSocket server (shared port)
-- [ ] **CAPI-02**: Port discovery file written to %APPDATA%\chat-overlay-widget\ with port + auth token
-- [ ] **CAPI-03**: HTTP API requires Bearer token authentication on all endpoints
-- [ ] **CAPI-04**: Port discovery file atomically deleted on sidecar shutdown
+- [x] **CAPI-01**: Sidecar exposes HTTP REST API alongside existing WebSocket server (shared port)
+- [x] **CAPI-02**: Port discovery file written to %APPDATA%\chat-overlay-widget\ with port + auth token
+- [x] **CAPI-03**: HTTP API requires Bearer token authentication on all endpoints
+- [x] **CAPI-04**: Port discovery file atomically deleted on sidecar shutdown
 
 ### CLI Wrapper
 
@@ -176,10 +176,10 @@ v1.2 (20 reqs):
 | SPLIT-01 | Phase 10 | Complete |
 | SPLIT-02 | Phase 10 | Complete |
 | SPLIT-03 | Phase 10 | Complete |
-| CAPI-01 | Phase 11 | Pending |
-| CAPI-02 | Phase 11 | Pending |
-| CAPI-03 | Phase 11 | Pending |
-| CAPI-04 | Phase 11 | Pending |
+| CAPI-01 | Phase 11 | Complete |
+| CAPI-02 | Phase 11 | Complete |
+| CAPI-03 | Phase 11 | Complete |
+| CAPI-04 | Phase 11 | Complete |
 | ENUM-01 | Phase 12 | Pending |
 | ENUM-02 | Phase 12 | Pending |
 | ENUM-03 | Phase 12 | Pending |

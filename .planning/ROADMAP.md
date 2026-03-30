@@ -113,7 +113,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   3. curl request with correct Bearer token returns a successful response
   4. Port discovery file is deleted on clean sidecar shutdown; file absent after app closes
 **Plans**: 2 plans
-- [ ] 11-01-PLAN.md — Shared HTTP+WS server with Bearer auth, health endpoint, discovery file
+- [x] 11-01-PLAN.md — Shared HTTP+WS server with Bearer auth, health endpoint, discovery file
 - [ ] 11-02-PLAN.md — Manual verification checkpoint (curl + discovery file lifecycle)
 
 ### Phase 12: Window Enumeration
@@ -168,7 +168,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 | 8. Window Screenshot Capture | v1.1 | Not started | |
 | 9. Browser CDP & CLI Wrapper | v1.1 | Not started | |
 | 10. Split Pane Preservation | 2/2 | Complete    | 2026-03-30 |
-| 11. Capture Infrastructure | v1.2 | Not started | |
+| 11. Capture Infrastructure | 1/2 | In Progress|  |
 | 12. Window Enumeration | v1.2 | Not started | |
 | 13. Window Capture | v1.2 | Not started | |
 | 14. CLI Wrapper | v1.2 | Not started | |
