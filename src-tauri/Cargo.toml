@@ -1,0 +1,36 @@
+[package]
+name = "chat-overlay-widget"
+version = "0.1.0"
+description = "A Tauri v1 chat overlay widget"
+authors = []
+license = ""
+repository = ""
+default-run = "chat-overlay-widget"
+edition = "2021"
+rust-version = "1.60"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+[dependencies]
+tauri = { version = "1", features = ["process-command-api", "shell-sidecar", "process-all", "window-all"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# this feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]
+
+# REQUIRED ON WINDOWS: Prevents "os error 32" file lock failures during cargo build.
+# Windows Defender real-time scanning locks .rcgu.o files mid-compilation.
+# codegen-units=1 makes each crate produce a single .o file, eliminating the
+# file-removal race condition that triggers Defender locks.
+# See: https://github.com/rust-lang/cargo/issues/5028
+[profile.dev]
+codegen-units = 1
+
+[profile.dev.build-override]
+codegen-units = 1
