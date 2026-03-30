@@ -10,6 +10,7 @@ import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 import { listWindows } from './windowEnumerator.js';
+import { captureWindow } from './windowCapture.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -46,6 +47,37 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Window enumeration failed' }));
     }
+    return;
+  }
+  if (req.method === 'POST' && req.url === '/capture/window') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { title?: unknown };
+        const title = typeof parsed.title === 'string' ? parsed.title.trim() : '';
+        if (!title) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'title is required' }));
+          return;
+        }
+        console.log(`[sidecar] capture/window requested: title="${title}"`);
+        const result = captureWindow(title);
+        if (result.ok) {
+          console.log(`[sidecar] capture/window success: ${result.path}`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ path: result.path }));
+        } else {
+          console.log(`[sidecar] capture/window failed: ${result.error}`);
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: result.error }));
+        }
+      } catch (err) {
+        console.error('[sidecar] capture/window error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err) }));
+      }
+    });
     return;
   }
   res.writeHead(404, { 'Content-Type': 'application/json' });

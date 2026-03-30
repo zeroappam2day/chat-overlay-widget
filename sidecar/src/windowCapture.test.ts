@@ -106,7 +106,7 @@ describe('windowCapture', () => {
     // Verify that spawnSync was called with a script that does NOT contain the dangerous chars
     expect(mockSpawnSync).toHaveBeenCalledTimes(1);
     const callArgs = mockSpawnSync.mock.calls[0];
-    const scriptArg = callArgs[1][3] as string; // 4th argument in the args array
+    const scriptArg = (callArgs[1] as string[])[3]; // 4th argument in the args array
     expect(scriptArg).not.toContain('"bad`');
     expect(scriptArg).not.toContain('`');
     // Also verify buildCaptureScript directly sanitizes

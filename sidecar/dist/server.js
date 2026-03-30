@@ -42,6 +42,8 @@ const ptySession_js_1 = require("./ptySession.js");
 const shellDetect_js_1 = require("./shellDetect.js");
 const historyStore_js_1 = require("./historyStore.js");
 const discoveryFile_js_1 = require("./discoveryFile.js");
+const windowEnumerator_js_1 = require("./windowEnumerator.js");
+const windowCapture_js_1 = require("./windowCapture.js");
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
@@ -62,6 +64,52 @@ function handleHttpRequest(req, res) {
     if (req.method === 'GET' && req.url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
+        return;
+    }
+    if (req.method === 'GET' && req.url === '/list-windows') {
+        try {
+            const windows = (0, windowEnumerator_js_1.listWindows)();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(windows));
+        }
+        catch (err) {
+            console.error('[sidecar] list-windows error:', err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Window enumeration failed' }));
+        }
+        return;
+    }
+    if (req.method === 'POST' && req.url === '/capture/window') {
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const parsed = JSON.parse(body);
+                const title = typeof parsed.title === 'string' ? parsed.title.trim() : '';
+                if (!title) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'title is required' }));
+                    return;
+                }
+                console.log(`[sidecar] capture/window requested: title="${title}"`);
+                const result = (0, windowCapture_js_1.captureWindow)(title);
+                if (result.ok) {
+                    console.log(`[sidecar] capture/window success: ${result.path}`);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ path: result.path }));
+                }
+                else {
+                    console.log(`[sidecar] capture/window failed: ${result.error}`);
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: result.error }));
+                }
+            }
+            catch (err) {
+                console.error('[sidecar] capture/window error:', err);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: String(err) }));
+            }
+        });
         return;
     }
     res.writeHead(404, { 'Content-Type': 'application/json' });
