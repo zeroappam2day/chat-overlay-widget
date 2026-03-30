@@ -95,10 +95,10 @@ Requirements for Live App Awareness & Capture milestone.
 
 ### Window Enumeration
 
-- [ ] **ENUM-01**: User can retrieve a list of visible taskbar applications with title and process name
-- [ ] **ENUM-02**: System windows, tooltips, and background services are filtered from the list
-- [ ] **ENUM-03**: Window list results are cached (5s TTL) to avoid redundant PowerShell spawns
-- [ ] **ENUM-04**: Sidecar exposes GET /list-windows HTTP endpoint returning JSON array
+- [x] **ENUM-01**: User can retrieve a list of visible taskbar applications with title and process name
+- [x] **ENUM-02**: System windows, tooltips, and background services are filtered from the list
+- [x] **ENUM-03**: Window list results are cached (5s TTL) to avoid redundant PowerShell spawns
+- [x] **ENUM-04**: Sidecar exposes GET /list-windows HTTP endpoint returning JSON array
 
 ### Window Capture
 
@@ -180,10 +180,10 @@ v1.2 (20 reqs):
 | CAPI-02 | Phase 11 | Complete |
 | CAPI-03 | Phase 11 | Complete |
 | CAPI-04 | Phase 11 | Complete |
-| ENUM-01 | Phase 12 | Pending |
-| ENUM-02 | Phase 12 | Pending |
-| ENUM-03 | Phase 12 | Pending |
-| ENUM-04 | Phase 12 | Pending |
+| ENUM-01 | Phase 12 | Complete |
+| ENUM-02 | Phase 12 | Complete |
+| ENUM-03 | Phase 12 | Complete |
+| ENUM-04 | Phase 12 | Complete |
 | WCAP-01 | Phase 13 | Pending |
 | WCAP-02 | Phase 13 | Pending |
 | WCAP-03 | Phase 13 | Pending |

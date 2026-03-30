@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
-status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-03-30T07:49:31.798Z"
+status: verifying
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-03-30T07:56:19.900Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 11 — capture-infrastructure
+**Current focus:** Phase 12 — window-enumeration
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Executing Phase 11
+Phase: 12 (window-enumeration) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
 Last activity: 2026-03-30
 
 Progress bar: [··········] 0/6 phases complete
@@ -91,6 +91,8 @@ Phase-specific decisions affecting current/future work:
 - [Phase 11]: Shared HTTP+WS port via WebSocketServer({ server: httpServer }) — CAPI-01 authoritative over STATE.md todo
 - [Phase 11]: Discovery file at %APPDATA%/chat-overlay-widget/api.port with JSON { port, token } format
 - [Phase 11]: Bearer auth on all HTTP endpoints; crypto.randomBytes(32) token; log char count only, never value
+- [Phase 12-window-enumeration]: spawnSync with args array (not execSync) for PS inline C# — avoids shell quoting escapes in multi-line heredoc
+- [Phase 12-window-enumeration]: GetWindowLongPtr (64-bit aware) not GetWindowLong — required on 64-bit Windows 11; WS_EX_TOOLWINDOW declared as long
 
 ### Todos
 
@@ -109,7 +111,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-30T05:44:51.539Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-03-30T07:56:19.894Z
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 10

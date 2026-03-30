@@ -83,7 +83,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 
 - [x] **Phase 10: Split Pane Preservation** — Fix React unmount destroying PTY session on split (completed 2026-03-30)
 - [x] **Phase 11: Capture Infrastructure** — Sidecar HTTP server + port/token discovery file (completed 2026-03-30)
-- [ ] **Phase 12: Window Enumeration** — List visible taskbar apps via PowerShell, 5s cache, HTTP endpoint
+- [x] **Phase 12: Window Enumeration** — List visible taskbar apps via PowerShell, 5s cache, HTTP endpoint (completed 2026-03-30)
 - [ ] **Phase 13: Window Capture** — Capture any window by title, DPI-aware, PrintWindow for occluded windows
 - [ ] **Phase 14: CLI Wrapper** — overlay-capture script reads discovery file, issues HTTP, prints path to stdout
 - [ ] **Phase 15: Claude Skill** — capture-app SKILL.md registers /capture-app command with dynamic window list
@@ -126,7 +126,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
   3. Calling /list-windows twice within 5 seconds does not spawn a second powershell.exe process (cache hit observable in sidecar logs)
   4. Response arrives in under 2 seconds on a cold cache (first call after startup)
 **Plans**: 1 plan
-- [ ] 12-01-PLAN.md — Window enumerator module with filter chain, 5s cache, GET /list-windows route
+- [x] 12-01-PLAN.md — Window enumerator module with filter chain, 5s cache, GET /list-windows route
 
 ### Phase 13: Window Capture
 **Goal**: Any visible (or minimized/occluded) window can be captured to a PNG file by title, with correct dimensions on high-DPI displays
@@ -170,7 +170,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 | 9. Browser CDP & CLI Wrapper | v1.1 | Not started | |
 | 10. Split Pane Preservation | 2/2 | Complete    | 2026-03-30 |
 | 11. Capture Infrastructure | 1/2 | Complete    | 2026-03-30 |
-| 12. Window Enumeration | v1.2 | Not started | |
+| 12. Window Enumeration | 1/1 | Complete   | 2026-03-30 |
 | 13. Window Capture | v1.2 | Not started | |
 | 14. CLI Wrapper | v1.2 | Not started | |
 | 15. Claude Skill | v1.2 | Not started | |
