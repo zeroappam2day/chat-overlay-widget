@@ -9,6 +9,7 @@ import { PTYSession, SCREENSHOT_DIR } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
+import { listWindows } from './windowEnumerator.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -33,6 +34,18 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+  if (req.method === 'GET' && req.url === '/list-windows') {
+    try {
+      const windows = listWindows();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(windows));
+    } catch (err) {
+      console.error('[sidecar] list-windows error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Window enumeration failed' }));
+    }
     return;
   }
   res.writeHead(404, { 'Content-Type': 'application/json' });
