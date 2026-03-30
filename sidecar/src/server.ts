@@ -8,13 +8,16 @@ import type { ClientMessage, ServerMessage, SessionMeta } from './protocol.js';
 import { PTYSession, SCREENSHOT_DIR } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
-import { writeDiscoveryFile, deleteDiscoveryFile } from './discoveryFile.js';
+import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
 markOrphans();
 sweepScreenshotTempFiles();
 console.log('[sidecar] SQLite session database initialized');
+
+// Clean any stale discovery file from a previous force-killed session
+cleanStaleDiscoveryFile();
 
 const authToken = crypto.randomBytes(32).toString('hex');
 let portFilePath: string | null = null;
@@ -206,12 +209,15 @@ wss.on('connection', (ws: WebSocket) => {
 });
 
 // Cleanup all PTY sessions and discovery file on sidecar exit (D-08, CAPI-04)
+// Note: On Windows, Tauri force-kills sidecar via taskkill /T /F, so these handlers
+// only fire for graceful shutdowns. Primary cleanup is in Tauri's RunEvent::Exit (main.rs).
 process.on('exit', () => {
   for (const session of activeSessions.values()) {
     session.destroy();
   }
   if (portFilePath) {
     deleteDiscoveryFile(portFilePath);
+    portFilePath = null;
   }
 });
 process.on('SIGTERM', () => process.exit(0));

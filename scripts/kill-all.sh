@@ -9,6 +9,12 @@ taskkill //F //IM "chat-overlay-widget.exe" 2>/dev/null && echo "[kill-all] Kill
 
 # 2. Kill sidecar node processes spawned by Tauri (match by sidecar path or caxa)
 #    During dev, the sidecar runs as a plain node process with sidecar/dist/server.js
+#    Clean discovery file BEFORE killing — force-kill won't trigger Node exit handlers
+DISCOVERY_FILE="$APPDATA/chat-overlay-widget/api.port"
+if [ -f "$DISCOVERY_FILE" ]; then
+  rm -f "$DISCOVERY_FILE"
+  echo "[kill-all] Cleaned discovery file: $DISCOVERY_FILE"
+fi
 wmic process where "CommandLine like '%sidecar%dist%server%'" call terminate 2>/dev/null && echo "[kill-all] Killed sidecar process" || true
 
 # 3. Kill orphan node-pty shell processes (powershell/cmd spawned by node-pty via ConPTY)

@@ -33,18 +33,42 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+const http = __importStar(require("node:http"));
+const crypto = __importStar(require("node:crypto"));
 const ws_1 = require("ws");
 const fs = __importStar(require("node:fs"));
 const path = __importStar(require("node:path"));
 const ptySession_js_1 = require("./ptySession.js");
 const shellDetect_js_1 = require("./shellDetect.js");
 const historyStore_js_1 = require("./historyStore.js");
+const discoveryFile_js_1 = require("./discoveryFile.js");
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
 sweepScreenshotTempFiles();
 console.log('[sidecar] SQLite session database initialized');
-const wss = new ws_1.WebSocketServer({ host: '127.0.0.1', port: 0 });
+// Clean any stale discovery file from a previous force-killed session
+(0, discoveryFile_js_1.cleanStaleDiscoveryFile)();
+const authToken = crypto.randomBytes(32).toString('hex');
+let portFilePath = null;
+function handleHttpRequest(req, res) {
+    const auth = req.headers['authorization'] ?? '';
+    if (!auth.startsWith('Bearer ') || auth.slice(7) !== authToken) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+    }
+    // Route dispatch
+    if (req.method === 'GET' && req.url === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+        return;
+    }
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not found' }));
+}
+const httpServer = http.createServer(handleHttpRequest);
+const wss = new ws_1.WebSocketServer({ server: httpServer });
 // Heartbeat: ping every 30s, terminate if no pong within 10s (Phase 5 hardening)
 const HEARTBEAT_INTERVAL = 30000;
 const HEARTBEAT_TIMEOUT = 10000;
@@ -60,12 +84,14 @@ const heartbeatTimer = setInterval(() => {
         ws.ping();
     }
 }, HEARTBEAT_INTERVAL);
-wss.on('close', () => clearInterval(heartbeatTimer));
-wss.on('listening', () => {
-    const addr = wss.address();
+httpServer.on('close', () => clearInterval(heartbeatTimer));
+httpServer.listen(0, '127.0.0.1', () => {
+    const addr = httpServer.address();
     // PORT: prefix — Tauri Rust core reads this via CommandEvent::Stdout
     process.stdout.write(`PORT:${addr.port}\n`);
-    console.log(`[sidecar] WebSocket server listening on 127.0.0.1:${addr.port}`);
+    console.log(`[sidecar] server listening on 127.0.0.1:${addr.port}`);
+    console.log(`[sidecar] auth token generated (${authToken.length} chars)`);
+    portFilePath = (0, discoveryFile_js_1.writeDiscoveryFile)(addr.port, authToken);
 });
 const activeSessions = new Map();
 function sendMsg(ws, msg) {
@@ -197,10 +223,16 @@ wss.on('connection', (ws) => {
         }
     });
 });
-// Cleanup all PTY sessions on sidecar exit (D-08)
+// Cleanup all PTY sessions and discovery file on sidecar exit (D-08, CAPI-04)
+// Note: On Windows, Tauri force-kills sidecar via taskkill /T /F, so these handlers
+// only fire for graceful shutdowns. Primary cleanup is in Tauri's RunEvent::Exit (main.rs).
 process.on('exit', () => {
     for (const session of activeSessions.values()) {
         session.destroy();
+    }
+    if (portFilePath) {
+        (0, discoveryFile_js_1.deleteDiscoveryFile)(portFilePath);
+        portFilePath = null;
     }
 });
 process.on('SIGTERM', () => process.exit(0));

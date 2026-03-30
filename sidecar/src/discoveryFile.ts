@@ -8,6 +8,20 @@ export const DISCOVERY_FILE_DIR = path.join(
 );
 
 /**
+ * Remove any stale discovery file left behind by a force-killed sidecar.
+ * Called at startup before writing a fresh one.
+ */
+export function cleanStaleDiscoveryFile(): void {
+  const filePath = path.join(DISCOVERY_FILE_DIR, 'api.port');
+  try {
+    fs.unlinkSync(filePath);
+    console.log(`[sidecar] cleaned stale discovery file: ${filePath}`);
+  } catch {
+    // No stale file — expected on first run
+  }
+}
+
+/**
  * Atomically write the discovery file containing port and auth token.
  * Writes to a .tmp file first, then renames for atomic replace.
  * Returns the file path for use in cleanup.

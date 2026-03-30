@@ -72,7 +72,18 @@ fn main() {
 
     app.run(move |_app_handle, event| {
         if let RunEvent::Exit = event {
-            println!("[tauri] app exiting — killing sidecar process tree");
+            println!("[tauri] app exiting — cleaning up");
+            // Delete discovery file BEFORE force-killing sidecar (CAPI-04)
+            // taskkill /T /F is TerminateProcess — Node.js exit handlers never fire
+            if let Some(appdata) = std::env::var_os("APPDATA") {
+                let discovery_file = std::path::PathBuf::from(appdata)
+                    .join("chat-overlay-widget")
+                    .join("api.port");
+                match std::fs::remove_file(&discovery_file) {
+                    Ok(()) => println!("[tauri] deleted discovery file: {}", discovery_file.display()),
+                    Err(e) => println!("[tauri] discovery file cleanup: {} ({})", discovery_file.display(), e),
+                }
+            }
             // Use taskkill /T to kill the entire process tree (sidecar.exe + grandchild node.exe)
             // CommandChild::kill() only kills the direct child, leaving the caxa-spawned node.exe orphaned
             if let Some(pid) = pid_arc.lock().unwrap().take() {
