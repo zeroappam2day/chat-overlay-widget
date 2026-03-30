@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
-status: verifying
+status: executing
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-03-30T05:44:51.544Z"
+last_updated: "2026-03-30T07:49:31.798Z"
 last_activity: 2026-03-30
 progress:
-  total_phases: 7
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 18
+  total_phases: 8
+  completed_phases: 2
+  total_plans: 7
+  completed_plans: 19
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 10 — split-pane-preservation
+**Current focus:** Phase 11 — capture-infrastructure
 
 ## Current Position
 
-Phase: 10
+Phase: 12
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Executing Phase 11
 Last activity: 2026-03-30
 
 Progress bar: [··········] 0/6 phases complete
