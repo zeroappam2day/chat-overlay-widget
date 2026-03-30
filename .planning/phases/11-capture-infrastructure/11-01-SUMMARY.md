@@ -112,6 +112,16 @@ None — no external service configuration required.
 - Discovery file format is JSON { port, token } — Phase 14 reads it with JSON.parse
 - Bearer token pattern established — future routes just call handleHttpRequest and route within it
 
+## Self-Check: PASSED
+
+- FOUND: sidecar/src/discoveryFile.ts
+- FOUND: sidecar/src/server.ts
+- FOUND: .planning/phases/11-capture-infrastructure/11-01-SUMMARY.md
+- FOUND commit ae7820f (Task 1)
+- FOUND commit cc8295d (Task 2)
+- TSC: no errors
+- Vitest: 16/16 tests pass
+
 ---
 *Phase: 11-capture-infrastructure*
 *Completed: 2026-03-30*
