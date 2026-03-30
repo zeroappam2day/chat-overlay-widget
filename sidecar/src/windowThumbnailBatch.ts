@@ -40,7 +40,7 @@ public class BatchThumb {
     public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out int pvAttribute, int cbAttribute);
 
     [DllImport("dwmapi.dll")]
-    public static extern int DwmGetWindowAttributeRect(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
 
     [DllImport("user32.dll")]
     public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdcBlt, uint nFlags);
@@ -106,7 +106,7 @@ public class BatchThumb {
 
                 // Get true physical pixel bounds via DwmGetWindowAttribute
                 RECT bounds;
-                DwmGetWindowAttributeRect(hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, out bounds,
+                DwmGetWindowAttribute(hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, out bounds,
                     System.Runtime.InteropServices.Marshal.SizeOf(typeof(RECT)));
                 int width  = bounds.Right  - bounds.Left;
                 int height = bounds.Bottom - bounds.Top;
