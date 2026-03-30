@@ -26,11 +26,16 @@ interface PaneStore {
 
 // --- Internal helpers (not exported) ---
 
-function splitInTree(node: LayoutNode, paneId: string, direction: 'h' | 'v'): LayoutNode {
+let _idCounter = 0;
+function uniqueId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${++_idCounter}`;
+}
+
+export function splitInTree(node: LayoutNode, paneId: string, direction: 'h' | 'v'): LayoutNode {
   if (node.type === 'pane') {
     if (node.id === paneId) {
-      const newPaneId = `pane-${Date.now()}`;
-      const splitId = `split-${Date.now()}`;
+      const newPaneId = uniqueId('pane');
+      const splitId = uniqueId('split');
       const splitNode: SplitNode = {
         type: 'split',
         id: splitId,
@@ -92,7 +97,7 @@ function countPanes(node: LayoutNode): number {
   return node.children.reduce((sum, child) => sum + countPanes(child), 0);
 }
 
-function getAllPaneIds(node: LayoutNode): string[] {
+export function getAllPaneIds(node: LayoutNode): string[] {
   if (node.type === 'pane') {
     return [node.id];
   }
