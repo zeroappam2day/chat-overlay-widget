@@ -155,7 +155,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 ### Phases
 
 - [x] **Phase 16: Protocol Extension** — WebSocket message types for batch thumbnails and enriched capture (completed 2026-03-30)
-- [ ] **Phase 17: Batch Thumbnail Backend** — Sidecar generates 240x180 thumbnails for all visible windows in a single async operation
+- [x] **Phase 17: Batch Thumbnail Backend** — Sidecar generates 240x180 thumbnails for all visible windows in a single async operation (completed 2026-03-30)
 - [ ] **Phase 18: Enriched Capture Backend** — Capture result includes bounds, DPI scale, capture dimensions; backward-compatible HTTP endpoints
 - [ ] **Phase 19: Window Picker UI** — Thumbnail grid popover with keyboard navigation, search filter, and manual refresh
 - [ ] **Phase 20: Metadata Injection & Integration** — Structured computer_use metadata block injected into active pane's ChatInputBar on window selection
@@ -187,7 +187,7 @@ Plans:
   4. Thumbnail generation uses a single async PowerShell spawn for the entire batch — not one spawn per window
 **Plans**: 1 plan
 Plans:
-- [ ] 17-01-PLAN.md -- Batch thumbnail module (TDD) + server.ts wiring
+- [x] 17-01-PLAN.md -- Batch thumbnail module (TDD) + server.ts wiring
 
 ### Phase 18: Enriched Capture Backend
 **Goal**: Window capture via WebSocket returns pixel-accurate bounds, DPI scale, and capture dimensions alongside the file path; existing HTTP endpoints continue working unchanged
@@ -239,7 +239,7 @@ Plans:
 | 14. CLI Wrapper | v1.2 | Complete | 2026-03-30 |
 | 15. Claude Skill | v1.2 | Complete | 2026-03-30 |
 | 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
-| 17. Batch Thumbnail Backend | v1.3 | Not started | — |
+| 17. Batch Thumbnail Backend | 1/1 | Complete   | 2026-03-30 |
 | 18. Enriched Capture Backend | v1.3 | Not started | — |
 | 19. Window Picker UI | v1.3 | Not started | — |
 | 20. Metadata Injection & Integration | v1.3 | Not started | — |

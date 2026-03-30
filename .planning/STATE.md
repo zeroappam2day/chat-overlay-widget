@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
 status: verifying
-stopped_at: Completed 16-01-PLAN.md
-last_updated: "2026-03-30T16:11:28.152Z"
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-03-30T16:35:28.583Z"
 last_activity: 2026-03-30
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  total_phases: 2
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 16 — protocol-extension
+**Current focus:** Phase 17 — batch-thumbnail-backend
 
 ## Current Position
 
-Phase: 16
-Plan: Not started
+Phase: 17 (batch-thumbnail-backend) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-03-30
 
@@ -98,6 +98,8 @@ Phase-specific decisions affecting current/future work:
 - [v1.3 roadmap]: Enriched capture metadata format: { path, bounds: {x,y,w,h}, captureSize: {w,h}, dpiScale } — computer_use compatible
 - [v1.3 roadmap]: Protocol extension in Phase 16 must land in both sidecar/src/protocol.ts and src/protocol.ts before Phase 17/19 start
 - [Phase 16]: WindowThumbnail as named interface (not inline) for reuse in Phase 17/19 handlers
+- [Phase 17]: proc.stdout.setEncoding('utf8') on stream not in spawn options — spawn ignores encoding option unlike spawnSync
+- [Phase 17]: buildBatchThumbnailScript() exported for testability — consistent with buildCaptureScript() pattern from Phase 13
 
 ### Todos
 
@@ -109,7 +111,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-30T16:07:29.298Z
-Stopped at: Completed 16-01-PLAN.md
+Last session: 2026-03-30T16:35:28.576Z
+Stopped at: Completed 17-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 16`
