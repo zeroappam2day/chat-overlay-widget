@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Stable Window Targeting
-status: executing
-stopped_at: "Checkpoint: 22-02-PLAN.md Task 2 awaiting human-verify"
-last_updated: "2026-03-31T10:07:49.039Z"
+status: verifying
+stopped_at: Completed 22-02-PLAN.md — human-verified
+last_updated: "2026-03-31T10:29:50.756Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 2
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 Phase: 22 (HWND-Based Capture) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-31
 
 Progress: [████████████░░] 85% (20/22 phases complete across all milestones)
@@ -56,6 +56,7 @@ Recent decisions affecting v1.4:
 - [Phase 21-protocol-extension]: PROT-05 preserved: captureWindowWithMetadata(msg.title) unchanged — HWND-based capture deferred to Phase 22
 - [Phase 22-hwnd-based-capture]: captureWindowByHwnd accepts (hwnd, pid, titleLabel) — HWND-04 fallback uses listWindows pid lookup to derive processName without protocol change
 - [Phase 22-hwnd-based-capture]: parseOkLine extracted as private helper shared between captureWindowWithMetadata and captureWindowByHwnd — avoids duplication
+- [Phase 22-hwnd-based-capture]: [Phase 22-02]: Human-verified HWND routing — capture-window-with-metadata routes through captureWindowByHwnd, HTTP path unchanged
 
 ### Todos
 
@@ -68,7 +69,7 @@ Recent decisions affecting v1.4:
 
 ## Session Continuity
 
-Last session: 2026-03-31T10:07:49.033Z
-Stopped at: Checkpoint: 22-02-PLAN.md Task 2 awaiting human-verify
+Last session: 2026-03-31T10:29:48.659Z
+Stopped at: Completed 22-02-PLAN.md — human-verified
 Resume file: None
 Next action: /gsd:plan-phase 21

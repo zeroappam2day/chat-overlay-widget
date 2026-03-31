@@ -49,7 +49,7 @@ completed: 2026-03-31
 - **Duration:** ~10 min
 - **Started:** 2026-03-31T11:05:00Z
 - **Completed:** 2026-03-31T11:15:00Z
-- **Tasks:** 1 of 2 (Task 2 is checkpoint:human-verify — awaiting user)
+- **Tasks:** 2 of 2
 - **Files modified:** 1
 
 ## Accomplishments
@@ -58,11 +58,12 @@ completed: 2026-03-31
 - Log line updated to show hwnd and pid for observability
 - HTTP POST /capture/window unchanged — captureWindow(title) path unaffected (PROT-05)
 - All 87 tests pass, TypeScript compiles clean
+- Human E2E verification passed: HWND and PID visible in WebSocket messages, capture succeeds with HWND routing, no console errors
 
 ## Task Commits
 
 1. **Task 1: Route capture handler to captureWindowByHwnd** - `2801bcf` (feat)
-2. **Task 2: Verify HWND-based capture end-to-end** - PENDING (checkpoint:human-verify)
+2. **Task 2: Verify HWND-based capture end-to-end** - APPROVED (checkpoint:human-verify)
 
 ## Files Created/Modified
 - `sidecar/src/server.ts` - Import updated, capture-window-with-metadata handler routes through captureWindowByHwnd
@@ -85,12 +86,11 @@ None.
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- HWND-based capture is fully wired. Task 2 requires human E2E verification:
-  1. Start app with start.bat
-  2. Open window picker, select Chrome window
-  3. Switch Chrome tabs (title change) — verify capture still targets correct window
-  4. Select Notepad, close it, attempt capture — verify STALE_HWND error
-  5. Check sidecar logs for `hwnd=` lines confirming HWND routing
+- HWND-based capture is fully wired and human-verified end-to-end
+- v1.4 Stable Window Targeting milestone: Phase 22 complete (both plans)
+- Ready for milestone closure or next milestone planning
+
+## Self-Check: PASSED
 
 ---
 *Phase: 22-hwnd-based-capture*
