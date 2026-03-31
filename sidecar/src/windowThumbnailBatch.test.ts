@@ -9,10 +9,13 @@ vi.mock('node:child_process', () => ({
 const mockSpawn = vi.mocked(spawn);
 
 function makeFakeProcess(stdout: string, exitCode = 0) {
-  const emitter = new EventEmitter() as NodeJS.EventEmitter & { stdout: EventEmitter & { setEncoding: () => void }; kill: () => void };
+  const emitter = new EventEmitter() as NodeJS.EventEmitter & { stdout: EventEmitter & { setEncoding: () => void }; stderr: EventEmitter & { setEncoding: () => void }; kill: () => void };
   const stdoutEmitter = new EventEmitter() as EventEmitter & { setEncoding: () => void };
-  stdoutEmitter.setEncoding = vi.fn(); // satisfy proc.stdout.setEncoding('utf8') call
+  const stderrEmitter = new EventEmitter() as EventEmitter & { setEncoding: () => void };
+  stdoutEmitter.setEncoding = vi.fn();
+  stderrEmitter.setEncoding = vi.fn();
   (emitter as any).stdout = stdoutEmitter;
+  (emitter as any).stderr = stderrEmitter;
   (emitter as any).kill = vi.fn();
   setImmediate(() => {
     stdoutEmitter.emit('data', stdout);

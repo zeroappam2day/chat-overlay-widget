@@ -8,7 +8,9 @@ import { SearchOverlay } from './SearchOverlay';
 import { ChatInputBar } from './ChatInputBar';
 import { HistorySidebar } from './HistorySidebar';
 import { HistoryViewer } from './HistoryViewer';
-import type { ServerMessage } from '../protocol';
+import { WindowPicker } from './WindowPicker';
+import type { ServerMessage, WindowThumbnail } from '../protocol';
+import { formatCaptureBlock } from '../utils/formatCaptureBlock';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -22,8 +24,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   const [connectionState, setConnectionState] = useState<string>('waiting');
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerWindows, setPickerWindows] = useState<WindowThumbnail[]>([]);
   // Pending image path from clipboard paste (sidecar save-image-result response)
   const [pendingImagePath, setPendingImagePath] = useState<string | null>(null);
+  // Pending capture block from window selection (sidecar capture-result-with-metadata response)
+  const [pendingInjection, setPendingInjection] = useState<string | null>(null);
   const [inputBarHeight, setInputBarHeight] = useState(144); // INBAR-01: ~144px default
   const isDraggingRef = useRef(false);
   const dragStartYRef = useRef(0);
@@ -43,6 +49,14 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   // Use a ref for isActive so keyboard handlers don't have stale closure issues
   const isActiveRef = useRef(isActive);
   useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+
+  // Ref for pickerOpen to avoid stale closure in keyboard handler (D-12 pattern)
+  const pickerOpenRef = useRef(false);
+  useEffect(() => { pickerOpenRef.current = pickerOpen; }, [pickerOpen]);
+
+  // Ref for currentShell to avoid stale closure in handleServerMessage (D-12 pattern)
+  const currentShellRef = useRef<string | null>(null);
+  useEffect(() => { currentShellRef.current = currentShell; }, [currentShell]);
 
   // handleHistoryMessage is initialized after useSessionHistory below.
   // Use a ref so handleServerMessage's useCallback can call it without
@@ -87,6 +101,21 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         // Clipboard paste flow: sidecar saved the temp file, inject its path into input box
         setPendingImagePath(msg.path);
         break;
+      case 'window-thumbnails':
+        setPickerWindows(msg.windows);
+        break;
+      case 'capture-result-with-metadata': {
+        const block = formatCaptureBlock({
+          path: msg.path,
+          title: msg.title,
+          bounds: msg.bounds,
+          captureSize: msg.captureSize,
+          dpiScale: msg.dpiScale,
+          shell: currentShellRef.current,
+        });
+        setPendingInjection(block);
+        break;
+      }
       default:
         // Delegate history-sessions, history-chunk, history-end, session-start
         handleHistoryMessageRef.current(msg);
@@ -160,6 +189,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
     const handler = (e: KeyboardEvent) => {
       if (!isActiveRef.current) return; // only active pane responds
+      if (pickerOpenRef.current) return; // picker handles its own keys via stopPropagation (D-12)
       if (e.ctrlKey && e.code === 'KeyF') {
         e.preventDefault();
         setSearchOpen(prev => !prev);
@@ -222,6 +252,17 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     }
   }, [currentShell, sendMessage, getTerminalDimensions]);
 
+  const handleOpenPicker = useCallback(() => {
+    setPickerOpen(true);
+    sendMessage({ type: 'list-windows-with-thumbnails' });
+  }, [sendMessage]);
+
+  // Close picker BEFORE sending WS message so UI does not freeze during sidecar spawnSync capture
+  const handleWindowSelect = useCallback((window: WindowThumbnail) => {
+    setPickerOpen(false);
+    sendMessage({ type: 'capture-window-with-metadata', title: window.title });
+  }, [sendMessage]);
+
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     isDraggingRef.current = true;
     dragStartYRef.current = e.clientY;
@@ -274,6 +315,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         shells={shells}
         onShellChange={handleShellChange}
         onToggleSidebar={() => setSidebarOpen(s => !s)}
+        onTogglePicker={handleOpenPicker}
         onSplitHorizontal={() => splitPane(paneId, 'h')}
         onSplitVertical={() => splitPane(paneId, 'v')}
         onClose={() => closePane(paneId)}
@@ -303,6 +345,14 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
             onClose={() => setSearchOpen(false)}
           />
         )}
+        {pickerOpen && (
+          <WindowPicker
+            windows={pickerWindows}
+            onClose={() => setPickerOpen(false)}
+            onRefresh={() => sendMessage({ type: 'list-windows-with-thumbnails' })}
+            onSelect={handleWindowSelect}
+          />
+        )}
         {/* Terminal mount point — must have explicit height for xterm.js FitAddon */}
         <div ref={containerRef} className="h-full" />
       </div>
@@ -321,6 +371,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         onImagePaste={(b64) => sendMessage({ type: 'save-image', base64: b64 })}
         currentShell={currentShell}
         height={inputBarHeight}
+        pendingInjection={pendingInjection}
+        onInjectionConsumed={() => setPendingInjection(null)}
       />
     </div>
   );

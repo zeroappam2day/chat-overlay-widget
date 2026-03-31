@@ -121,3 +121,100 @@ describe('windowCapture', () => {
     expect(mockSpawnSync).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('captureWindowWithMetadata', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.resetAllMocks();
+  });
+
+  it('Test 12: captureWindowWithMetadata("Chrome") returns enriched metadata on success', async () => {
+    const { spawnSync: mockSS } = await import('node:child_process');
+    const mock = vi.mocked(mockSS);
+    // Pipe-delimited format: OK|path|bx|by|bw|bh|cw|ch|dpi
+    const stdout = 'OK|C:\\temp\\abc.png|100|200|1500|1000|1500|1000|1.2500';
+    mock.mockReturnValue({ stdout, stderr: '', status: 0, error: undefined } as ReturnType<typeof spawnSync>);
+    const { captureWindowWithMetadata } = await import('./windowCapture.js');
+    const result = captureWindowWithMetadata('Chrome');
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        path: 'C:\\temp\\abc.png',
+        bounds: { x: 100, y: 200, w: 1500, h: 1000 },
+        captureSize: { w: 1500, h: 1000 },
+        dpiScale: 1.25,
+      },
+    });
+  });
+
+  it('Test 13: captureWindowWithMetadata("XYZZY") returns { ok: false, error: "NO_MATCH" } when PS stdout is ERROR:NO_MATCH', async () => {
+    const { spawnSync: mockSS } = await import('node:child_process');
+    const mock = vi.mocked(mockSS);
+    mock.mockReturnValue({ stdout: 'ERROR:NO_MATCH', stderr: '', status: 0, error: undefined } as ReturnType<typeof spawnSync>);
+    const { captureWindowWithMetadata } = await import('./windowCapture.js');
+    const result = captureWindowWithMetadata('XYZZY');
+    expect(result).toEqual({ ok: false, error: 'NO_MATCH' });
+  });
+
+  it('Test 14: captureWindowWithMetadata("Minimized") returns { ok: false, error: "MINIMIZED" } when PS stdout is ERROR:MINIMIZED', async () => {
+    const { spawnSync: mockSS } = await import('node:child_process');
+    const mock = vi.mocked(mockSS);
+    mock.mockReturnValue({ stdout: 'ERROR:MINIMIZED', stderr: '', status: 0, error: undefined } as ReturnType<typeof spawnSync>);
+    const { captureWindowWithMetadata } = await import('./windowCapture.js');
+    const result = captureWindowWithMetadata('Minimized');
+    expect(result).toEqual({ ok: false, error: 'MINIMIZED' });
+  });
+
+  it('Test 15: buildCaptureScriptWithMetadata() output contains SetProcessDpiAwarenessContext(new IntPtr(-4))', async () => {
+    const { buildCaptureScriptWithMetadata } = await import('./windowCapture.js');
+    const script = buildCaptureScriptWithMetadata('Chrome', 'C:\\temp\\test.png');
+    expect(script).toContain('SetProcessDpiAwarenessContext(new IntPtr(-4))');
+  });
+
+  it('Test 16: buildCaptureScriptWithMetadata() output contains GetWindowRect P/Invoke declaration', async () => {
+    const { buildCaptureScriptWithMetadata } = await import('./windowCapture.js');
+    const script = buildCaptureScriptWithMetadata('Chrome', 'C:\\temp\\test.png');
+    expect(script).toContain('GetWindowRect(IntPtr hWnd, out RECT lpRect)');
+  });
+
+  it('Test 17: buildCaptureScriptWithMetadata() output contains pipe-delimited return with bounds and dpi fields', async () => {
+    const { buildCaptureScriptWithMetadata } = await import('./windowCapture.js');
+    const script = buildCaptureScriptWithMetadata('Chrome', 'C:\\temp\\test.png');
+    // Uses pipe-delimited format: OK|path|bx|by|bw|bh|cw|ch|dpi
+    expect(script).toContain('"OK|"');
+    expect(script).toContain('dmwBounds.Left');
+    expect(script).toContain('dmwBounds.Top');
+    expect(script).toContain('physW');
+    expect(script).toContain('physH');
+    expect(script).toContain('dpiScale');
+  });
+
+  it('Test 18: captureWindowWithMetadata handles PS Add-Type diagnostic lines before OK| line', async () => {
+    const { spawnSync: mockSS } = await import('node:child_process');
+    const mock = vi.mocked(mockSS);
+    const okLine = 'OK|C:\\temp\\abc.png|0|0|800|600|800|600|1.0000';
+    const stdout = `warning CS0219: unused variable\n${okLine}`;
+    mock.mockReturnValue({ stdout, stderr: '', status: 0, error: undefined } as ReturnType<typeof spawnSync>);
+    const { captureWindowWithMetadata } = await import('./windowCapture.js');
+    const result = captureWindowWithMetadata('Chrome');
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        path: 'C:\\temp\\abc.png',
+        bounds: { x: 0, y: 0, w: 800, h: 600 },
+        captureSize: { w: 800, h: 600 },
+        dpiScale: 1.0,
+      },
+    });
+  });
+
+  it('Test 19: All 11 existing captureWindow tests pass (regression guard — captureWindow still works)', async () => {
+    const { spawnSync: mockSS } = await import('node:child_process');
+    const mock = vi.mocked(mockSS);
+    const fakePath = 'C:\\temp\\abc.png';
+    mock.mockReturnValue({ stdout: `OK:${fakePath}`, stderr: '', status: 0, error: undefined } as ReturnType<typeof spawnSync>);
+    const { captureWindow } = await import('./windowCapture.js');
+    const result = captureWindow('Chrome');
+    expect(result).toEqual({ ok: true, path: fakePath });
+  });
+});

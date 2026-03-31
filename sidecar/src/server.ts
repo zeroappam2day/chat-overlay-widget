@@ -10,7 +10,7 @@ import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 import { listWindows } from './windowEnumerator.js';
-import { captureWindow } from './windowCapture.js';
+import { captureWindow, captureWindowWithMetadata } from './windowCapture.js';
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
@@ -250,6 +250,25 @@ wss.on('connection', (ws: WebSocket) => {
             console.error('[sidecar] list-windows-with-thumbnails error:', err);
             sendMsg(ws, { type: 'error', message: `Thumbnail batch failed: ${err}` });
           });
+        break;
+      }
+      case 'capture-window-with-metadata': {
+        console.log(`[sidecar] capture-window-with-metadata requested: title="${msg.title}"`);
+        const result = captureWindowWithMetadata(msg.title);
+        if (result.ok) {
+          console.log(`[sidecar] capture-window-with-metadata success: ${result.data.path}`);
+          sendMsg(ws, {
+            type: 'capture-result-with-metadata',
+            path: result.data.path,
+            title: msg.title,
+            bounds: result.data.bounds,
+            captureSize: result.data.captureSize,
+            dpiScale: result.data.dpiScale,
+          });
+        } else {
+          console.log(`[sidecar] capture-window-with-metadata failed: ${result.error}`);
+          sendMsg(ws, { type: 'error', message: `capture-window-with-metadata failed: ${result.error}` });
+        }
         break;
       }
     }

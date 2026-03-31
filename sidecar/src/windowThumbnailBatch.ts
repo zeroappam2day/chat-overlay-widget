@@ -155,6 +155,7 @@ ConvertTo-Json -InputObject @(\$r) -Compress -Depth 3
 function runPsAsync(script: string, timeoutMs: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: string[] = [];
+    const errChunks: string[] = [];
     const proc = spawn(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-Command', script],
@@ -162,6 +163,7 @@ function runPsAsync(script: string, timeoutMs: number): Promise<string> {
 
     // CRITICAL: set encoding on stream, NOT in spawn options (Pitfall 3 from research)
     proc.stdout.setEncoding('utf8');
+    proc.stderr.setEncoding('utf8');
 
     const timer = setTimeout(() => {
       proc.kill();
@@ -169,11 +171,16 @@ function runPsAsync(script: string, timeoutMs: number): Promise<string> {
     }, timeoutMs);
 
     proc.stdout.on('data', (chunk: string) => chunks.push(chunk));
+    proc.stderr.on('data', (chunk: string) => errChunks.push(chunk));
 
     proc.on('close', (code: number | null) => {
       clearTimeout(timer);
+      const stderrText = errChunks.join('').trim();
+      if (stderrText) {
+        console.error('[sidecar] PowerShell stderr:', stderrText);
+      }
       if (code !== 0) {
-        reject(new Error(`PS exited ${code}`));
+        reject(new Error(`PS exited ${code}: ${stderrText}`));
       } else {
         resolve(chunks.join(''));
       }
@@ -197,13 +204,16 @@ export async function listWindowsWithThumbnails(): Promise<WindowThumbnail[]> {
   const stdout = await runPsAsync(script, 30_000);
 
   const raw = stdout.trim();
+  console.log(`[sidecar] PS stdout length=${raw.length}, first 200 chars: ${raw.substring(0, 200)}`);
   if (!raw || raw === 'null') {
+    console.warn('[sidecar] list-windows-with-thumbnails: empty/null stdout — returning []');
     const data: WindowThumbnail[] = [];
     cache = { data, ts: Date.now() };
     return data;
   }
 
   const data = JSON.parse(raw) as WindowThumbnail[];
+  console.log(`[sidecar] list-windows-with-thumbnails: parsed ${data.length} windows`);
   cache = { data, ts: Date.now() };
   return data;
 }
