@@ -4,6 +4,7 @@ interface TerminalHeaderProps {
   shells: string[];
   onShellChange: (shell: string) => void;
   onToggleSidebar: () => void;
+  onTogglePicker: () => void;
   onSplitHorizontal: () => void;
   onSplitVertical: () => void;
   onClose: () => void;
@@ -17,6 +18,7 @@ export function TerminalHeader({
   shells,
   onShellChange,
   onToggleSidebar,
+  onTogglePicker,
   onSplitHorizontal,
   onSplitVertical,
   onClose,
@@ -51,6 +53,21 @@ export function TerminalHeader({
       </div>
 
       <div className="flex items-center gap-1">
+        {/* Window picker button */}
+        <button
+          onClick={onTogglePicker}
+          className="text-gray-400 hover:text-gray-200 px-1"
+          title="Window picker"
+          aria-label="Open window picker"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="6" height="6" rx="1" />
+            <rect x="9" y="1" width="6" height="6" rx="1" />
+            <rect x="1" y="9" width="6" height="6" rx="1" />
+            <rect x="9" y="9" width="6" height="6" rx="1" />
+          </svg>
+        </button>
+
         {/* Split horizontal button (per D-10) */}
         <button
           onClick={onSplitHorizontal}
