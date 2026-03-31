@@ -162,8 +162,8 @@ export type CaptureWithMetadataResult =
 export function buildCaptureScriptWithMetadata(titleQuery: string, outputPath: string): string {
   // Sanitize title: strip CR/LF, escape ' for PS single-quoted strings
   const safeTitle = titleQuery.replace(/[\r\n]/g, '').replace(/'/g, "''");
-  // Escape backslashes and single quotes for embedding in C# string literal via string.Format
-  const escapedPath = outputPath.replace(/\\/g, '\\\\');
+  // PS single-quoted strings treat backslashes literally — only escape single quotes
+  const safePath = outputPath.replace(/'/g, "''");
 
   return `
 Add-Type -AssemblyName System.Drawing
@@ -261,20 +261,20 @@ public class WinCaptureWithMetadata {
                 bmp.Save(outputPath, ImageFormat.Png);
             }
 
-            return string.Format(
-                CultureInfo.InvariantCulture,
-                "{{\"ok\":true,\"path\":\"{0}\",\"bx\":{1},\"by\":{2},\"bw\":{3},\"bh\":{4},\"cw\":{3},\"ch\":{4},\"dpi\":\"{5}\"}}",
-                outputPath.Replace("\\\\", "\\\\\\\\"),
-                dmwBounds.Left, dmwBounds.Top, physW, physH,
-                dpiScale.ToString("F4", CultureInfo.InvariantCulture)
-            );
+            // Pipe-delimited to avoid JS->PS->C# quote/brace escaping nightmare
+            // Format: OK|path|bx|by|bw|bh|cw|ch|dpi
+            return "OK|" + outputPath + "|"
+                + dmwBounds.Left.ToString() + "|" + dmwBounds.Top.ToString() + "|"
+                + physW.ToString() + "|" + physH.ToString() + "|"
+                + physW.ToString() + "|" + physH.ToString() + "|"
+                + dpiScale.ToString("F4", CultureInfo.InvariantCulture);
         } catch (Exception ex) {
             return "ERROR:" + ex.Message;
         }
     }
 }
 "@ -ReferencedAssemblies System.Drawing
-\$result = [WinCaptureWithMetadata]::CaptureWindowWithMetadata('${safeTitle}', '${escapedPath}')
+\$result = [WinCaptureWithMetadata]::CaptureWindowWithMetadata('${safeTitle}', '${safePath}')
 Write-Output \$result
 `;
 }
@@ -303,34 +303,31 @@ export function captureWindowWithMetadata(titleQuery: string): CaptureWithMetada
 
   const raw = result.stdout.trim();
 
-  // Skip any Add-Type diagnostic lines by finding first '{' character
-  const jsonStart = raw.indexOf('{');
-  if (jsonStart === -1) {
-    // No JSON found — check for ERROR: prefix
-    if (raw.startsWith('ERROR:')) {
-      return { ok: false, error: raw.slice(6) };
+  // C# returns pipe-delimited: OK|path|bx|by|bw|bh|cw|ch|dpi
+  // Find the last line starting with "OK|" (skip Add-Type diagnostics)
+  const lines = raw.split(/\r?\n/);
+  const okLine = lines.reverse().find(l => l.startsWith('OK|'));
+  if (okLine) {
+    const parts = okLine.split('|');
+    // parts: [OK, path, bx, by, bw, bh, cw, ch, dpi]
+    if (parts.length >= 9) {
+      return {
+        ok: true,
+        data: {
+          path: parts[1],
+          bounds: { x: +parts[2], y: +parts[3], w: +parts[4], h: +parts[5] },
+          captureSize: { w: +parts[6], h: +parts[7] },
+          dpiScale: parseFloat(parts[8]),
+        },
+      };
     }
-    return { ok: false, error: `unexpected PS output: ${raw}` };
+    return { ok: false, error: `malformed OK response: ${okLine}` };
   }
 
-  try {
-    const parsed = JSON.parse(raw.slice(jsonStart)) as {
-      ok: boolean;
-      path: string;
-      bx: number; by: number; bw: number; bh: number;
-      cw: number; ch: number;
-      dpi: string;
-    };
-    return {
-      ok: true,
-      data: {
-        path: parsed.path,
-        bounds: { x: parsed.bx, y: parsed.by, w: parsed.bw, h: parsed.bh },
-        captureSize: { w: parsed.cw, h: parsed.ch },
-        dpiScale: parseFloat(parsed.dpi),
-      },
-    };
-  } catch (err) {
-    return { ok: false, error: `JSON parse failed: ${err}` };
+  // Check for ERROR: prefix
+  const errLine = lines.find(l => l.startsWith('ERROR:'));
+  if (errLine) {
+    return { ok: false, error: errLine.slice(6) };
   }
+  return { ok: false, error: `unexpected PS output: ${raw}` };
 }

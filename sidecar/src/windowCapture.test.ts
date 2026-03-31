@@ -131,7 +131,8 @@ describe('captureWindowWithMetadata', () => {
   it('Test 12: captureWindowWithMetadata("Chrome") returns enriched metadata on success', async () => {
     const { spawnSync: mockSS } = await import('node:child_process');
     const mock = vi.mocked(mockSS);
-    const stdout = '{"ok":true,"path":"C:\\\\temp\\\\abc.png","bx":100,"by":200,"bw":1500,"bh":1000,"cw":1500,"ch":1000,"dpi":"1.2500"}';
+    // Pipe-delimited format: OK|path|bx|by|bw|bh|cw|ch|dpi
+    const stdout = 'OK|C:\\temp\\abc.png|100|200|1500|1000|1500|1000|1.2500';
     mock.mockReturnValue({ stdout, stderr: '', status: 0, error: undefined } as ReturnType<typeof spawnSync>);
     const { captureWindowWithMetadata } = await import('./windowCapture.js');
     const result = captureWindowWithMetadata('Chrome');
@@ -176,24 +177,23 @@ describe('captureWindowWithMetadata', () => {
     expect(script).toContain('GetWindowRect(IntPtr hWnd, out RECT lpRect)');
   });
 
-  it('Test 17: buildCaptureScriptWithMetadata() output contains JSON output with bx, by, bw, bh, cw, ch, dpi fields', async () => {
+  it('Test 17: buildCaptureScriptWithMetadata() output contains pipe-delimited return with bounds and dpi fields', async () => {
     const { buildCaptureScriptWithMetadata } = await import('./windowCapture.js');
     const script = buildCaptureScriptWithMetadata('Chrome', 'C:\\temp\\test.png');
-    expect(script).toMatch(/string\.Format|ConvertTo-Json/);
-    expect(script).toContain('bx');
-    expect(script).toContain('by');
-    expect(script).toContain('bw');
-    expect(script).toContain('bh');
-    expect(script).toContain('cw');
-    expect(script).toContain('ch');
-    expect(script).toContain('dpi');
+    // Uses pipe-delimited format: OK|path|bx|by|bw|bh|cw|ch|dpi
+    expect(script).toContain('"OK|"');
+    expect(script).toContain('dmwBounds.Left');
+    expect(script).toContain('dmwBounds.Top');
+    expect(script).toContain('physW');
+    expect(script).toContain('physH');
+    expect(script).toContain('dpiScale');
   });
 
-  it('Test 18: captureWindowWithMetadata handles PS Add-Type diagnostic lines before JSON (finds first { in stdout)', async () => {
+  it('Test 18: captureWindowWithMetadata handles PS Add-Type diagnostic lines before OK| line', async () => {
     const { spawnSync: mockSS } = await import('node:child_process');
     const mock = vi.mocked(mockSS);
-    const jsonPart = '{"ok":true,"path":"C:\\\\temp\\\\abc.png","bx":0,"by":0,"bw":800,"bh":600,"cw":800,"ch":600,"dpi":"1.0000"}';
-    const stdout = `warning CS0219: unused variable\n${jsonPart}`;
+    const okLine = 'OK|C:\\temp\\abc.png|0|0|800|600|800|600|1.0000';
+    const stdout = `warning CS0219: unused variable\n${okLine}`;
     mock.mockReturnValue({ stdout, stderr: '', status: 0, error: undefined } as ReturnType<typeof spawnSync>);
     const { captureWindowWithMetadata } = await import('./windowCapture.js');
     const result = captureWindowWithMetadata('Chrome');
