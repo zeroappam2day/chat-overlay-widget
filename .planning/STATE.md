@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Stable Window Targeting
-status: verifying
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-03-31T09:18:07.285Z"
+status: executing
+stopped_at: Completed 22-01-PLAN.md
+last_updated: "2026-03-31T10:04:09.795Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
   percent: 85
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 21 — Protocol Extension
+**Current focus:** Phase 22 — HWND-Based Capture
 
 ## Current Position
 
-Phase: 21 (Protocol Extension) — EXECUTING
+Phase: 22 (HWND-Based Capture) — EXECUTING
 Plan: 2 of 2
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-03-31
 
 Progress: [████████████░░] 85% (20/22 phases complete across all milestones)
@@ -54,6 +54,8 @@ Recent decisions affecting v1.4:
 - [Phase 21]: WindowThumbnail type extended with hwnd: number and pid: number in protocol.ts (PROT-01/02 downstream readiness)
 - [Phase 21-protocol-extension]: hwnd and pid are required fields on WindowThumbnail — all callers must supply them
 - [Phase 21-protocol-extension]: PROT-05 preserved: captureWindowWithMetadata(msg.title) unchanged — HWND-based capture deferred to Phase 22
+- [Phase 22-hwnd-based-capture]: captureWindowByHwnd accepts (hwnd, pid, titleLabel) — HWND-04 fallback uses listWindows pid lookup to derive processName without protocol change
+- [Phase 22-hwnd-based-capture]: parseOkLine extracted as private helper shared between captureWindowWithMetadata and captureWindowByHwnd — avoids duplication
 
 ### Todos
 
@@ -66,7 +68,7 @@ Recent decisions affecting v1.4:
 
 ## Session Continuity
 
-Last session: 2026-03-31T09:18:07.279Z
-Stopped at: Completed 21-02-PLAN.md
+Last session: 2026-03-31T10:04:09.789Z
+Stopped at: Completed 22-01-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 21

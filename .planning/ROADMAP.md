@@ -87,9 +87,9 @@ Plans:
   2. Capturing a window that was closed after picker selection returns a visible error message (STALE_HWND) rather than a silent failure or wrong-window capture
   3. Capturing an elevated window (e.g., Task Manager) returns a blank-capture warning instead of silently saving a black image
   4. Fallback to title+processName match fires when HWND is stale, with a warning logged to the sidecar console
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 22-01-PLAN.md — buildCaptureByHwndScript + captureWindowByHwnd with TDD tests
+- [x] 22-01-PLAN.md — buildCaptureByHwndScript + captureWindowByHwnd with TDD tests
 - [ ] 22-02-PLAN.md — Server handler wiring + end-to-end human verification
 
 ## Progress
@@ -102,7 +102,7 @@ Plans:
 | 10-15 | v1.2 | 9/9 | Complete | 2026-03-30 |
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
 | 21. Protocol Extension | v1.4 | 2/2 | Complete    | 2026-03-31 |
-| 22. HWND-Based Capture | v1.4 | 0/2 | Planned | - |
+| 22. HWND-Based Capture | v1.4 | 1/2 | In Progress|  |
 
 ---
 *Full phase details archived in `.planning/milestones/v1.3-ROADMAP.md`*

@@ -17,10 +17,10 @@ Requirements for stable window targeting. Each maps to roadmap phases.
 
 ### HWND Capture
 
-- [ ] **HWND-01**: Capture uses HWND directly via PrintWindow instead of title substring re-enumeration
-- [ ] **HWND-02**: Stale HWND validated via GetWindowThreadProcessId + PID cross-check before capture
-- [ ] **HWND-03**: Blank-bitmap detection identifies black/empty captures from elevated windows with warning
-- [ ] **HWND-04**: When HWND is stale, falls back to title+processName match with warning message
+- [x] **HWND-01**: Capture uses HWND directly via PrintWindow instead of title substring re-enumeration
+- [x] **HWND-02**: Stale HWND validated via GetWindowThreadProcessId + PID cross-check before capture
+- [x] **HWND-03**: Blank-bitmap detection identifies black/empty captures from elevated windows with warning
+- [x] **HWND-04**: When HWND is stale, falls back to title+processName match with warning message
 
 ## Future Requirements
 
@@ -49,10 +49,10 @@ Requirements for stable window targeting. Each maps to roadmap phases.
 | PROT-03 | Phase 21 | Complete |
 | PROT-04 | Phase 21 | Complete |
 | PROT-05 | Phase 21 | Complete |
-| HWND-01 | Phase 22 | Pending |
-| HWND-02 | Phase 22 | Pending |
-| HWND-03 | Phase 22 | Pending |
-| HWND-04 | Phase 22 | Pending |
+| HWND-01 | Phase 22 | Complete |
+| HWND-02 | Phase 22 | Complete |
+| HWND-03 | Phase 22 | Complete |
+| HWND-04 | Phase 22 | Complete |
 
 **Coverage:**
 - v1.4 requirements: 9 total
