@@ -31,7 +31,7 @@ Requirements for Self-Observation & Agent Visibility milestone. Each maps to roa
 
 - [ ] **LLM-01**: MCP server (stdio transport) exposes `read_terminal_output`, `query_session_history`, `capture_screenshot` tools
 - [ ] **LLM-02**: Adapter layer with ClaudeCodeAdapter, WindsurfAdapter, CursorAdapter, FallbackAdapter normalizing hook events
-- [ ] **LLM-03**: Provider trust tier config: local models receive unscrubbed content, cloud providers receive scrubbed content
+- [x] **LLM-03**: Provider trust tier config: local models receive unscrubbed content, cloud providers receive scrubbed content
 - [x] **LLM-04**: Best-effort secret scrubber (regex for API keys, tokens, connection strings) with explicit "not a security boundary" warning
 
 ## Future Requirements
@@ -62,7 +62,7 @@ Requirements for Self-Observation & Agent Visibility milestone. Each maps to roa
 | TERM-03 | Phase 23 | Pending |
 | TERM-04 | Phase 23 | Pending |
 | LLM-04 | Phase 24 | Complete |
-| LLM-03 | Phase 24 | Pending |
+| LLM-03 | Phase 24 | Complete |
 | SCRN-01 | Phase 25 | Pending |
 | SCRN-02 | Phase 25 | Pending |
 | SCRN-03 | Phase 25 | Pending |

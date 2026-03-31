@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Self-Observation & Agent Visibility
-status: executing
-stopped_at: Completed 24-01-PLAN.md
-last_updated: "2026-03-31T17:19:58.487Z"
+status: verifying
+stopped_at: Completed 24-02-PLAN.md
+last_updated: "2026-03-31T17:25:33.722Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 Phase: 24 (secret-scrubber-trust-tiers) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0% (v1.5 milestone)
@@ -52,6 +52,8 @@ v1.5 architectural decisions from stress testing:
 - Provider trust tiers for local vs cloud (security + portability reviews)
 - [Phase 24-secret-scrubber-trust-tiers]: GitHub token patterns use {30,} not {36} — real tokens are 36 chars but test samples are 34; lenient minimum avoids false negatives
 - [Phase 24-secret-scrubber-trust-tiers]: bearer-token pattern uses captureGroup to preserve 'Bearer ' prefix, only redacting the token value
+- [Phase 24]: Default is scrub=true — only explicit scrub=false skips redaction (safe default per D-06)
+- [Phase 24]: Scrubbing happens at read-time in HTTP handler, NOT at write-time in TerminalBuffer (D-07)
 
 ### Todos
 
@@ -75,10 +77,11 @@ None.
 
 **Recommendation:** Validate A1 and A2 via a 30-min spike before Phase 26 planning. A3 and A4 validate naturally during Phase 23. A5 validates during Phase 25.
 | Phase 24-secret-scrubber-trust-tiers P01 | 3 | 1 tasks | 2 files |
+| Phase 24 P02 | 185 | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-03-31T17:19:58.478Z
-Stopped at: Completed 24-01-PLAN.md
+Last session: 2026-03-31T17:25:33.716Z
+Stopped at: Completed 24-02-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 23`

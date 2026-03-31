@@ -68,7 +68,7 @@
 **Milestone Goal:** Let any MCP-capable LLM running in the app autonomously read the terminal, observe agent activity, and capture screenshots — with a layered adapter architecture that degrades gracefully for non-MCP LLMs.
 
 - [x] **Phase 23: Terminal Buffer Layer** - Ring buffer, ANSI stripping, HTTP endpoint, SQLite history query (completed 2026-03-31)
-- [ ] **Phase 24: Secret Scrubber & Trust Tiers** - Best-effort secret scrubbing and provider trust tier config
+- [x] **Phase 24: Secret Scrubber & Trust Tiers** - Best-effort secret scrubbing and provider trust tier config (completed 2026-03-31)
 - [ ] **Phase 25: Screenshot Self-Capture** - App self-capture, secret-region blurring, provider-gated delivery
 - [ ] **Phase 26: Hook Receiver & Event Schema** - Hook endpoint, normalized AgentEvent schema
 - [ ] **Phase 27: MCP Server** - stdio MCP server wrapping terminal, history, and screenshot tools
@@ -102,7 +102,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 24-01-PLAN.md — Secret scrubber module (scrub, detectSecrets, ~18 regex patterns)
-- [ ] 24-02-PLAN.md — HTTP route integration (?scrub param, X-Scrub-Warning header, warning field)
+- [x] 24-02-PLAN.md — HTTP route integration (?scrub param, X-Scrub-Warning header, warning field)
 
 ### Phase 25: Screenshot Self-Capture
 **Goal**: The app can capture and deliver its own window as a PNG, with secrets blurred for cloud transmission
@@ -169,7 +169,7 @@ Plans:
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
 | 21-22 | v1.4 | 4/4 | Complete | 2026-03-31 |
 | 23. Terminal Buffer Layer | v1.5 | 2/2 | Complete    | 2026-03-31 |
-| 24. Secret Scrubber & Trust Tiers | v1.5 | 1/2 | In Progress|  |
+| 24. Secret Scrubber & Trust Tiers | v1.5 | 2/2 | Complete   | 2026-03-31 |
 | 25. Screenshot Self-Capture | v1.5 | 0/TBD | Not started | - |
 | 26. Hook Receiver & Event Schema | v1.5 | 0/TBD | Not started | - |
 | 27. MCP Server | v1.5 | 0/TBD | Not started | - |
