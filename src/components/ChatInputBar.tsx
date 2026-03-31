@@ -9,9 +9,11 @@ interface ChatInputBarProps {
   onImagePathConsumed?: () => void;
   currentShell?: string | null;
   height?: number;
+  pendingInjection?: string | null;
+  onInjectionConsumed?: () => void;
 }
 
-export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath, onImagePathConsumed, currentShell, height }: ChatInputBarProps) {
+export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath, onImagePathConsumed, currentShell, height, pendingInjection, onInjectionConsumed }: ChatInputBarProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -87,6 +89,19 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
       textareaRef.current?.focus();
     }
   }, [pendingImagePath, onImagePathConsumed, currentShell]);
+
+  // Inject pending capture block into the input box (INTG-03, CAPT-02)
+  // Uses newline separator (not space) because the block is multi-line
+  useEffect(() => {
+    if (pendingInjection) {
+      setValue(prev => {
+        const prefix = prev.trim() ? prev.trim() + '\n' : '';
+        return prefix + pendingInjection;
+      });
+      onInjectionConsumed?.();
+      textareaRef.current?.focus();
+    }
+  }, [pendingInjection, onInjectionConsumed]);
 
   return (
     <div
