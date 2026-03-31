@@ -22,7 +22,19 @@ export function AppHeader() {
       className="flex items-center justify-between h-8 px-3 bg-[#252526] border-b border-[#404040] text-xs text-gray-400 shrink-0 select-none"
       data-tauri-drag-region
     >
-      <span className="font-medium text-gray-300">Chat Overlay</span>
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-gray-300">Chat Overlay</span>
+        <div
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#333] cursor-default ml-2"
+          title="Secret scrubbing is best-effort. Do not rely on it as a security boundary."
+          aria-label="Secret scrubbing active — best-effort only"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="text-amber-600">
+            <path d="M8 1L2 4v4c0 3.5 2.5 6.3 6 7 3.5-.7 6-3.5 6-7V4L8 1zm0 2.2L12 5.4V8c0 2.4-1.7 4.5-4 5.1C5.7 12.5 4 10.4 4 8V5.4L8 3.2zM7 6v4h2V6H7z"/>
+          </svg>
+          <span className="text-xs text-gray-500">Scrub</span>
+        </div>
+      </div>
       <div className="flex items-center gap-1">
         <button
           onClick={togglePin}
