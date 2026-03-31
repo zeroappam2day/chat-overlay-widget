@@ -10,7 +10,7 @@ import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 import { listWindows } from './windowEnumerator.js';
-import { captureWindow, captureWindowWithMetadata } from './windowCapture.js';
+import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
@@ -253,8 +253,8 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       }
       case 'capture-window-with-metadata': {
-        console.log(`[sidecar] capture-window-with-metadata requested: title="${msg.title}"`);
-        const result = captureWindowWithMetadata(msg.title);
+        console.log(`[sidecar] capture-window-with-metadata: hwnd=${msg.hwnd} pid=${msg.pid} title="${msg.title}"`);
+        const result = captureWindowByHwnd(msg.hwnd, msg.pid, msg.title);
         if (result.ok) {
           console.log(`[sidecar] capture-window-with-metadata success: ${result.data.path}`);
           sendMsg(ws, {
@@ -269,7 +269,7 @@ wss.on('connection', (ws: WebSocket) => {
           });
         } else {
           console.log(`[sidecar] capture-window-with-metadata failed: ${result.error}`);
-          sendMsg(ws, { type: 'error', message: `capture-window-with-metadata failed: ${result.error}` });
+          sendMsg(ws, { type: 'error', message: `capture failed: ${result.error}` });
         }
         break;
       }
