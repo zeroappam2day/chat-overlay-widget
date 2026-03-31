@@ -75,9 +75,9 @@ class PTYSession {
     resize(cols, rows) {
         this.ptyProcess.resize(cols, rows);
     }
-    async saveImage(base64, ext) {
+    async saveImage(base64) {
         await fs.promises.mkdir(exports.SCREENSHOT_DIR, { recursive: true });
-        const filename = `${crypto.randomUUID()}.${ext}`;
+        const filename = `${crypto.randomUUID()}.png`;
         const filePath = path.join(exports.SCREENSHOT_DIR, filename);
         const buffer = Buffer.from(base64, 'base64');
         await fs.promises.writeFile(filePath, buffer);

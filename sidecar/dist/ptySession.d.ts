@@ -10,7 +10,7 @@ export declare class PTYSession {
     constructor(ws: WebSocket, shellExe: string, cols?: number, rows?: number);
     write(data: string): void;
     resize(cols: number, rows: number): void;
-    saveImage(base64: string, ext: string): Promise<string>;
+    saveImage(base64: string): Promise<string>;
     private cleanupTempFiles;
     destroy(): void;
     get sessionId(): number;

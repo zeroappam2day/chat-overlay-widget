@@ -44,6 +44,7 @@ const historyStore_js_1 = require("./historyStore.js");
 const discoveryFile_js_1 = require("./discoveryFile.js");
 const windowEnumerator_js_1 = require("./windowEnumerator.js");
 const windowCapture_js_1 = require("./windowCapture.js");
+const windowThumbnailBatch_js_1 = require("./windowThumbnailBatch.js");
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
@@ -251,13 +252,46 @@ wss.on('connection', (ws) => {
                     sendMsg(ws, { type: 'error', message: 'No active session for save-image' });
                     break;
                 }
-                session.saveImage(msg.base64, msg.ext)
+                session.saveImage(msg.base64)
                     .then(filePath => {
                     sendMsg(ws, { type: 'save-image-result', path: filePath });
                 })
                     .catch(err => {
                     sendMsg(ws, { type: 'error', message: `Failed to save image: ${err}` });
                 });
+                break;
+            }
+            case 'list-windows-with-thumbnails': {
+                (0, windowThumbnailBatch_js_1.listWindowsWithThumbnails)()
+                    .then(windows => {
+                    sendMsg(ws, { type: 'window-thumbnails', windows });
+                })
+                    .catch(err => {
+                    console.error('[sidecar] list-windows-with-thumbnails error:', err);
+                    sendMsg(ws, { type: 'error', message: `Thumbnail batch failed: ${err}` });
+                });
+                break;
+            }
+            case 'capture-window-with-metadata': {
+                console.log(`[sidecar] capture-window-with-metadata requested: title="${msg.title}"`);
+                const result = (0, windowCapture_js_1.captureWindowWithMetadata)(msg.title);
+                if (result.ok) {
+                    console.log(`[sidecar] capture-window-with-metadata success: ${result.data.path}`);
+                    sendMsg(ws, {
+                        type: 'capture-result-with-metadata',
+                        path: result.data.path,
+                        title: msg.title,
+                        hwnd: msg.hwnd,
+                        pid: msg.pid,
+                        bounds: result.data.bounds,
+                        captureSize: result.data.captureSize,
+                        dpiScale: result.data.dpiScale,
+                    });
+                }
+                else {
+                    console.log(`[sidecar] capture-window-with-metadata failed: ${result.error}`);
+                    sendMsg(ws, { type: 'error', message: `capture-window-with-metadata failed: ${result.error}` });
+                }
                 break;
             }
         }
