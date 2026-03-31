@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Stable Window Targeting
 status: executing
-stopped_at: Completed 22-01-PLAN.md
-last_updated: "2026-03-31T10:04:09.795Z"
+stopped_at: "Checkpoint: 22-02-PLAN.md Task 2 awaiting human-verify"
+last_updated: "2026-03-31T10:07:49.039Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 85
 ---
 
@@ -68,7 +68,7 @@ Recent decisions affecting v1.4:
 
 ## Session Continuity
 
-Last session: 2026-03-31T10:04:09.789Z
-Stopped at: Completed 22-01-PLAN.md
+Last session: 2026-03-31T10:07:49.033Z
+Stopped at: Checkpoint: 22-02-PLAN.md Task 2 awaiting human-verify
 Resume file: None
 Next action: /gsd:plan-phase 21

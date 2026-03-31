@@ -59,7 +59,7 @@
 **Milestone Goal:** Replace fragile title-based window matching with HWND-based capture so the correct window is always captured regardless of title changes.
 
 - [x] **Phase 21: Protocol Extension** - Thread HWND and PID through enumeration, types, and WebSocket protocol (completed 2026-03-31)
-- [ ] **Phase 22: HWND-Based Capture** - Route capture through PrintWindow(hwnd) with stale detection and blank-bitmap fallback
+- [x] **Phase 22: HWND-Based Capture** - Route capture through PrintWindow(hwnd) with stale detection and blank-bitmap fallback (completed 2026-03-31)
 
 ## Phase Details
 
@@ -87,10 +87,10 @@ Plans:
   2. Capturing a window that was closed after picker selection returns a visible error message (STALE_HWND) rather than a silent failure or wrong-window capture
   3. Capturing an elevated window (e.g., Task Manager) returns a blank-capture warning instead of silently saving a black image
   4. Fallback to title+processName match fires when HWND is stale, with a warning logged to the sidecar console
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 22-01-PLAN.md — buildCaptureByHwndScript + captureWindowByHwnd with TDD tests
-- [ ] 22-02-PLAN.md — Server handler wiring + end-to-end human verification
+- [x] 22-02-PLAN.md — Server handler wiring + end-to-end human verification
 
 ## Progress
 
@@ -102,7 +102,7 @@ Plans:
 | 10-15 | v1.2 | 9/9 | Complete | 2026-03-30 |
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
 | 21. Protocol Extension | v1.4 | 2/2 | Complete    | 2026-03-31 |
-| 22. HWND-Based Capture | v1.4 | 1/2 | In Progress|  |
+| 22. HWND-Based Capture | v1.4 | 2/2 | Complete   | 2026-03-31 |
 
 ---
 *Full phase details archived in `.planning/milestones/v1.3-ROADMAP.md`*
