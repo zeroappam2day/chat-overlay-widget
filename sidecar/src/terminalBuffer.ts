@@ -43,8 +43,10 @@ const MAX_BYTES = 65536; // 64KB
  */
 export function crFold(raw: string): string {
   return raw.split('\n').map(line => {
-    const lastCr = line.lastIndexOf('\r');
-    return lastCr >= 0 ? line.slice(lastCr + 1) : line;
+    // Strip trailing \r (Windows CRLF) before looking for mid-line \r overwrites
+    const trimmed = line.endsWith('\r') ? line.slice(0, -1) : line;
+    const lastCr = trimmed.lastIndexOf('\r');
+    return lastCr >= 0 ? trimmed.slice(lastCr + 1) : trimmed;
   }).join('\n');
 }
 
