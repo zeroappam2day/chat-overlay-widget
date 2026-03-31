@@ -273,8 +273,8 @@ wss.on('connection', (ws) => {
                 break;
             }
             case 'capture-window-with-metadata': {
-                console.log(`[sidecar] capture-window-with-metadata requested: title="${msg.title}"`);
-                const result = (0, windowCapture_js_1.captureWindowWithMetadata)(msg.title);
+                console.log(`[sidecar] capture-window-with-metadata: hwnd=${msg.hwnd} pid=${msg.pid} title="${msg.title}"`);
+                const result = (0, windowCapture_js_1.captureWindowByHwnd)(msg.hwnd, msg.pid, msg.title);
                 if (result.ok) {
                     console.log(`[sidecar] capture-window-with-metadata success: ${result.data.path}`);
                     sendMsg(ws, {
@@ -290,7 +290,7 @@ wss.on('connection', (ws) => {
                 }
                 else {
                     console.log(`[sidecar] capture-window-with-metadata failed: ${result.error}`);
-                    sendMsg(ws, { type: 'error', message: `capture-window-with-metadata failed: ${result.error}` });
+                    sendMsg(ws, { type: 'error', message: `capture failed: ${result.error}` });
                 }
                 break;
             }

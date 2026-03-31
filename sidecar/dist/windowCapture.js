@@ -37,11 +37,14 @@ exports.buildCaptureScript = buildCaptureScript;
 exports.captureWindow = captureWindow;
 exports.buildCaptureScriptWithMetadata = buildCaptureScriptWithMetadata;
 exports.captureWindowWithMetadata = captureWindowWithMetadata;
+exports.buildCaptureByHwndScript = buildCaptureByHwndScript;
+exports.captureWindowByHwnd = captureWindowByHwnd;
 const node_child_process_1 = require("node:child_process");
 const crypto = __importStar(require("node:crypto"));
 const path = __importStar(require("node:path"));
 const fs = __importStar(require("node:fs"));
 const ptySession_js_1 = require("./ptySession.js");
+const windowEnumerator_js_1 = require("./windowEnumerator.js");
 function buildCaptureScript(titleQuery, outputPath) {
     // Sanitize title: strip CR/LF (break script structure), escape ' for PS single-quoted strings
     const safeTitle = titleQuery.replace(/[\r\n]/g, '').replace(/'/g, "''");
@@ -324,4 +327,184 @@ function captureWindowWithMetadata(titleQuery) {
         return { ok: false, error: errLine.slice(6) };
     }
     return { ok: false, error: `unexpected PS output: ${raw}` };
+}
+// ─── HWND-based capture (Phase 22) ─────────────────────────────────────────
+function buildCaptureByHwndScript(hwnd, pid, outputPath) {
+    // PS single-quoted strings treat backslashes literally — only escape single quotes
+    const safePath = outputPath.replace(/'/g, "''");
+    return `
+Add-Type -AssemblyName System.Drawing
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Globalization;
+
+public class WinCaptureByHwnd {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll")]
+    public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdcBlt, uint nFlags);
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+
+    private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+    private const uint PW_RENDERFULLCONTENT = 0x2;
+
+    public static string CaptureByHwnd(long hwndValue, long expectedPid, string outputPath) {
+        try {
+            // Must be first call — DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+            SetProcessDpiAwarenessContext(new IntPtr(-4));
+
+            IntPtr target = new IntPtr(hwndValue);  // MUST be long cast, never int
+
+            // HWND-02: Stale/recycled detection via GetWindowThreadProcessId
+            uint actualPid = 0;
+            uint threadId = GetWindowThreadProcessId(target, out actualPid);
+            if (threadId == 0) return "ERROR:STALE_HWND";
+            if (actualPid != (uint)expectedPid) return "ERROR:STALE_HWND";
+
+            if (IsIconic(target)) return "ERROR:MINIMIZED";
+
+            // Physical pixel bounds from DWM
+            RECT dmwBounds;
+            DwmGetWindowAttribute(target, DWMWA_EXTENDED_FRAME_BOUNDS, out dmwBounds,
+                System.Runtime.InteropServices.Marshal.SizeOf(typeof(RECT)));
+            int physW = dmwBounds.Right - dmwBounds.Left;
+            int physH = dmwBounds.Bottom - dmwBounds.Top;
+            if (physW <= 0 || physH <= 0) return "ERROR:ZERO_BOUNDS";
+
+            // Logical bounds from GetWindowRect (used to derive DPI scale)
+            RECT logRect;
+            GetWindowRect(target, out logRect);
+            int logW = logRect.Right - logRect.Left;
+            double dpiScale = logW > 0 ? (double)physW / logW : 1.0;
+
+            using (var bmp = new Bitmap(physW, physH))
+            using (var g = Graphics.FromImage(bmp)) {
+                IntPtr hdc = g.GetHdc();
+                bool ok = PrintWindow(target, hdc, PW_RENDERFULLCONTENT);
+                g.ReleaseHdc(hdc);
+                if (!ok) return "ERROR:PRINTWINDOW_FAILED";
+
+                // HWND-03: Blank-bitmap detection (elevated/UWP windows return all-black)
+                if (IsBitmapBlank(bmp)) return "ERROR:BLANK_CAPTURE";
+
+                bmp.Save(outputPath, ImageFormat.Png);
+            }
+
+            // Pipe-delimited format: OK|path|bx|by|bw|bh|cw|ch|dpi
+            return "OK|" + outputPath + "|"
+                + dmwBounds.Left.ToString() + "|" + dmwBounds.Top.ToString() + "|"
+                + physW.ToString() + "|" + physH.ToString() + "|"
+                + physW.ToString() + "|" + physH.ToString() + "|"
+                + dpiScale.ToString("F4", CultureInfo.InvariantCulture);
+        } catch (Exception ex) {
+            return "ERROR:" + ex.Message;
+        }
+    }
+
+    private static bool IsBitmapBlank(Bitmap bmp, int sampleCount = 100) {
+        int step = (int)Math.Sqrt((double)(bmp.Width * bmp.Height) / sampleCount);
+        if (step < 1) step = 1;
+        long totalBrightness = 0;
+        int counted = 0;
+        for (int x = 0; x < bmp.Width; x += step) {
+            for (int y = 0; y < bmp.Height; y += step) {
+                var c = bmp.GetPixel(x, y);
+                totalBrightness += (c.R + c.G + c.B);
+                counted++;
+            }
+        }
+        if (counted == 0) return true;
+        double avgLuminance = (double)totalBrightness / (counted * 3);
+        return avgLuminance < 5.0;
+    }
+}
+"@ -ReferencedAssemblies System.Drawing
+\$result = [WinCaptureByHwnd]::CaptureByHwnd(${hwnd}L, ${pid}L, '${safePath}')
+Write-Output \$result
+`;
+}
+function parseOkLine(raw) {
+    const lines = raw.split(/\r?\n/);
+    const okLine = [...lines].reverse().find(l => l.startsWith('OK|'));
+    if (okLine) {
+        const parts = okLine.split('|');
+        if (parts.length >= 9) {
+            return {
+                ok: true,
+                data: {
+                    path: parts[1],
+                    bounds: { x: +parts[2], y: +parts[3], w: +parts[4], h: +parts[5] },
+                    captureSize: { w: +parts[6], h: +parts[7] },
+                    dpiScale: parseFloat(parts[8]),
+                },
+            };
+        }
+        return { ok: false, error: `malformed OK response: ${okLine}` };
+    }
+    const errLine = lines.find(l => l.startsWith('ERROR:'));
+    if (errLine) {
+        return { ok: false, error: errLine.slice(6) };
+    }
+    return { ok: false, error: `unexpected PS output: ${raw}` };
+}
+function captureWindowByHwnd(hwnd, pid, titleLabel) {
+    const outputPath = path.join(ptySession_js_1.SCREENSHOT_DIR, crypto.randomUUID() + '.png');
+    fs.mkdirSync(ptySession_js_1.SCREENSHOT_DIR, { recursive: true });
+    const script = buildCaptureByHwndScript(hwnd, pid, outputPath);
+    const result = (0, node_child_process_1.spawnSync)('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', timeout: 15000 });
+    if (result.error) {
+        return { ok: false, error: `spawn error: ${result.error.message}` };
+    }
+    if (result.status !== 0) {
+        return { ok: false, error: `PS exited ${result.status}: ${result.stderr?.trim()}` };
+    }
+    const raw = result.stdout.trim();
+    const parsed = parseOkLine(raw);
+    // HWND-03: BLANK_CAPTURE is returned as-is — no fallback for elevated window black bitmaps
+    // HWND-04: Stale HWND fallback — attempt processName-based single-window fallback
+    if (!parsed.ok && parsed.error === 'STALE_HWND' && titleLabel) {
+        console.warn(`[sidecar] HWND ${hwnd} is stale — attempting title+processName fallback`);
+        const windows = (0, windowEnumerator_js_1.listWindows)();
+        // Find processName by matching pid in the live window list
+        const pidMatch = windows.find(w => w.pid === pid);
+        if (pidMatch) {
+            // Process still alive — find all windows with that processName
+            const matches = windows.filter(w => w.processName === pidMatch.processName);
+            if (matches.length === 1) {
+                // Safe to fall back — only one window with this processName
+                const fallback = captureWindowWithMetadata(matches[0].title);
+                if (fallback.ok) {
+                    console.warn(`[sidecar] fallback capture succeeded via title "${matches[0].title}"`);
+                    return fallback;
+                }
+            }
+            else {
+                console.warn(`[sidecar] fallback skipped — ${matches.length} windows match processName`);
+            }
+        }
+        // Process is dead or fallback conditions not met
+        return { ok: false, error: 'STALE_HWND' };
+    }
+    return parsed;
 }

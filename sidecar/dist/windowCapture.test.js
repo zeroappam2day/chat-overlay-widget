@@ -8,6 +8,10 @@ vitest_1.vi.mock('node:child_process', () => ({
 vitest_1.vi.mock('node:fs', () => ({
     mkdirSync: vitest_1.vi.fn(),
 }));
+vitest_1.vi.mock('./windowEnumerator.js', () => ({
+    listWindows: vitest_1.vi.fn(),
+    PS_SCRIPT: '',
+}));
 const mockSpawnSync = vitest_1.vi.mocked(node_child_process_1.spawnSync);
 function makeOkResult(stdout, status = 0) {
     return { stdout, stderr: '', status, error: undefined };
@@ -192,5 +196,112 @@ function makeOkResult(stdout, status = 0) {
         const { captureWindow } = await import('./windowCapture.js');
         const result = captureWindow('Chrome');
         (0, vitest_1.expect)(result).toEqual({ ok: true, path: fakePath });
+    });
+});
+(0, vitest_1.describe)('captureWindowByHwnd', () => {
+    (0, vitest_1.beforeEach)(() => {
+        vitest_1.vi.resetModules();
+        vitest_1.vi.resetAllMocks();
+    });
+    (0, vitest_1.it)('Test 20: buildCaptureByHwndScript output contains new IntPtr(hwndValue) and does NOT contain EnumWindows (HWND-01)', async () => {
+        const { buildCaptureByHwndScript } = await import('./windowCapture.js');
+        const script = buildCaptureByHwndScript(12345, 42, 'C:\\temp\\test.png');
+        (0, vitest_1.expect)(script).toContain('new IntPtr(hwndValue)');
+        (0, vitest_1.expect)(script).not.toContain('EnumWindows');
+    });
+    (0, vitest_1.it)('Test 21: buildCaptureByHwndScript output contains GetWindowThreadProcessId declaration and PID comparison (HWND-02)', async () => {
+        const { buildCaptureByHwndScript } = await import('./windowCapture.js');
+        const script = buildCaptureByHwndScript(12345, 42, 'C:\\temp\\test.png');
+        (0, vitest_1.expect)(script).toContain('GetWindowThreadProcessId');
+        (0, vitest_1.expect)(script).toContain('expectedPid');
+        (0, vitest_1.expect)(script).toContain('actualPid');
+    });
+    (0, vitest_1.it)('Test 22: buildCaptureByHwndScript output contains IsBitmapBlank method (HWND-03)', async () => {
+        const { buildCaptureByHwndScript } = await import('./windowCapture.js');
+        const script = buildCaptureByHwndScript(12345, 42, 'C:\\temp\\test.png');
+        (0, vitest_1.expect)(script).toContain('IsBitmapBlank');
+    });
+    (0, vitest_1.it)('Test 23: buildCaptureByHwndScript output uses ${hwnd}L long literal and ${pid}L for expectedPid (HWND-01/02)', async () => {
+        const { buildCaptureByHwndScript } = await import('./windowCapture.js');
+        const script = buildCaptureByHwndScript(12345, 42, 'C:\\temp\\test.png');
+        (0, vitest_1.expect)(script).toContain('12345L');
+        (0, vitest_1.expect)(script).toContain('42L');
+    });
+    (0, vitest_1.it)('Test 24: captureWindowByHwnd returns { ok: true, data } with correct CaptureMetadata on pipe-delimited OK stdout (HWND-01)', async () => {
+        const { spawnSync: mockSS } = await import('node:child_process');
+        const mock = vitest_1.vi.mocked(mockSS);
+        const stdout = 'OK|C:\\temp\\abc.png|100|200|1500|1000|1500|1000|1.2500';
+        mock.mockReturnValue({ stdout, stderr: '', status: 0, error: undefined });
+        const { captureWindowByHwnd } = await import('./windowCapture.js');
+        const result = captureWindowByHwnd(12345, 42, 'Chrome');
+        (0, vitest_1.expect)(result).toEqual({
+            ok: true,
+            data: {
+                path: 'C:\\temp\\abc.png',
+                bounds: { x: 100, y: 200, w: 1500, h: 1000 },
+                captureSize: { w: 1500, h: 1000 },
+                dpiScale: 1.25,
+            },
+        });
+    });
+    (0, vitest_1.it)('Test 25: captureWindowByHwnd returns { ok: false, error: "STALE_HWND" } on ERROR:STALE_HWND stdout (HWND-02)', async () => {
+        const { spawnSync: mockSS } = await import('node:child_process');
+        const mock = vitest_1.vi.mocked(mockSS);
+        mock.mockReturnValue({ stdout: 'ERROR:STALE_HWND', stderr: '', status: 0, error: undefined });
+        // mock listWindows to return empty so fallback does nothing
+        const { listWindows } = await import('./windowEnumerator.js');
+        vitest_1.vi.mocked(listWindows).mockReturnValue([]);
+        const { captureWindowByHwnd } = await import('./windowCapture.js');
+        const result = captureWindowByHwnd(12345, 42, 'Chrome');
+        (0, vitest_1.expect)(result).toEqual({ ok: false, error: 'STALE_HWND' });
+    });
+    (0, vitest_1.it)('Test 26: captureWindowByHwnd returns { ok: false, error: "BLANK_CAPTURE" } on ERROR:BLANK_CAPTURE stdout (HWND-03)', async () => {
+        const { spawnSync: mockSS } = await import('node:child_process');
+        const mock = vitest_1.vi.mocked(mockSS);
+        mock.mockReturnValue({ stdout: 'ERROR:BLANK_CAPTURE', stderr: '', status: 0, error: undefined });
+        const { captureWindowByHwnd } = await import('./windowCapture.js');
+        const result = captureWindowByHwnd(12345, 42, 'Chrome');
+        (0, vitest_1.expect)(result).toEqual({ ok: false, error: 'BLANK_CAPTURE' });
+    });
+    (0, vitest_1.it)('Test 27: captureWindowByHwnd calls captureWindowWithMetadata as fallback when STALE_HWND + listWindows returns exactly 1 match for processName (HWND-04)', async () => {
+        const { spawnSync: mockSS } = await import('node:child_process');
+        const mock = vitest_1.vi.mocked(mockSS);
+        // First call: STALE_HWND; second call: OK from fallback captureWindowWithMetadata
+        mock
+            .mockReturnValueOnce({ stdout: 'ERROR:STALE_HWND', stderr: '', status: 0, error: undefined })
+            .mockReturnValueOnce({ stdout: 'OK|C:\\temp\\fallback.png|0|0|800|600|800|600|1.0000', stderr: '', status: 0, error: undefined });
+        const { listWindows } = await import('./windowEnumerator.js');
+        vitest_1.vi.mocked(listWindows).mockReturnValue([
+            { title: 'Notepad', processName: 'notepad', hwnd: 999, pid: 42 },
+        ]);
+        const consoleSpy = vitest_1.vi.spyOn(console, 'warn').mockImplementation(() => { });
+        const { captureWindowByHwnd } = await import('./windowCapture.js');
+        const result = captureWindowByHwnd(12345, 42, 'Notepad');
+        (0, vitest_1.expect)(result.ok).toBe(true);
+        (0, vitest_1.expect)(consoleSpy).toHaveBeenCalledWith(vitest_1.expect.stringContaining('fallback'));
+        consoleSpy.mockRestore();
+    });
+    (0, vitest_1.it)('Test 28: captureWindowByHwnd does NOT fallback when listWindows returns 2+ matches for processName (HWND-04)', async () => {
+        const { spawnSync: mockSS } = await import('node:child_process');
+        const mock = vitest_1.vi.mocked(mockSS);
+        mock.mockReturnValue({ stdout: 'ERROR:STALE_HWND', stderr: '', status: 0, error: undefined });
+        const { listWindows } = await import('./windowEnumerator.js');
+        vitest_1.vi.mocked(listWindows).mockReturnValue([
+            { title: 'Notepad 1', processName: 'notepad', hwnd: 100, pid: 42 },
+            { title: 'Notepad 2', processName: 'notepad', hwnd: 101, pid: 42 },
+        ]);
+        const { captureWindowByHwnd } = await import('./windowCapture.js');
+        const result = captureWindowByHwnd(12345, 42, 'Notepad');
+        (0, vitest_1.expect)(result).toEqual({ ok: false, error: 'STALE_HWND' });
+    });
+    (0, vitest_1.it)('Test 29: captureWindowByHwnd does NOT fallback when listWindows returns 0 matches (HWND-04)', async () => {
+        const { spawnSync: mockSS } = await import('node:child_process');
+        const mock = vitest_1.vi.mocked(mockSS);
+        mock.mockReturnValue({ stdout: 'ERROR:STALE_HWND', stderr: '', status: 0, error: undefined });
+        const { listWindows } = await import('./windowEnumerator.js');
+        vitest_1.vi.mocked(listWindows).mockReturnValue([]);
+        const { captureWindowByHwnd } = await import('./windowCapture.js');
+        const result = captureWindowByHwnd(12345, 42, 'Notepad');
+        (0, vitest_1.expect)(result).toEqual({ ok: false, error: 'STALE_HWND' });
     });
 });

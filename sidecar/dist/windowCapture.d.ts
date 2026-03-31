@@ -30,3 +30,5 @@ export type CaptureWithMetadataResult = {
 };
 export declare function buildCaptureScriptWithMetadata(titleQuery: string, outputPath: string): string;
 export declare function captureWindowWithMetadata(titleQuery: string): CaptureWithMetadataResult;
+export declare function buildCaptureByHwndScript(hwnd: number, pid: number, outputPath: string): string;
+export declare function captureWindowByHwnd(hwnd: number, pid: number, titleLabel: string): CaptureWithMetadataResult;
