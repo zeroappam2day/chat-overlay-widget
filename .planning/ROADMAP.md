@@ -227,7 +227,7 @@ Plans:
   4. End-to-end flow works: open picker → select window → ChatInputBar populated → user sends → Claude references the image and its coordinates
 **Plans**: 2 plans
 Plans:
-- [ ] 20-01-PLAN.md — formatCaptureBlock TDD utility (metadata text formatter)
+- [x] 20-01-PLAN.md — formatCaptureBlock TDD utility (metadata text formatter)
 - [ ] 20-02-PLAN.md — Wire picker selection flow + ChatInputBar injection + visual checkpoint
 **UI hint**: yes
 
@@ -250,4 +250,4 @@ Plans:
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
 | 18. Enriched Capture Backend | 1/1 | Complete    | 2026-03-30 |
 | 19. Window Picker UI | 2/2 | Complete    | 2026-03-31 |
-| 20. Metadata Injection & Integration | v1.3 | Not started | — |
+| 20. Metadata Injection & Integration | 1/2 | In Progress|  |

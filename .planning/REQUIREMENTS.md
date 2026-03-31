@@ -147,8 +147,8 @@ Requirements for Window Picker & LLM-Actionable Capture milestone.
 ### Capture
 
 - [x] **CAPT-01**: Capture result includes window bounds (x, y, w, h), capture dimensions, and DPI scale
-- [ ] **CAPT-02**: Structured metadata block is formatted alongside the image path in ChatInputBar
-- [ ] **CAPT-03**: Metadata follows Claude computer_use coordinate conventions for LLM spatial reasoning
+- [x] **CAPT-02**: Structured metadata block is formatted alongside the image path in ChatInputBar
+- [x] **CAPT-03**: Metadata follows Claude computer_use coordinate conventions for LLM spatial reasoning
 
 ### Integration
 
@@ -246,8 +246,8 @@ v1.3 (13 reqs):
 | PICK-02 | Phase 19 | Complete |
 | PICK-03 | Phase 19 | Complete |
 | THUMB-04 | Phase 19 | Complete |
-| CAPT-02 | Phase 20 | Pending |
-| CAPT-03 | Phase 20 | Pending |
+| CAPT-02 | Phase 20 | Complete |
+| CAPT-03 | Phase 20 | Complete |
 | INTG-03 | Phase 20 | Pending |
 
 Coverage: 13/13 v1.3 requirements mapped. No orphans.

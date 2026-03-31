@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
 status: executing
-stopped_at: "Checkpoint: 19-02 Task 2 awaiting human visual verification"
-last_updated: "2026-03-31T04:14:47.806Z"
+stopped_at: Completed 20-01-PLAN.md
+last_updated: "2026-03-31T06:16:45.749Z"
 last_activity: 2026-03-31
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
 ---
 
 # Project State
@@ -20,11 +20,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 19 — window-picker-ui
+**Current focus:** Phase 20 — metadata-injection-integration
 
 ## Current Position
 
-Phase: 19 (window-picker-ui) — EXECUTING
+Phase: 20 (metadata-injection-integration) — EXECUTING
 Plan: 2 of 2
 Status: Ready to execute
 Last activity: 2026-03-31
@@ -107,6 +107,9 @@ Phase-specific decisions affecting current/future work:
 - [Phase 19-window-picker-ui]: afterEach(cleanup) required in vitest 4 jsdom mode — no auto-cleanup between tests
 - [Phase 19-window-picker-ui]: onTogglePicker placed before split buttons in toolbar — picker is a primary action, frequent use warrants prominent placement
 - [Phase 19-window-picker-ui]: pickerOpenRef pattern used in keyboard gate (not adding pickerOpen to deps array) — consistent with isActiveRef from Phase 04
+- [Phase 20-01]: formatCaptureBlock delegates shell-quoting to quotePathForShell — no duplication of quoting logic
+- [Phase 20-01]: dpiScale formatted with toFixed(4) for consistent 4-decimal precision matching computer_use coordinate convention
+- [Phase 20-01]: Block uses # comment lines readable by Claude without JSON parsing
 
 ### Todos
 
@@ -118,7 +121,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-31T04:14:31.322Z
-Stopped at: Checkpoint: 19-02 Task 2 awaiting human visual verification
+Last session: 2026-03-31T06:16:45.743Z
+Stopped at: Completed 20-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 16`
