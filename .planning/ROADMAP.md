@@ -250,4 +250,4 @@ Plans:
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
 | 18. Enriched Capture Backend | 1/1 | Complete    | 2026-03-30 |
 | 19. Window Picker UI | 2/2 | Complete    | 2026-03-31 |
-| 20. Metadata Injection & Integration | 2/2 | Complete   | 2026-03-31 |
+| 20. Metadata Injection & Integration | 2/2 | Complete    | 2026-03-31 |
