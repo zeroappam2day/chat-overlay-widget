@@ -8,6 +8,7 @@ import type { ClientMessage, ServerMessage, SessionMeta } from './protocol.js';
 import { PTYSession, SCREENSHOT_DIR } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
+import { crFold, stripAnsiSync, initStripAnsi } from './terminalBuffer.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 import { listWindows } from './windowEnumerator.js';
 import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
@@ -17,6 +18,8 @@ import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
 openDb();
 markOrphans();
 sweepScreenshotTempFiles();
+// Pre-load strip-ansi ESM module so stripAnsiSync is ready before any request
+initStripAnsi().catch(err => console.error('[sidecar] initStripAnsi failed:', err));
 console.log('[sidecar] SQLite session database initialized');
 
 // Clean any stale discovery file from a previous force-killed session
@@ -81,6 +84,44 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     });
     return;
   }
+  // Parse URL for new routes that use query parameters
+  const url = new URL(req.url!, 'http://localhost');
+
+  if (req.method === 'GET' && url.pathname === '/terminal-state') {
+    const session = [...activeSessions.values()][0];
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No active session' }));
+      return;
+    }
+    const n = Math.min(500, Math.max(1, parseInt(url.searchParams.get('lines') ?? '50', 10) || 50));
+    const sinceParam = url.searchParams.get('since');
+    const since = sinceParam !== null ? parseInt(sinceParam, 10) : undefined;
+    const snapshot = session.terminalBuffer.getLines(n, since);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(snapshot));
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/session-history') {
+    const sessionIdParam = url.searchParams.get('sessionId') ?? '';
+    const sessionId = parseInt(sessionIdParam, 10);
+    if (isNaN(sessionId)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+    const lines = Math.min(500, Math.max(1, parseInt(url.searchParams.get('lines') ?? '100', 10) || 100));
+    const chunks = getSessionChunks(sessionId);
+    const raw = chunks.map(c => c.data.toString('utf8')).join('');
+    const cleaned = stripAnsiSync(crFold(raw));
+    const allLines = cleaned.split('\n').filter(l => l.trim() !== '');
+    const result = allLines.slice(-lines);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ lines: result, sessionId, total: allLines.length }));
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }

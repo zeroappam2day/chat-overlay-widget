@@ -14,8 +14,9 @@ async function getStripAnsi(): Promise<(str: string) => string> {
 /**
  * Synchronous ANSI stripping using a pre-loaded reference.
  * Call initStripAnsi() once at startup before using TerminalBuffer.
+ * Exported for use in server.ts session-history processing.
  */
-function stripAnsiSync(str: string): string {
+export function stripAnsiSync(str: string): string {
   if (!_stripAnsi) {
     // Fallback: strip common SGR/OSC patterns without the library.
     // This path should only be hit in tests before init completes.
