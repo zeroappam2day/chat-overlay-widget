@@ -67,7 +67,7 @@
 
 **Milestone Goal:** Let any MCP-capable LLM running in the app autonomously read the terminal, observe agent activity, and capture screenshots — with a layered adapter architecture that degrades gracefully for non-MCP LLMs.
 
-- [ ] **Phase 23: Terminal Buffer Layer** - Ring buffer, ANSI stripping, HTTP endpoint, SQLite history query
+- [x] **Phase 23: Terminal Buffer Layer** - Ring buffer, ANSI stripping, HTTP endpoint, SQLite history query (completed 2026-03-31)
 - [ ] **Phase 24: Secret Scrubber & Trust Tiers** - Best-effort secret scrubbing and provider trust tier config
 - [ ] **Phase 25: Screenshot Self-Capture** - App self-capture, secret-region blurring, provider-gated delivery
 - [ ] **Phase 26: Hook Receiver & Event Schema** - Hook endpoint, normalized AgentEvent schema
@@ -88,8 +88,8 @@
   4. ANSI/OSC escape codes are stripped at write time — the stored buffer contains only readable text
 **Plans**: 2 plans
 Plans:
-- [ ] 23-01-PLAN.md -- TerminalBuffer core (ring buffer, ANSI strip, PTYSession wiring)
-- [ ] 23-02-PLAN.md -- HTTP endpoints (/terminal-state, /session-history) + live verify
+- [x] 23-01-PLAN.md -- TerminalBuffer core (ring buffer, ANSI strip, PTYSession wiring)
+- [x] 23-02-PLAN.md -- HTTP endpoints (/terminal-state, /session-history) + live verify
 
 ### Phase 24: Secret Scrubber & Trust Tiers
 **Goal**: Sensitive values in terminal output are identified and redacted before leaving the local machine
@@ -99,7 +99,10 @@ Plans:
   1. API keys, tokens, and connection strings matching known patterns are replaced with `[REDACTED]` in terminal content before it is returned to any LLM caller
   2. A visible warning in the app communicates that scrubbing is best-effort, not a security guarantee
   3. Local model callers receive unscrubbed terminal content; cloud provider callers receive scrubbed content based on the configured trust tier
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 24-01-PLAN.md — Secret scrubber module (scrub, detectSecrets, ~18 regex patterns)
+- [ ] 24-02-PLAN.md — HTTP route integration (?scrub param, X-Scrub-Warning header, warning field)
 
 ### Phase 25: Screenshot Self-Capture
 **Goal**: The app can capture and deliver its own window as a PNG, with secrets blurred for cloud transmission
@@ -165,8 +168,8 @@ Plans:
 | 10-15 | v1.2 | 9/9 | Complete | 2026-03-30 |
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
 | 21-22 | v1.4 | 4/4 | Complete | 2026-03-31 |
-| 23. Terminal Buffer Layer | v1.5 | 0/2 | Planned | - |
-| 24. Secret Scrubber & Trust Tiers | v1.5 | 0/TBD | Not started | - |
+| 23. Terminal Buffer Layer | v1.5 | 2/2 | Complete    | 2026-03-31 |
+| 24. Secret Scrubber & Trust Tiers | v1.5 | 0/2 | Planning complete | - |
 | 25. Screenshot Self-Capture | v1.5 | 0/TBD | Not started | - |
 | 26. Hook Receiver & Event Schema | v1.5 | 0/TBD | Not started | - |
 | 27. MCP Server | v1.5 | 0/TBD | Not started | - |
