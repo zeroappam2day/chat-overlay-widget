@@ -260,7 +260,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   // Close picker BEFORE sending WS message so UI does not freeze during sidecar spawnSync capture
   const handleWindowSelect = useCallback((window: WindowThumbnail) => {
     setPickerOpen(false);
-    sendMessage({ type: 'capture-window-with-metadata', title: window.title });
+    sendMessage({
+      type: 'capture-window-with-metadata',
+      hwnd: window.hwnd,
+      pid: window.pid,
+      title: window.title,
+    });
   }, [sendMessage]);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {

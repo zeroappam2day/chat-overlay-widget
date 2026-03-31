@@ -261,6 +261,8 @@ wss.on('connection', (ws: WebSocket) => {
             type: 'capture-result-with-metadata',
             path: result.data.path,
             title: msg.title,
+            hwnd: msg.hwnd,
+            pid: msg.pid,
             bounds: result.data.bounds,
             captureSize: result.data.captureSize,
             dpiScale: result.data.dpiScale,
