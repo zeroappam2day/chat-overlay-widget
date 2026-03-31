@@ -212,7 +212,7 @@ Plans:
   4. A refresh button inside the picker triggers a new `list-windows-with-thumbnails` request and updates the grid without closing the picker
 **Plans**: 2 plans
 Plans:
-- [ ] 19-01-PLAN.md — WindowPicker component with TDD + test infrastructure
+- [x] 19-01-PLAN.md — WindowPicker component with TDD + test infrastructure
 - [ ] 19-02-PLAN.md — TerminalPane/TerminalHeader integration wiring + visual checkpoint
 **UI hint**: yes
 
@@ -246,5 +246,5 @@ Plans:
 | 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
 | 18. Enriched Capture Backend | 1/1 | Complete    | 2026-03-30 |
-| 19. Window Picker UI | v1.3 | Planning | — |
+| 19. Window Picker UI | 1/2 | In Progress|  |
 | 20. Metadata Injection & Integration | v1.3 | Not started | — |

@@ -136,13 +136,13 @@ Requirements for Window Picker & LLM-Actionable Capture milestone.
 - [x] **THUMB-01**: User can request batch thumbnails of all visible windows via a single async operation
 - [x] **THUMB-02**: Each thumbnail is a mini-capture (240x180) returned as base64 with window title and process name
 - [x] **THUMB-03**: Thumbnails are briefly cached to avoid re-capturing on picker reopen
-- [ ] **THUMB-04**: User can filter windows by title or process name in the picker
+- [x] **THUMB-04**: User can filter windows by title or process name in the picker
 
 ### Picker
 
-- [ ] **PICK-01**: User can open a window picker popover/panel from the UI showing thumbnail grid
-- [ ] **PICK-02**: User can navigate the thumbnail grid with arrow keys and select with Enter
-- [ ] **PICK-03**: User can manually refresh the window list without closing the picker
+- [x] **PICK-01**: User can open a window picker popover/panel from the UI showing thumbnail grid
+- [x] **PICK-02**: User can navigate the thumbnail grid with arrow keys and select with Enter
+- [x] **PICK-03**: User can manually refresh the window list without closing the picker
 
 ### Capture
 
@@ -242,10 +242,10 @@ v1.3 (13 reqs):
 | THUMB-03 | Phase 17 | Complete |
 | CAPT-01 | Phase 18 | Complete |
 | INTG-02 | Phase 18 | Complete |
-| PICK-01 | Phase 19 | Pending |
-| PICK-02 | Phase 19 | Pending |
-| PICK-03 | Phase 19 | Pending |
-| THUMB-04 | Phase 19 | Pending |
+| PICK-01 | Phase 19 | Complete |
+| PICK-02 | Phase 19 | Complete |
+| PICK-03 | Phase 19 | Complete |
+| THUMB-04 | Phase 19 | Complete |
 | CAPT-02 | Phase 20 | Pending |
 | CAPT-03 | Phase 20 | Pending |
 | INTG-03 | Phase 20 | Pending |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
-status: verifying
-stopped_at: Phase 19 context gathered (assumptions mode)
-last_updated: "2026-03-30T17:49:52.405Z"
-last_activity: 2026-03-30
+status: executing
+stopped_at: Completed 19-01-PLAN.md
+last_updated: "2026-03-31T04:10:09.587Z"
+last_activity: 2026-03-31
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 18 — enriched-capture-backend
+**Current focus:** Phase 19 — window-picker-ui
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-03-30
+Phase: 19 (window-picker-ui) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-31
 
 ## Performance Metrics
 
@@ -102,6 +102,9 @@ Phase-specific decisions affecting current/future work:
 - [Phase 17]: buildBatchThumbnailScript() exported for testability — consistent with buildCaptureScript() pattern from Phase 13
 - [Phase 18]: DPI scale derived from GetWindowRect/DwmGetWindowAttribute physW/logW ratio at runtime — not hardcoded
 - [Phase 18]: captureWindowWithMetadata JSON stdout parsing skips to first '{' to handle Add-Type diagnostic lines
+- [Phase 19-window-picker-ui]: jsdom downgraded to v24 for Node 20.17.0 compatibility (v27 requires 20.19.0+)
+- [Phase 19-window-picker-ui]: @vitest-environment jsdom docblock per test file prevents sidecar CJS test breakage from global jsdom
+- [Phase 19-window-picker-ui]: afterEach(cleanup) required in vitest 4 jsdom mode — no auto-cleanup between tests
 
 ### Todos
 
@@ -113,7 +116,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-30T17:49:52.396Z
-Stopped at: Phase 19 context gathered (assumptions mode)
-Resume file: .planning/phases/19-window-picker-ui/19-CONTEXT.md
+Last session: 2026-03-31T04:10:09.580Z
+Stopped at: Completed 19-01-PLAN.md
+Resume file: None
 Next action: `/gsd:plan-phase 16`
