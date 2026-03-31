@@ -157,7 +157,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 - [x] **Phase 16: Protocol Extension** — WebSocket message types for batch thumbnails and enriched capture (completed 2026-03-30)
 - [x] **Phase 17: Batch Thumbnail Backend** — Sidecar generates 240x180 thumbnails for all visible windows in a single async operation (completed 2026-03-30)
 - [x] **Phase 18: Enriched Capture Backend** — Capture result includes bounds, DPI scale, capture dimensions; backward-compatible HTTP endpoints (completed 2026-03-30)
-- [ ] **Phase 19: Window Picker UI** — Thumbnail grid popover with keyboard navigation, search filter, and manual refresh
+- [x] **Phase 19: Window Picker UI** — Thumbnail grid popover with keyboard navigation, search filter, and manual refresh (completed 2026-03-31)
 - [ ] **Phase 20: Metadata Injection & Integration** — Structured computer_use metadata block injected into active pane's ChatInputBar on window selection
 
 ## Phase Details
@@ -213,7 +213,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 19-01-PLAN.md — WindowPicker component with TDD + test infrastructure
-- [ ] 19-02-PLAN.md — TerminalPane/TerminalHeader integration wiring + visual checkpoint
+- [x] 19-02-PLAN.md — TerminalPane/TerminalHeader integration wiring + visual checkpoint
 **UI hint**: yes
 
 ### Phase 20: Metadata Injection & Integration
@@ -246,5 +246,5 @@ Plans:
 | 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
 | 18. Enriched Capture Backend | 1/1 | Complete    | 2026-03-30 |
-| 19. Window Picker UI | 1/2 | In Progress|  |
+| 19. Window Picker UI | 2/2 | Complete   | 2026-03-31 |
 | 20. Metadata Injection & Integration | v1.3 | Not started | — |

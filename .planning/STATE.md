@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Application
 status: executing
-stopped_at: Completed 19-01-PLAN.md
-last_updated: "2026-03-31T04:10:09.587Z"
+stopped_at: "Checkpoint: 19-02 Task 2 awaiting human visual verification"
+last_updated: "2026-03-31T04:14:47.806Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -105,6 +105,8 @@ Phase-specific decisions affecting current/future work:
 - [Phase 19-window-picker-ui]: jsdom downgraded to v24 for Node 20.17.0 compatibility (v27 requires 20.19.0+)
 - [Phase 19-window-picker-ui]: @vitest-environment jsdom docblock per test file prevents sidecar CJS test breakage from global jsdom
 - [Phase 19-window-picker-ui]: afterEach(cleanup) required in vitest 4 jsdom mode — no auto-cleanup between tests
+- [Phase 19-window-picker-ui]: onTogglePicker placed before split buttons in toolbar — picker is a primary action, frequent use warrants prominent placement
+- [Phase 19-window-picker-ui]: pickerOpenRef pattern used in keyboard gate (not adding pickerOpen to deps array) — consistent with isActiveRef from Phase 04
 
 ### Todos
 
@@ -116,7 +118,7 @@ Phase-specific decisions affecting current/future work:
 
 ## Session Continuity
 
-Last session: 2026-03-31T04:10:09.580Z
-Stopped at: Completed 19-01-PLAN.md
+Last session: 2026-03-31T04:14:31.322Z
+Stopped at: Checkpoint: 19-02 Task 2 awaiting human visual verification
 Resume file: None
 Next action: `/gsd:plan-phase 16`
