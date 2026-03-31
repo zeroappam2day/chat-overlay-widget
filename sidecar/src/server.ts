@@ -9,6 +9,7 @@ import { PTYSession, SCREENSHOT_DIR } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 import { crFold, stripAnsiSync, initStripAnsi } from './terminalBuffer.js';
+import { scrub } from './secretScrubber.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 import { listWindows } from './windowEnumerator.js';
 import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
@@ -98,8 +99,15 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     const sinceParam = url.searchParams.get('since');
     const since = sinceParam !== null ? parseInt(sinceParam, 10) : undefined;
     const snapshot = session.terminalBuffer.getLines(n, since);
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(snapshot));
+    const shouldScrub = url.searchParams.get('scrub') !== 'false';
+    const lines = shouldScrub ? snapshot.lines.map(line => scrub(line)) : snapshot.lines;
+    if (shouldScrub) {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-Scrub-Warning': 'best-effort' });
+      res.end(JSON.stringify({ lines, cursor: snapshot.cursor, warning: 'Secret scrubbing is best-effort. Do not rely on it as a security boundary.' }));
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ lines, cursor: snapshot.cursor }));
+    }
     return;
   }
 
@@ -117,8 +125,15 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     const cleaned = stripAnsiSync(crFold(raw));
     const allLines = cleaned.split('\n').filter(l => l.trim() !== '');
     const result = allLines.slice(-lines);
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ lines: result, sessionId, total: allLines.length }));
+    const shouldScrub = url.searchParams.get('scrub') !== 'false';
+    const outputLines = shouldScrub ? result.map(line => scrub(line)) : result;
+    if (shouldScrub) {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-Scrub-Warning': 'best-effort' });
+      res.end(JSON.stringify({ lines: outputLines, sessionId, total: allLines.length, warning: 'Secret scrubbing is best-effort. Do not rely on it as a security boundary.' }));
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ lines: outputLines, sessionId, total: allLines.length }));
+    }
     return;
   }
 
