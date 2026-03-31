@@ -210,7 +210,10 @@ Plans:
   2. User can type in a search box inside the picker to filter thumbnails by window title or process name; non-matching cards disappear in real time
   3. User can navigate the thumbnail grid with arrow keys and activate a selection with Enter (no mouse required)
   4. A refresh button inside the picker triggers a new `list-windows-with-thumbnails` request and updates the grid without closing the picker
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 19-01-PLAN.md — WindowPicker component with TDD + test infrastructure
+- [ ] 19-02-PLAN.md — TerminalPane/TerminalHeader integration wiring + visual checkpoint
 **UI hint**: yes
 
 ### Phase 20: Metadata Injection & Integration
@@ -243,5 +246,5 @@ Plans:
 | 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
 | 18. Enriched Capture Backend | 1/1 | Complete    | 2026-03-30 |
-| 19. Window Picker UI | v1.3 | Not started | — |
+| 19. Window Picker UI | v1.3 | Planning | — |
 | 20. Metadata Injection & Integration | v1.3 | Not started | — |
