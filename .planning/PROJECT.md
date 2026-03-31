@@ -41,7 +41,26 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Cursor-paginated terminal buffer with ANSI/OSC stripping, exposed via HTTP + MCP
+- [ ] Best-effort secret scrubbing with provider trust tiers (local unscrubbed, cloud scrubbed)
+- [ ] Screenshot self-capture with secret-region blurring before cloud transmission
+- [ ] MCP server (stdio) wrapping HTTP APIs for autonomous LLM tool access
+- [ ] Hook receiver normalizing Claude Code/Windsurf/Cursor events into shared AgentEvent schema
+- [ ] Sidebar event panel showing structured agent activity (tool name, file, status)
+- [ ] Auto-configuration: app injects hook config + MCP registration on startup
+- [ ] Adapter layer for LLM-specific integrations (ClaudeCode, Windsurf, Cursor, Fallback)
+
+## Current Milestone: v1.5 Self-Observation & Agent Visibility
+
+**Goal:** Let any MCP-capable LLM running in the app autonomously read the terminal, observe agent activity, and capture screenshots — with a layered adapter architecture that degrades gracefully for non-MCP LLMs.
+
+**Target features:**
+- Layer 1: Universal HTTP APIs (/terminal-state, /screenshot) with cursor pagination and ANSI stripping
+- Layer 2: MCP server wrapping Layer 1 for autonomous LLM access (stdio + optional SSE)
+- Layer 3: Adapter layer normalizing hooks from Claude Code, Windsurf, Cursor into AgentEvent schema
+- Sidebar event panel with structured agent activity display
+- Auto-configuration (zero manual setup for hooks + MCP)
+- Provider trust tiers for secret scrubbing (local vs cloud)
 
 ### Out of Scope
 
@@ -59,6 +78,7 @@ v1.2 shipped: split fix, capture infrastructure, window enumeration, window capt
 v1.3 shipped: protocol extension, batch thumbnails, enriched capture, window picker UI, metadata injection (Phases 16-20)
 v1.4 shipped: HWND+PID protocol threading, direct HWND capture, stale detection, blank-bitmap warning, fallback (Phases 21-22)
 Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 22 phases shipped across 4 milestones.
+v1.5 context: Stress-tested from 5 adversarial views (token efficiency, security, UX, portability, architecture). Virtual xterm.js agent panes rejected — sidebar panel chosen. MCP broadly adopted (Claude, Cursor, Windsurf, Cline, GPT-4, Gemini). Hook systems fragmented across tools — adapter layer required. Secret scrubber is best-effort, not a security boundary.
 
 ## Key Decisions
 
@@ -86,5 +106,16 @@ Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (nod
 Updates at phase transitions: invalidate/validate requirements, log decisions, check core value accuracy.
 Updates at milestones: full review, core value check, out-of-scope audit.
 
+| Sidebar over virtual terminal panes for agent visibility | Stress test: raw JSONL in xterm.js is unreadable; panes accumulate; category error (terminal for log data) | — Pending |
+| Layered architecture (HTTP → MCP → Adapters) | LLM portability: HTTP is universal, MCP is broadly adopted, adapters handle fragmented hooks | — Pending |
+| Best-effort secret scrubbing (not security boundary) | Regex bypass vectors (ANSI-split, base64, line-wrap); explicit user warning instead of false guarantee | — Pending |
+| Provider trust tiers (local unscrubbed, cloud scrubbed) | Multi-LLM data leakage: same content to all providers defeats purpose of local models for sensitive work | — Pending |
+| Cursor-paginated terminal reads over full buffer dump | 64KB raw dump = 16K-20K tokens; catastrophic for small-context models (Haiku, local Llama) | — Pending |
+
+## Evolution
+
+Updates at phase transitions: invalidate/validate requirements, log decisions, check core value accuracy.
+Updates at milestones: full review, core value check, out-of-scope audit.
+
 ---
-*Last updated: 2026-03-31 after v1.4 milestone*
+*Last updated: 2026-03-31 after v1.5 milestone started*
