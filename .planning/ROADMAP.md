@@ -225,7 +225,10 @@ Plans:
   2. The active pane's ChatInputBar receives the captured file path plus a structured metadata block containing bounds, captureSize, and dpiScale in computer_use coordinate format
   3. The injected metadata block is formatted so Claude can read pixel coordinates and reason about spatial positions without any additional parsing
   4. End-to-end flow works: open picker → select window → ChatInputBar populated → user sends → Claude references the image and its coordinates
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — formatCaptureBlock TDD utility (metadata text formatter)
+- [ ] 20-02-PLAN.md — Wire picker selection flow + ChatInputBar injection + visual checkpoint
 **UI hint**: yes
 
 ## Progress
@@ -246,5 +249,5 @@ Plans:
 | 16. Protocol Extension | 1/1 | Complete    | 2026-03-30 |
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
 | 18. Enriched Capture Backend | 1/1 | Complete    | 2026-03-30 |
-| 19. Window Picker UI | 2/2 | Complete   | 2026-03-31 |
+| 19. Window Picker UI | 2/2 | Complete    | 2026-03-31 |
 | 20. Metadata Injection & Integration | v1.3 | Not started | — |
