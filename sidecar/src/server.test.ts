@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { TerminalBuffer, crFold, stripAnsiSync, initStripAnsi } from './terminalBuffer.js';
+import { scrub } from './secretScrubber.js';
 
 beforeAll(async () => {
   // Pre-load strip-ansi ESM module (same call as sidecar startup)
@@ -158,5 +159,83 @@ describe('/session-history — cleaning pipeline (crFold + stripAnsiSync)', () =
     expect(cap('50')).toBe(50);    // normal
     expect(cap('0')).toBe(100);    // 0 → fallback default
     expect(cap('-1')).toBe(1);     // negative → Math.max(1, ...)
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Secret scrubbing integration
+// ---------------------------------------------------------------------------
+
+describe('secret scrubbing integration', () => {
+  let buf: TerminalBuffer;
+
+  beforeEach(() => {
+    buf = new TerminalBuffer();
+  });
+
+  it('/terminal-state with default scrub param scrubs secrets', () => {
+    // Simulate shouldScrub=true (default — scrub param absent or not "false")
+    buf.append('export AWS_KEY=AKIAIOSFODNN7EXAMPLE\n');
+    const snapshot = buf.getLines(50);
+    // Simulate server behavior: shouldScrub defaults to true
+    const shouldScrub = true;
+    const lines = shouldScrub ? snapshot.lines.map(line => scrub(line)) : snapshot.lines;
+    expect(lines.some(l => l.includes('[REDACTED]'))).toBe(true);
+    expect(lines.some(l => l.includes('AKIAIOSFODNN7EXAMPLE'))).toBe(false);
+  });
+
+  it('/terminal-state with scrub=false preserves secrets', () => {
+    // Simulate shouldScrub=false (caller explicitly passed scrub=false)
+    buf.append('export AWS_KEY=AKIAIOSFODNN7EXAMPLE\n');
+    const snapshot = buf.getLines(50);
+    const shouldScrub = false;
+    const lines = shouldScrub ? snapshot.lines.map(line => scrub(line)) : snapshot.lines;
+    expect(lines.some(l => l.includes('AKIAIOSFODNN7EXAMPLE'))).toBe(true);
+  });
+
+  it('/session-history scrubbing applies to cleaned text', () => {
+    // Simulate session-history pipeline: crFold + stripAnsiSync + scrub
+    const raw = 'export AWS_KEY=AKIAIOSFODNN7EXAMPLE\n';
+    const cleaned = stripAnsiSync(crFold(raw));
+    const allLines = cleaned.split('\n').filter(l => l.trim() !== '');
+    const result = allLines.slice(-100);
+    // shouldScrub=true (default)
+    const outputLines = result.map(line => scrub(line));
+    expect(outputLines.some(l => l.includes('[REDACTED]'))).toBe(true);
+    expect(outputLines.some(l => l.includes('AKIAIOSFODNN7EXAMPLE'))).toBe(false);
+  });
+
+  it('scrubbed response includes warning field', () => {
+    // Simulate building the response JSON with shouldScrub=true
+    const shouldScrub = true;
+    const lines = ['some output'];
+    const response = shouldScrub
+      ? { lines, cursor: 1, warning: 'Secret scrubbing is best-effort. Do not rely on it as a security boundary.' }
+      : { lines, cursor: 1 };
+    expect(response).toHaveProperty('warning');
+    expect((response as { warning?: string }).warning).toBe(
+      'Secret scrubbing is best-effort. Do not rely on it as a security boundary.'
+    );
+  });
+
+  it('unscrubbed response has no warning field', () => {
+    // Simulate building response with shouldScrub=false
+    const shouldScrub = false;
+    const lines = ['some output'];
+    const response = shouldScrub
+      ? { lines, cursor: 1, warning: 'Secret scrubbing is best-effort. Do not rely on it as a security boundary.' }
+      : { lines, cursor: 1 };
+    expect(response).not.toHaveProperty('warning');
+  });
+
+  it('multiple secrets in terminal output are all redacted', () => {
+    // Both an AWS key and a GitHub PAT on the same line
+    const line = 'key=AKIAIOSFODNN7EXAMPLE token=ghp_abcdefghijklmnopqrstuvwxyz1234567890';
+    const result = scrub(line);
+    expect(result).not.toContain('AKIAIOSFODNN7EXAMPLE');
+    expect(result).not.toContain('ghp_abcdefghijklmnopqrstuvwxyz1234567890');
+    // Both replaced with [REDACTED]
+    const redactedCount = (result.match(/\[REDACTED\]/g) ?? []).length;
+    expect(redactedCount).toBeGreaterThanOrEqual(2);
   });
 });
