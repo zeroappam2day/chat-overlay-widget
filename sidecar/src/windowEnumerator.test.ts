@@ -20,7 +20,7 @@ describe('windowEnumerator', () => {
   });
 
   it('Test 1: returns cached data on second call within 5 seconds (spawnSync called once)', async () => {
-    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome"}]') as ReturnType<typeof spawnSync>);
+    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome","hwnd":131234,"pid":4567}]') as ReturnType<typeof spawnSync>);
     const mod = await import('./windowEnumerator.js');
     mod.listWindows();
     mod.listWindows();
@@ -28,7 +28,7 @@ describe('windowEnumerator', () => {
   });
 
   it('Test 2: calls spawnSync again when cache is expired (> 5 seconds old)', async () => {
-    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome"}]') as ReturnType<typeof spawnSync>);
+    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome","hwnd":131234,"pid":4567}]') as ReturnType<typeof spawnSync>);
     const mod = await import('./windowEnumerator.js');
     let now = Date.now();
     const spy = vi.spyOn(Date, 'now').mockReturnValue(now);
@@ -41,7 +41,7 @@ describe('windowEnumerator', () => {
   });
 
   it('Test 3: returns WindowInfo[] with title and processName fields', async () => {
-    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome"}]') as ReturnType<typeof spawnSync>);
+    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome","hwnd":131234,"pid":4567}]') as ReturnType<typeof spawnSync>);
     const mod = await import('./windowEnumerator.js');
     const result = mod.listWindows();
     expect(Array.isArray(result)).toBe(true);
@@ -63,11 +63,40 @@ describe('windowEnumerator', () => {
   });
 
   it('Test 6: resetCache forces next listWindows() to spawn PS again', async () => {
-    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome"}]') as ReturnType<typeof spawnSync>);
+    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome","hwnd":131234,"pid":4567}]') as ReturnType<typeof spawnSync>);
     const mod = await import('./windowEnumerator.js');
     mod.listWindows();
     mod.resetCache();
     mod.listWindows();
     expect(mockSpawnSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('Test 7 (PROT-01): listWindows() result includes hwnd as number', async () => {
+    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome","hwnd":131234,"pid":4567}]') as ReturnType<typeof spawnSync>);
+    const mod = await import('./windowEnumerator.js');
+    const result = mod.listWindows();
+    expect(result[0]).toHaveProperty('hwnd');
+    expect(typeof result[0].hwnd).toBe('number');
+    expect(result[0].hwnd).toBe(131234);
+  });
+
+  it('Test 8 (PROT-02): listWindows() result includes pid as number', async () => {
+    mockSpawnSync.mockReturnValue(makeOkResult('[{"title":"Chrome","processName":"chrome","hwnd":131234,"pid":4567}]') as ReturnType<typeof spawnSync>);
+    const mod = await import('./windowEnumerator.js');
+    const result = mod.listWindows();
+    expect(result[0]).toHaveProperty('pid');
+    expect(typeof result[0].pid).toBe('number');
+    expect(result[0].pid).toBe(4567);
+  });
+
+  it('Test 9 (PROT-03): PS_SCRIPT contains GetParent P/Invoke declaration', async () => {
+    const { PS_SCRIPT } = await import('./windowEnumerator.js');
+    expect(PS_SCRIPT).toContain('GetParent');
+    expect(PS_SCRIPT).toContain('DllImport');
+  });
+
+  it('Test 10 (PROT-03): PS_SCRIPT contains GetParent filter check', async () => {
+    const { PS_SCRIPT } = await import('./windowEnumerator.js');
+    expect(PS_SCRIPT).toContain('GetParent(hWnd)');
   });
 });

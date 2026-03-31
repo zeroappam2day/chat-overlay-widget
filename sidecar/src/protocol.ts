@@ -23,6 +23,10 @@ export interface SessionMeta {
 export interface WindowThumbnail {
   title: string;
   processName: string;
+  /** Window handle as decimal number (via ToInt64). */
+  hwnd: number;
+  /** Process ID of the window's owning process. */
+  pid: number;
   /** Base64-encoded PNG thumbnail (240x180). Absent if capture failed for this window. */
   thumbnail?: string;
   /** Error description if thumbnail capture failed for this window. */
