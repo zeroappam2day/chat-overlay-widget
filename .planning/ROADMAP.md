@@ -73,9 +73,9 @@
   3. Enumeration filters out child render handles — only root windows (GetParent==IntPtr.Zero) appear in the picker
   4. The overlay-capture CLI and HTTP API still capture by title without requiring an HWND argument
   5. TypeScript compiler reports zero errors after both protocol.ts files are updated
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 21-01-PLAN.md — C# scripts + Node.js types: emit HWND/PID, add GetParent filter
+- [x] 21-01-PLAN.md — C# scripts + Node.js types: emit HWND/PID, add GetParent filter
 - [ ] 21-02-PLAN.md — Protocol types + server handler + TerminalPane: thread HWND/PID through WebSocket
 
 ### Phase 22: HWND-Based Capture
@@ -98,7 +98,7 @@ Plans:
 | 7-9 | v1.1 | — | Superseded by v1.2 | — |
 | 10-15 | v1.2 | 9/9 | Complete | 2026-03-30 |
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
-| 21. Protocol Extension | v1.4 | 0/2 | Planned | - |
+| 21. Protocol Extension | v1.4 | 1/2 | In Progress|  |
 | 22. HWND-Based Capture | v1.4 | 0/? | Not started | - |
 
 ---
