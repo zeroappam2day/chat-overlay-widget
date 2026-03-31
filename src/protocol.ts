@@ -11,7 +11,7 @@ export type ClientMessage =
   | { type: 'history-replay'; sessionId: number }
   | { type: 'save-image'; base64: string }
   | { type: 'list-windows-with-thumbnails' }
-  | { type: 'capture-window-with-metadata'; title: string };
+  | { type: 'capture-window-with-metadata'; hwnd: number; pid: number; title: string };
 
 export interface SessionMeta {
   id: number;
@@ -26,6 +26,10 @@ export interface SessionMeta {
 export interface WindowThumbnail {
   title: string;
   processName: string;
+  /** Window handle as decimal integer via ToInt64(). Always <= 0xFFFFFFFF on x64. */
+  hwnd: number;
+  /** Process ID of the window's owning process. */
+  pid: number;
   /** Base64-encoded PNG thumbnail (240x180). Absent if capture failed for this window. */
   thumbnail?: string;
   /** Error description if thumbnail capture failed for this window. */
@@ -45,4 +49,4 @@ export type ServerMessage =
   | { type: 'history-end'; sessionId: number }
   | { type: 'save-image-result'; path: string }
   | { type: 'window-thumbnails'; windows: WindowThumbnail[] }
-  | { type: 'capture-result-with-metadata'; path: string; title: string; bounds: { x: number; y: number; w: number; h: number }; captureSize: { w: number; h: number }; dpiScale: number };
+  | { type: 'capture-result-with-metadata'; path: string; title: string; hwnd: number; pid: number; bounds: { x: number; y: number; w: number; h: number }; captureSize: { w: number; h: number }; dpiScale: number };
