@@ -12,15 +12,15 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 
 See `.planning/REQUIREMENTS.md` for full requirement database with status and traceability.
 
-## Current Milestone: v1.2 Live App Awareness & Capture
+## Current Milestone: v1.3 Window Picker & LLM-Actionable Capture
 
-**Goal:** Fix session-killing split bug, let the app see and screenshot live Windows applications, and give Claude a skill to do the same automatically.
+**Goal:** Add a visual window picker UI with thumbnail previews, one-click capture, and LLM-actionable coordinate metadata so Claude can reason about spatial positions.
 
 **Target features:**
-- Split pane preservation (bug fix: React unmount destroys PTY session on split)
-- Taskbar app identification (visible windows with titles via Win32 EnumWindows)
-- Screenshot capture of selected live application (path injected into terminal)
-- Claude Code skill for automated app identification + capture (agent-initiated)
+- Window Picker UI — popover/panel showing open Windows apps with thumbnail previews
+- Thumbnail Previews — mini-captures of each visible window as image cards
+- One-Click Capture — select window → capture screenshot → inject path + metadata into ChatInputBar
+- LLM-Actionable Coordinate Metadata — bounds, DPI scale, capture dimensions in computer_use-compatible format
 
 ### Out of Scope
 
@@ -33,7 +33,10 @@ Tauri v1.8: Rust desktop shell, Node.js as sidecar (no native Node in webview)
 node-pty: ConPTY on Windows, powers VS Code terminal | xterm.js: ANSI terminal emulator
 shadow typing: `ptyProcess.write(input)` — CLI cannot distinguish from real keyboard
 v1.1 shipped: shell path quoting + input bar resize. HTTP API approach (phases 7-9) dropped in favor of direct UI + Claude skill.
-v1.2 direction: app becomes aware of live Windows applications — enumerate, capture, and expose via Claude Code skill
+v1.2 shipped: split fix, capture infrastructure, window enumeration, window capture, CLI wrapper, Claude skill
+v1.3 direction: visual window picker UI with thumbnails, one-click capture, LLM-actionable coordinate metadata
+Phase 16 complete: shared WS protocol types for thumbnails and enriched capture landed in both sidecar and frontend
+Phase 20 complete: full metadata injection pipeline — picker selection triggers capture, formats coordinate block, injects into ChatInputBar
 
 ## Key Decisions
 
@@ -54,4 +57,4 @@ Updates at phase transitions: invalidate/validate requirements, log decisions, c
 Updates at milestones: full review, core value check, out-of-scope audit.
 
 ---
-*Last updated: 2026-03-30 — v1.2 milestone complete: Phases 10-15 shipped (split fix, capture infrastructure, window enumeration, window capture, CLI wrapper, Claude skill)*
+*Last updated: 2026-03-31 — Phase 20 (Metadata Injection & Integration) complete*
