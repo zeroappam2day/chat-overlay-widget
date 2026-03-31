@@ -158,7 +158,7 @@ Detailed success criteria and verification: see phase VERIFICATION.md files in `
 - [x] **Phase 17: Batch Thumbnail Backend** — Sidecar generates 240x180 thumbnails for all visible windows in a single async operation (completed 2026-03-30)
 - [x] **Phase 18: Enriched Capture Backend** — Capture result includes bounds, DPI scale, capture dimensions; backward-compatible HTTP endpoints (completed 2026-03-30)
 - [x] **Phase 19: Window Picker UI** — Thumbnail grid popover with keyboard navigation, search filter, and manual refresh (completed 2026-03-31)
-- [ ] **Phase 20: Metadata Injection & Integration** — Structured computer_use metadata block injected into active pane's ChatInputBar on window selection
+- [x] **Phase 20: Metadata Injection & Integration** — Structured computer_use metadata block injected into active pane's ChatInputBar on window selection (completed 2026-03-31)
 
 ## Phase Details
 
@@ -228,7 +228,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 20-01-PLAN.md — formatCaptureBlock TDD utility (metadata text formatter)
-- [ ] 20-02-PLAN.md — Wire picker selection flow + ChatInputBar injection + visual checkpoint
+- [x] 20-02-PLAN.md — Wire picker selection flow + ChatInputBar injection + visual checkpoint
 **UI hint**: yes
 
 ## Progress
@@ -250,4 +250,4 @@ Plans:
 | 17. Batch Thumbnail Backend | 1/1 | Complete    | 2026-03-30 |
 | 18. Enriched Capture Backend | 1/1 | Complete    | 2026-03-30 |
 | 19. Window Picker UI | 2/2 | Complete    | 2026-03-31 |
-| 20. Metadata Injection & Integration | 1/2 | In Progress|  |
+| 20. Metadata Injection & Integration | 2/2 | Complete   | 2026-03-31 |
