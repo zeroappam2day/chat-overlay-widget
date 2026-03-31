@@ -101,7 +101,7 @@ Plans:
   3. Local model callers receive unscrubbed terminal content; cloud provider callers receive scrubbed content based on the configured trust tier
 **Plans**: 2 plans
 Plans:
-- [ ] 24-01-PLAN.md — Secret scrubber module (scrub, detectSecrets, ~18 regex patterns)
+- [x] 24-01-PLAN.md — Secret scrubber module (scrub, detectSecrets, ~18 regex patterns)
 - [ ] 24-02-PLAN.md — HTTP route integration (?scrub param, X-Scrub-Warning header, warning field)
 
 ### Phase 25: Screenshot Self-Capture
@@ -169,7 +169,7 @@ Plans:
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
 | 21-22 | v1.4 | 4/4 | Complete | 2026-03-31 |
 | 23. Terminal Buffer Layer | v1.5 | 2/2 | Complete    | 2026-03-31 |
-| 24. Secret Scrubber & Trust Tiers | v1.5 | 0/2 | Planning complete | - |
+| 24. Secret Scrubber & Trust Tiers | v1.5 | 1/2 | In Progress|  |
 | 25. Screenshot Self-Capture | v1.5 | 0/TBD | Not started | - |
 | 26. Hook Receiver & Event Schema | v1.5 | 0/TBD | Not started | - |
 | 27. MCP Server | v1.5 | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Self-Observation & Agent Visibility
 status: executing
-stopped_at: Roadmap written, REQUIREMENTS.md traceability updated
-last_updated: "2026-03-31T15:08:26.805Z"
-last_activity: 2026-03-31 -- Phase 23 execution started
+stopped_at: Completed 24-01-PLAN.md
+last_updated: "2026-03-31T17:19:58.487Z"
+last_activity: 2026-03-31
 progress:
   total_phases: 7
-  completed_phases: 0
-  total_plans: 2
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 3
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 23 — terminal-buffer-layer
+**Current focus:** Phase 24 — secret-scrubber-trust-tiers
 
 ## Current Position
 
-Phase: 23 (terminal-buffer-layer) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 23
-Last activity: 2026-03-31 -- Phase 23 execution started
+Phase: 24 (secret-scrubber-trust-tiers) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0% (v1.5 milestone)
 
@@ -50,6 +50,8 @@ v1.5 architectural decisions from stress testing:
 - Cursor-paginated reads over full buffer dump (token efficiency review)
 - Best-effort secret scrubber, not security boundary (security review)
 - Provider trust tiers for local vs cloud (security + portability reviews)
+- [Phase 24-secret-scrubber-trust-tiers]: GitHub token patterns use {30,} not {36} — real tokens are 36 chars but test samples are 34; lenient minimum avoids false negatives
+- [Phase 24-secret-scrubber-trust-tiers]: bearer-token pattern uses captureGroup to preserve 'Bearer ' prefix, only redacting the token value
 
 ### Todos
 
@@ -72,10 +74,11 @@ None.
 | A5 | App can PrintWindow its own Tauri HWND (WebView2 self-capture) | 25 | Screenshot endpoint needs alternative approach (xterm.js serialize or CDP) | Call existing captureWindowByHwnd with the app's own HWND |
 
 **Recommendation:** Validate A1 and A2 via a 30-min spike before Phase 26 planning. A3 and A4 validate naturally during Phase 23. A5 validates during Phase 25.
+| Phase 24-secret-scrubber-trust-tiers P01 | 3 | 1 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-03-31
-Stopped at: Roadmap written, REQUIREMENTS.md traceability updated
+Last session: 2026-03-31T17:19:58.478Z
+Stopped at: Completed 24-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 23`
