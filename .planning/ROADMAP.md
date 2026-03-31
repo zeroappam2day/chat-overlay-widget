@@ -58,7 +58,7 @@
 
 **Milestone Goal:** Replace fragile title-based window matching with HWND-based capture so the correct window is always captured regardless of title changes.
 
-- [ ] **Phase 21: Protocol Extension** - Thread HWND and PID through enumeration, types, and WebSocket protocol
+- [x] **Phase 21: Protocol Extension** - Thread HWND and PID through enumeration, types, and WebSocket protocol (completed 2026-03-31)
 - [ ] **Phase 22: HWND-Based Capture** - Route capture through PrintWindow(hwnd) with stale detection and blank-bitmap fallback
 
 ## Phase Details
@@ -73,10 +73,10 @@
   3. Enumeration filters out child render handles — only root windows (GetParent==IntPtr.Zero) appear in the picker
   4. The overlay-capture CLI and HTTP API still capture by title without requiring an HWND argument
   5. TypeScript compiler reports zero errors after both protocol.ts files are updated
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 21-01-PLAN.md — C# scripts + Node.js types: emit HWND/PID, add GetParent filter
-- [ ] 21-02-PLAN.md — Protocol types + server handler + TerminalPane: thread HWND/PID through WebSocket
+- [x] 21-02-PLAN.md — Protocol types + server handler + TerminalPane: thread HWND/PID through WebSocket
 
 ### Phase 22: HWND-Based Capture
 **Goal**: Capture routes through PrintWindow(hwnd) directly — no title re-enumeration — with explicit validation that the HWND is still alive, the PID matches, and the resulting bitmap is non-blank
@@ -98,7 +98,7 @@ Plans:
 | 7-9 | v1.1 | — | Superseded by v1.2 | — |
 | 10-15 | v1.2 | 9/9 | Complete | 2026-03-30 |
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
-| 21. Protocol Extension | v1.4 | 1/2 | In Progress|  |
+| 21. Protocol Extension | v1.4 | 2/2 | Complete   | 2026-03-31 |
 | 22. HWND-Based Capture | v1.4 | 0/? | Not started | - |
 
 ---

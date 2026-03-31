@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Stable Window Targeting
-status: executing
-stopped_at: Completed 21-01-PLAN.md
-last_updated: "2026-03-31T09:13:33.917Z"
+status: verifying
+stopped_at: Completed 21-02-PLAN.md
+last_updated: "2026-03-31T09:18:07.285Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 85
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 Phase: 21 (Protocol Extension) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-31
 
 Progress: [████████████░░] 85% (20/22 phases complete across all milestones)
@@ -52,6 +52,8 @@ Recent decisions affecting v1.4:
 - Parallel functions pattern: `captureWindowByHwnd` is additive alongside existing `captureWindowWithMetadata` — no regression on CLI/HTTP paths
 - [Phase 21]: PS_SCRIPT exported from windowEnumerator.ts to enable structural assertions in Tests 9/10
 - [Phase 21]: WindowThumbnail type extended with hwnd: number and pid: number in protocol.ts (PROT-01/02 downstream readiness)
+- [Phase 21-protocol-extension]: hwnd and pid are required fields on WindowThumbnail — all callers must supply them
+- [Phase 21-protocol-extension]: PROT-05 preserved: captureWindowWithMetadata(msg.title) unchanged — HWND-based capture deferred to Phase 22
 
 ### Todos
 
@@ -64,7 +66,7 @@ Recent decisions affecting v1.4:
 
 ## Session Continuity
 
-Last session: 2026-03-31T09:13:33.911Z
-Stopped at: Completed 21-01-PLAN.md
+Last session: 2026-03-31T09:18:07.279Z
+Stopped at: Completed 21-02-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 21

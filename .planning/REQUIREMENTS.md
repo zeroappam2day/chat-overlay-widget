@@ -12,8 +12,8 @@ Requirements for stable window targeting. Each maps to roadmap phases.
 - [x] **PROT-01**: Enumeration stores HWND (via ToInt64()) for each window in WindowInfo and WindowThumbnail
 - [x] **PROT-02**: Enumeration stores process ID (PID) for each window
 - [x] **PROT-03**: Root-window assertion filters to GetParent==IntPtr.Zero only (no child render handles)
-- [ ] **PROT-04**: WebSocket protocol includes hwnd and pid fields in capture-window-with-metadata message
-- [ ] **PROT-05**: Title-only capture (overlay-capture CLI, HTTP API) continues working without HWND
+- [x] **PROT-04**: WebSocket protocol includes hwnd and pid fields in capture-window-with-metadata message
+- [x] **PROT-05**: Title-only capture (overlay-capture CLI, HTTP API) continues working without HWND
 
 ### HWND Capture
 
@@ -47,8 +47,8 @@ Requirements for stable window targeting. Each maps to roadmap phases.
 | PROT-01 | Phase 21 | Complete |
 | PROT-02 | Phase 21 | Complete |
 | PROT-03 | Phase 21 | Complete |
-| PROT-04 | Phase 21 | Pending |
-| PROT-05 | Phase 21 | Pending |
+| PROT-04 | Phase 21 | Complete |
+| PROT-05 | Phase 21 | Complete |
 | HWND-01 | Phase 22 | Pending |
 | HWND-02 | Phase 22 | Pending |
 | HWND-03 | Phase 22 | Pending |
