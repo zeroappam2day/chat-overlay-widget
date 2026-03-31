@@ -1,5 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { TerminalBuffer, crFold } from './terminalBuffer.js';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
+import { TerminalBuffer, crFold, initStripAnsi } from './terminalBuffer.js';
+
+beforeAll(async () => {
+  await initStripAnsi();
+});
 
 describe('crFold', () => {
   it('keeps only content after last \\r on each line', () => {

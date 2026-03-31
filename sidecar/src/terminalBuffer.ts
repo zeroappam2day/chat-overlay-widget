@@ -1,4 +1,37 @@
-import stripAnsi from 'strip-ansi';
+// strip-ansi 7.x is ESM-only. In a Node16 CJS-compiled module we must use
+// a dynamic import. We resolve it once at module load and cache it.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _stripAnsi: ((str: string) => string) | undefined;
+
+async function getStripAnsi(): Promise<(str: string) => string> {
+  if (!_stripAnsi) {
+    const mod = await import('strip-ansi');
+    _stripAnsi = mod.default as (str: string) => string;
+  }
+  return _stripAnsi;
+}
+
+/**
+ * Synchronous ANSI stripping using a pre-loaded reference.
+ * Call initStripAnsi() once at startup before using TerminalBuffer.
+ */
+function stripAnsiSync(str: string): string {
+  if (!_stripAnsi) {
+    // Fallback: strip common SGR/OSC patterns without the library.
+    // This path should only be hit in tests before init completes.
+    // eslint-disable-next-line no-control-regex
+    return str.replace(/\x1b(?:\[[0-9;]*[mGKHFABCDJP]|\][^\x07]*\x07)/g, '');
+  }
+  return _stripAnsi(str);
+}
+
+/**
+ * Pre-load strip-ansi. Must be called once before TerminalBuffer is used
+ * in production (e.g., at sidecar startup). Tests can call this too.
+ */
+export async function initStripAnsi(): Promise<void> {
+  await getStripAnsi();
+}
 
 const MAX_BYTES = 65536; // 64KB
 
@@ -39,7 +72,7 @@ export class TerminalBuffer {
 
     for (const seg of segments) {
       // Two-step pipeline: CR-fold then ANSI strip
-      const clean = stripAnsi(crFold(seg)).trimEnd();
+      const clean = stripAnsiSync(crFold(seg)).trimEnd();
       if (clean === '') continue; // skip empty/whitespace-only lines
 
       const bytes = Buffer.byteLength(clean, 'utf8');
