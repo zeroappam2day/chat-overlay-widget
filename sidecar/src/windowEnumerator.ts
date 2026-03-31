@@ -3,6 +3,8 @@ import { spawnSync } from 'node:child_process';
 export interface WindowInfo {
   title: string;
   processName: string;
+  hwnd: number;
+  pid: number;
 }
 
 let cache: { data: WindowInfo[]; ts: number } | null = null;
@@ -12,7 +14,7 @@ export function resetCache(): void {
   cache = null;
 }
 
-const PS_SCRIPT = `
+export const PS_SCRIPT = `
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -40,6 +42,9 @@ public class WinEnum {
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetParent(IntPtr hWnd);
+
     private const int GWL_EXSTYLE = -20;
     private const long WS_EX_TOOLWINDOW = 0x80L;
     private const int DWMWA_CLOAKED = 14;
@@ -65,6 +70,9 @@ public class WinEnum {
             var exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
             if ((exStyle & WS_EX_TOOLWINDOW) != 0) return true;
 
+            // Filter 5: root windows only (PROT-03)
+            if (GetParent(hWnd) != IntPtr.Zero) return true;
+
             // Get process name
             uint pid = 0;
             GetWindowThreadProcessId(hWnd, out pid);
@@ -74,7 +82,7 @@ public class WinEnum {
                 processName = proc.ProcessName;
             } catch {}
 
-            windows.Add(new { title = title, processName = processName });
+            windows.Add(new { title = title, processName = processName, hwnd = hWnd.ToInt64(), pid = (long)pid });
             return true;
         }, IntPtr.Zero);
         return windows;

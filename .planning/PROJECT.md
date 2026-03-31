@@ -35,7 +35,15 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 
 ### Active
 
-(None — planning next milestone)
+## Current Milestone: v1.4 Stable Window Targeting
+
+**Goal:** Replace fragile title-based window matching with HWND-based capture so the correct window is always captured regardless of title changes.
+
+**Target features:**
+- HWND threaded through enumeration → protocol → picker → capture
+- Capture by HWND instead of title substring match
+- Fallback/validation when HWND becomes stale (window closed)
+- Process name as secondary disambiguator
 
 ### Out of Scope
 
@@ -76,4 +84,4 @@ Updates at phase transitions: invalidate/validate requirements, log decisions, c
 Updates at milestones: full review, core value check, out-of-scope audit.
 
 ---
-*Last updated: 2026-03-31 after v1.3 milestone*
+*Last updated: 2026-03-31 after v1.4 milestone start*
