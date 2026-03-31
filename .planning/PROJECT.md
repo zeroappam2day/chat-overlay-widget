@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Tauri v1.8 desktop app wrapping Claude Code's CLI in a GUI with visual window capture capabilities. node-pty (ConPTY) bridges GUI input to a real shell, xterm.js renders terminal output, WebSocket connects browser UI to Node.js sidecar. Includes a window picker with thumbnail previews, one-click capture, and LLM-actionable coordinate metadata for Claude spatial reasoning. Single user, Windows 11 only.
+Tauri v1.8 desktop app wrapping Claude Code's CLI in a GUI with visual window capture capabilities. node-pty (ConPTY) bridges GUI input to a real shell, xterm.js renders terminal output, WebSocket connects browser UI to Node.js sidecar. Includes a window picker with thumbnail previews, one-click HWND-based capture (reliable even when window titles change), and LLM-actionable coordinate metadata for Claude spatial reasoning. Single user, Windows 11 only.
 
 ## Core Value
 
@@ -32,18 +32,16 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 - Window Picker UI (thumbnail grid, keyboard nav, search filter) — v1.3
 - Enriched capture with bounds/DPI/dimensions metadata — v1.3
 - Metadata injection into ChatInputBar in computer_use format — v1.3
+- HWND+PID threading through enumeration, protocol, and WebSocket — v1.4 (Phase 21)
+- Root-window filter (GetParent==IntPtr.Zero) for child handle exclusion — v1.4 (Phase 21)
+- Direct HWND capture via PrintWindow (no title re-enumeration) — v1.4 (Phase 22)
+- Stale HWND detection via GetWindowThreadProcessId + PID cross-check — v1.4 (Phase 22)
+- Blank-bitmap detection for elevated window capture — v1.4 (Phase 22)
+- Title+processName fallback for stale HWNDs — v1.4 (Phase 22)
 
 ### Active
 
-## Current Milestone: v1.4 Stable Window Targeting
-
-**Goal:** Replace fragile title-based window matching with HWND-based capture so the correct window is always captured regardless of title changes.
-
-**Target features:**
-- HWND threaded through enumeration → protocol → picker → capture
-- Capture by HWND instead of title substring match
-- Fallback/validation when HWND becomes stale (window closed)
-- Process name as secondary disambiguator
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -59,7 +57,8 @@ v1.0 shipped: scaffolding, PTY bridge, chat overlay MVP, differentiating feature
 v1.1 shipped: shell path quoting + input bar resize (Phase 6). HTTP API approach (phases 7-9) superseded by v1.2.
 v1.2 shipped: split fix, capture infrastructure, window enumeration, window capture, CLI wrapper, Claude skill (Phases 10-15)
 v1.3 shipped: protocol extension, batch thumbnails, enriched capture, window picker UI, metadata injection (Phases 16-20)
-Codebase: ~38 files changed in v1.3, +4,816 lines. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws).
+v1.4 shipped: HWND+PID protocol threading, direct HWND capture, stale detection, blank-bitmap warning, fallback (Phases 21-22)
+Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 22 phases shipped across 4 milestones.
 
 ## Key Decisions
 
@@ -77,6 +76,10 @@ Codebase: ~38 files changed in v1.3, +4,816 lines. TypeScript frontend (React/Vi
 | PrintWindow PW_RENDERFULLCONTENT for capture | Required for GPU-composited windows (Chrome, VS Code); BitBlt returns black | Validated (Phase 13) |
 | Single async PS spawn for batch thumbnails | One PowerShell process captures all windows — avoids per-window spawn overhead | Validated (Phase 17) |
 | computer_use coordinate format for metadata | Forward-compatible with Claude automation; # comment lines readable without JSON parsing | Validated (Phase 20) |
+| HWND as decimal number (ToInt64) | JS number safe (upper 32 bits always zero), simpler than hex, no BigInt needed | Validated (Phase 21) |
+| GetWindowThreadProcessId over IsWindow | IsWindow has TOCTOU race; GWTP returns 0 if invalid AND enables PID cross-check | Validated (Phase 22) |
+| Grid sampling for blank-bitmap detection | Full pixel scan too slow at 4K; 100-point grid with luminance < 5/255 threshold | Validated (Phase 22) |
+| Single-window gate for processName fallback | Chrome/VS Code have many same-process windows; fallback only safe for unique processes | Validated (Phase 22) |
 
 ## Evolution
 
@@ -84,4 +87,4 @@ Updates at phase transitions: invalidate/validate requirements, log decisions, c
 Updates at milestones: full review, core value check, out-of-scope audit.
 
 ---
-*Last updated: 2026-03-31 after v1.4 milestone start*
+*Last updated: 2026-03-31 after v1.4 milestone*

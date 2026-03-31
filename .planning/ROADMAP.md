@@ -6,7 +6,7 @@
 - **v1.1 Screenshot Automation & Input Polish** — Phases 6-9 (shipped 2026-03-30)
 - **v1.2 Live App Awareness & Capture** — Phases 10-15 (shipped 2026-03-30)
 - **v1.3 Window Picker & LLM-Actionable Capture** — Phases 16-20 (shipped 2026-03-31)
-- **v1.4 Stable Window Targeting** — Phases 21-22 (in progress)
+- **v1.4 Stable Window Targeting** — Phases 21-22 (shipped 2026-03-31)
 
 ## Phases
 
@@ -54,43 +54,13 @@
 
 </details>
 
-### v1.4 Stable Window Targeting (In Progress)
+<details>
+<summary>v1.4 Stable Window Targeting (Phases 21-22) — SHIPPED 2026-03-31</summary>
 
-**Milestone Goal:** Replace fragile title-based window matching with HWND-based capture so the correct window is always captured regardless of title changes.
+- [x] Phase 21: Protocol Extension (2/2 plans) — completed 2026-03-31
+- [x] Phase 22: HWND-Based Capture (2/2 plans) — completed 2026-03-31
 
-- [x] **Phase 21: Protocol Extension** - Thread HWND and PID through enumeration, types, and WebSocket protocol (completed 2026-03-31)
-- [x] **Phase 22: HWND-Based Capture** - Route capture through PrintWindow(hwnd) with stale detection and blank-bitmap fallback (completed 2026-03-31)
-
-## Phase Details
-
-### Phase 21: Protocol Extension
-**Goal**: HWND and PID are present at every layer — enumeration scripts emit them, Node.js types carry them, WebSocket messages include them, and TerminalPane sends them with every capture request
-**Depends on**: Phase 20
-**Requirements**: PROT-01, PROT-02, PROT-03, PROT-04, PROT-05
-**Success Criteria** (what must be TRUE):
-  1. Window picker thumbnails include a numeric `hwnd` and `pid` field visible in WebSocket message inspection
-  2. Capture request sent from TerminalPane includes `hwnd` and `pid` alongside the window title
-  3. Enumeration filters out child render handles — only root windows (GetParent==IntPtr.Zero) appear in the picker
-  4. The overlay-capture CLI and HTTP API still capture by title without requiring an HWND argument
-  5. TypeScript compiler reports zero errors after both protocol.ts files are updated
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 21-01-PLAN.md — C# scripts + Node.js types: emit HWND/PID, add GetParent filter
-- [x] 21-02-PLAN.md — Protocol types + server handler + TerminalPane: thread HWND/PID through WebSocket
-
-### Phase 22: HWND-Based Capture
-**Goal**: Capture routes through PrintWindow(hwnd) directly — no title re-enumeration — with explicit validation that the HWND is still alive, the PID matches, and the resulting bitmap is non-blank
-**Depends on**: Phase 21
-**Requirements**: HWND-01, HWND-02, HWND-03, HWND-04
-**Success Criteria** (what must be TRUE):
-  1. Capturing a window whose title changed since picker selection produces the correct screenshot (not a wrong-window or stale result)
-  2. Capturing a window that was closed after picker selection returns a visible error message (STALE_HWND) rather than a silent failure or wrong-window capture
-  3. Capturing an elevated window (e.g., Task Manager) returns a blank-capture warning instead of silently saving a black image
-  4. Fallback to title+processName match fires when HWND is stale, with a warning logged to the sidecar console
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 22-01-PLAN.md — buildCaptureByHwndScript + captureWindowByHwnd with TDD tests
-- [x] 22-02-PLAN.md — Server handler wiring + end-to-end human verification
+</details>
 
 ## Progress
 
@@ -101,8 +71,7 @@ Plans:
 | 7-9 | v1.1 | — | Superseded by v1.2 | — |
 | 10-15 | v1.2 | 9/9 | Complete | 2026-03-30 |
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
-| 21. Protocol Extension | v1.4 | 2/2 | Complete    | 2026-03-31 |
-| 22. HWND-Based Capture | v1.4 | 2/2 | Complete   | 2026-03-31 |
+| 21-22 | v1.4 | 4/4 | Complete | 2026-03-31 |
 
 ---
-*Full phase details archived in `.planning/milestones/v1.3-ROADMAP.md`*
+*Full phase details archived in `.planning/milestones/`*
