@@ -1,3 +1,9 @@
+// MCP subcommand routing — must be FIRST, before any imports (per D-03)
+if (process.argv[2] === 'mcp') {
+  require('./mcp-server.js');
+  throw new Error('mcp-server should not return');
+}
+
 import * as http from 'node:http';
 import * as crypto from 'node:crypto';
 import { WebSocketServer } from 'ws';
