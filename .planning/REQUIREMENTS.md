@@ -17,7 +17,7 @@ Requirements for Agent Hooks & MCP Integration milestone (Phases 26-29).
 ### LLM Integration
 
 - [x] **LLM-01**: MCP server (stdio transport) exposes `read_terminal_output`, `query_session_history`, `capture_screenshot` tools
-- [ ] **LLM-02**: Adapter layer with ClaudeCodeAdapter, WindsurfAdapter, CursorAdapter, FallbackAdapter normalizing hook events
+- [x] **LLM-02**: Adapter layer with ClaudeCodeAdapter, WindsurfAdapter, CursorAdapter, FallbackAdapter normalizing hook events
 
 ## Future Requirements
 

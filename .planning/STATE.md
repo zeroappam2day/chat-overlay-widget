@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Agent Hooks & MCP Integration
 status: executing
-stopped_at: Completed 28-02-PLAN.md (checkpoint awaiting visual verify)
-last_updated: "2026-04-01T11:13:22.055Z"
+stopped_at: Completed 28-01-PLAN.md, 28-02 checkpoint approved
+last_updated: "2026-04-01T11:15:51.592Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 10
@@ -76,6 +76,11 @@ None.
 
 ## Session Continuity
 
+<<<<<<< HEAD
 Last session: 2026-04-01T11:13:22.052Z
 Stopped at: Completed 28-02-PLAN.md (checkpoint awaiting visual verify)
+=======
+Last session: 2026-04-01T11:15:51.589Z
+Stopped at: Completed 28-01-PLAN.md
+>>>>>>> worktree-agent-aa13f66d
 Next action: `/gsd:new-milestone` or `/gsd:discuss-phase 26` to start v1.6
