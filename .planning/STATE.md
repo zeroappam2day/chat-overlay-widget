@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Agent Hooks & MCP Integration
 status: executing
-stopped_at: Completed 26-01-PLAN.md
-last_updated: "2026-04-01T07:48:50.844Z"
+stopped_at: "Checkpoint: Task 3 E2E validation awaiting user approval (26-02)"
+last_updated: "2026-04-01T07:52:22.484Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -46,6 +46,7 @@ Baseline decisions: see PROJECT.md Key Decisions table.
 
 - [Phase 26-hook-receiver-event-schema]: AgentEvent defined only in agentEvent.ts; protocol.ts imports from there (one-directional, no circular dep)
 - [Phase 26-hook-receiver-event-schema]: hook_event_name takes priority over type in normalizeAgentEvent for Claude Code compatibility
+- [Phase 26-hook-receiver-event-schema]: broadcastAgentEvent defined after sendMsg, AgentEvent imported as type separately from normalizeAgentEvent/agentEventBuffer
 
 ### Todos
 
@@ -68,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01T07:48:50.840Z
-Stopped at: Completed 26-01-PLAN.md
+Last session: 2026-04-01T07:52:14.389Z
+Stopped at: Checkpoint: Task 3 E2E validation awaiting user approval (26-02)
 Next action: `/gsd:new-milestone` or `/gsd:discuss-phase 26` to start v1.6
