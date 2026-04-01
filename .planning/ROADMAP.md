@@ -96,7 +96,10 @@
   1. `POST /hook-event` on the sidecar accepts hook payloads (SubagentStart, SubagentStop, PreToolUse, PostToolUse) and responds within 500ms
   2. Every received hook payload is normalized to a shared `AgentEvent` object with consistent `tool`, `type`, `timestamp`, `sessionId`, and `payload` fields regardless of the originating tool
   3. Events from Claude Code hooks delivered via curl reach the sidecar and are logged with their normalized schema
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 26-01-PLAN.md — AgentEvent schema module (TDD) + protocol extension
+- [ ] 26-02-PLAN.md — Server route integration, hook scripts, E2E validation
 
 ### Phase 27: MCP Server
 **Goal**: Any MCP-capable LLM can autonomously read terminal output, query session history, and capture screenshots via standard MCP tools
@@ -142,7 +145,7 @@
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
 | 21-22 | v1.4 | 4/4 | Complete | 2026-03-31 |
 | 23-25 | v1.5 | 7/7 | Complete | 2026-04-01 |
-| 26. Hook Receiver & Event Schema | v1.6 | 0/TBD | Not started | - |
+| 26. Hook Receiver & Event Schema | v1.6 | 0/2 | Planning | - |
 | 27. MCP Server | v1.6 | 0/TBD | Not started | - |
 | 28. Adapter Layer & Sidebar | v1.6 | 0/TBD | Not started | - |
 | 29. Auto-Configuration | v1.6 | 0/TBD | Not started | - |
