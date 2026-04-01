@@ -6,6 +6,7 @@ import * as crypto from 'node:crypto';
 import type WebSocket from 'ws';
 import type { ServerMessage } from './protocol.js';
 import { SessionRecorder } from './sessionRecorder.js';
+import { TerminalBuffer } from './terminalBuffer.js';
 
 export const SCREENSHOT_DIR = path.join(os.tmpdir(), 'chat-overlay-screenshots');
 
@@ -18,9 +19,11 @@ function send(ws: WebSocket, msg: ServerMessage): void {
 export class PTYSession {
   private ptyProcess: pty.IPty;
   private dataDisposable: pty.IDisposable;
+  private bufferDisposable: pty.IDisposable;
   private exitDisposable: pty.IDisposable;
   private recorder: SessionRecorder;
   private tempFiles: string[] = [];
+  public readonly terminalBuffer: TerminalBuffer;
 
   constructor(
     private ws: WebSocket,
@@ -42,6 +45,11 @@ export class PTYSession {
     this.dataDisposable = this.ptyProcess.onData((data: string) => {
       send(ws, { type: 'output', data });
       this.recorder.append(data);
+    });
+
+    this.terminalBuffer = new TerminalBuffer();
+    this.bufferDisposable = this.ptyProcess.onData((data: string) => {
+      this.terminalBuffer.append(data);
     });
 
     this.exitDisposable = this.ptyProcess.onExit(({ exitCode }) => {
@@ -80,6 +88,7 @@ export class PTYSession {
   destroy(): void {
     this.cleanupTempFiles();
     this.recorder.end();
+    this.bufferDisposable.dispose();
     this.dataDisposable.dispose();
     this.exitDisposable.dispose();
     try { this.ptyProcess.kill(); } catch { /* already dead */ }

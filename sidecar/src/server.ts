@@ -8,15 +8,20 @@ import type { ClientMessage, ServerMessage, SessionMeta } from './protocol.js';
 import { PTYSession, SCREENSHOT_DIR } from './ptySession.js';
 import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
+import { crFold, stripAnsiSync, initStripAnsi } from './terminalBuffer.js';
+import { scrub } from './secretScrubber.js';
+import { captureSelfScreenshot } from './screenshotSelf.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 import { listWindows } from './windowEnumerator.js';
-import { captureWindow, captureWindowWithMetadata } from './windowCapture.js';
+import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
 markOrphans();
 sweepScreenshotTempFiles();
+// Pre-load strip-ansi ESM module so stripAnsiSync is ready before any request
+initStripAnsi().catch(err => console.error('[sidecar] initStripAnsi failed:', err));
 console.log('[sidecar] SQLite session database initialized');
 
 // Clean any stale discovery file from a previous force-killed session
@@ -81,6 +86,110 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     });
     return;
   }
+  // Parse URL for new routes that use query parameters
+  const url = new URL(req.url!, 'http://localhost');
+
+  if (req.method === 'GET' && url.pathname === '/terminal-state') {
+    const session = [...activeSessions.values()][0];
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No active session' }));
+      return;
+    }
+    const n = Math.min(500, Math.max(1, parseInt(url.searchParams.get('lines') ?? '50', 10) || 50));
+    const sinceParam = url.searchParams.get('since');
+    const since = sinceParam !== null ? parseInt(sinceParam, 10) : undefined;
+    const snapshot = session.terminalBuffer.getLines(n, since);
+    const shouldScrub = url.searchParams.get('scrub') !== 'false';
+    const lines = shouldScrub ? snapshot.lines.map(line => scrub(line)) : snapshot.lines;
+    if (shouldScrub) {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-Scrub-Warning': 'best-effort' });
+      res.end(JSON.stringify({ lines, cursor: snapshot.cursor, warning: 'Secret scrubbing is best-effort. Do not rely on it as a security boundary.' }));
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ lines, cursor: snapshot.cursor }));
+    }
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/session-history') {
+    const sessionIdParam = url.searchParams.get('sessionId') ?? '';
+    const sessionId = parseInt(sessionIdParam, 10);
+    if (isNaN(sessionId)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sessionId required' }));
+      return;
+    }
+    const lines = Math.min(500, Math.max(1, parseInt(url.searchParams.get('lines') ?? '100', 10) || 100));
+    const chunks = getSessionChunks(sessionId);
+    const raw = chunks.map(c => c.data.toString('utf8')).join('');
+    const cleaned = stripAnsiSync(crFold(raw));
+    const allLines = cleaned.split('\n').filter(l => l.trim() !== '');
+    const result = allLines.slice(-lines);
+    const shouldScrub = url.searchParams.get('scrub') !== 'false';
+    const outputLines = shouldScrub ? result.map(line => scrub(line)) : result;
+    if (shouldScrub) {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-Scrub-Warning': 'best-effort' });
+      res.end(JSON.stringify({ lines: outputLines, sessionId, total: allLines.length, warning: 'Secret scrubbing is best-effort. Do not rely on it as a security boundary.' }));
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ lines: outputLines, sessionId, total: allLines.length }));
+    }
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/screenshot') {
+    const session = [...activeSessions.values()][0];
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No active session' }));
+      return;
+    }
+
+    const shouldBlur = url.searchParams.get('blur') !== 'false';
+
+    const lineHeight = url.searchParams.has('lineHeight')
+      ? parseInt(url.searchParams.get('lineHeight')!, 10)
+      : undefined;
+    const topOffset = url.searchParams.has('topOffset')
+      ? parseInt(url.searchParams.get('topOffset')!, 10)
+      : undefined;
+    const opts = (lineHeight || topOffset)
+      ? { lineHeight: lineHeight || undefined, topOffset: topOffset || undefined }
+      : undefined;
+
+    captureSelfScreenshot(session.terminalBuffer, shouldBlur, opts)
+      .then(result => {
+        if (!result.ok) {
+          const status = result.error === 'SELF_NOT_FOUND' ? 404
+            : result.error === 'MINIMIZED' ? 409
+            : result.error === 'BLANK_CAPTURE' ? 502
+            : 500;
+          res.writeHead(status, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: result.error }));
+          return;
+        }
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'image/png',
+          'Content-Length': String(result.buffer.length),
+        };
+
+        if (result.blurred) {
+          headers['X-Blur-Warning'] = 'best-effort';
+        }
+
+        res.writeHead(200, headers);
+        res.end(result.buffer);
+      })
+      .catch(err => {
+        console.error('[sidecar] screenshot error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err) }));
+      });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -253,21 +362,23 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       }
       case 'capture-window-with-metadata': {
-        console.log(`[sidecar] capture-window-with-metadata requested: title="${msg.title}"`);
-        const result = captureWindowWithMetadata(msg.title);
+        console.log(`[sidecar] capture-window-with-metadata: hwnd=${msg.hwnd} pid=${msg.pid} title="${msg.title}"`);
+        const result = captureWindowByHwnd(msg.hwnd, msg.pid, msg.title);
         if (result.ok) {
           console.log(`[sidecar] capture-window-with-metadata success: ${result.data.path}`);
           sendMsg(ws, {
             type: 'capture-result-with-metadata',
             path: result.data.path,
             title: msg.title,
+            hwnd: msg.hwnd,
+            pid: msg.pid,
             bounds: result.data.bounds,
             captureSize: result.data.captureSize,
             dpiScale: result.data.dpiScale,
           });
         } else {
           console.log(`[sidecar] capture-window-with-metadata failed: ${result.error}`);
-          sendMsg(ws, { type: 'error', message: `capture-window-with-metadata failed: ${result.error}` });
+          sendMsg(ws, { type: 'error', message: `capture failed: ${result.error}` });
         }
         break;
       }

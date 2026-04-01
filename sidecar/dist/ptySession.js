@@ -40,6 +40,7 @@ const path = __importStar(require("node:path"));
 const os = __importStar(require("node:os"));
 const crypto = __importStar(require("node:crypto"));
 const sessionRecorder_js_1 = require("./sessionRecorder.js");
+const terminalBuffer_js_1 = require("./terminalBuffer.js");
 exports.SCREENSHOT_DIR = path.join(os.tmpdir(), 'chat-overlay-screenshots');
 function send(ws, msg) {
     if (ws.readyState === ws.OPEN) {
@@ -63,6 +64,10 @@ class PTYSession {
             send(ws, { type: 'output', data });
             this.recorder.append(data);
         });
+        this.terminalBuffer = new terminalBuffer_js_1.TerminalBuffer();
+        this.bufferDisposable = this.ptyProcess.onData((data) => {
+            this.terminalBuffer.append(data);
+        });
         this.exitDisposable = this.ptyProcess.onExit(({ exitCode }) => {
             this.recorder.end();
             send(ws, { type: 'pty-exit', exitCode });
@@ -75,9 +80,9 @@ class PTYSession {
     resize(cols, rows) {
         this.ptyProcess.resize(cols, rows);
     }
-    async saveImage(base64, ext) {
+    async saveImage(base64) {
         await fs.promises.mkdir(exports.SCREENSHOT_DIR, { recursive: true });
-        const filename = `${crypto.randomUUID()}.${ext}`;
+        const filename = `${crypto.randomUUID()}.png`;
         const filePath = path.join(exports.SCREENSHOT_DIR, filename);
         const buffer = Buffer.from(base64, 'base64');
         await fs.promises.writeFile(filePath, buffer);
@@ -93,6 +98,7 @@ class PTYSession {
     destroy() {
         this.cleanupTempFiles();
         this.recorder.end();
+        this.bufferDisposable.dispose();
         this.dataDisposable.dispose();
         this.exitDisposable.dispose();
         try {

@@ -10,10 +10,10 @@ afterEach(() => {
 });
 
 const mockWindows: WindowThumbnail[] = [
-  { title: 'Google Chrome', processName: 'chrome.exe', thumbnail: 'iVBORw0KGgo=' },
-  { title: 'VS Code', processName: 'code.exe', thumbnail: 'iVBORw0KGgo=' },
-  { title: 'File Explorer', processName: 'explorer.exe', thumbnail: 'iVBORw0KGgo=' },
-  { title: 'Broken Window', processName: 'broken.exe', error: 'MINIMIZED' },
+  { title: 'Google Chrome', processName: 'chrome.exe', hwnd: 131072, pid: 1234, thumbnail: 'iVBORw0KGgo=' },
+  { title: 'VS Code', processName: 'code.exe', hwnd: 196608, pid: 5678, thumbnail: 'iVBORw0KGgo=' },
+  { title: 'File Explorer', processName: 'explorer.exe', hwnd: 262144, pid: 9012, thumbnail: 'iVBORw0KGgo=' },
+  { title: 'Broken Window', processName: 'broken.exe', hwnd: 327680, pid: 3456, error: 'MINIMIZED' },
 ];
 
 // ============================================================

@@ -1,15 +1,45 @@
 #!/usr/bin/env bash
 # tauri-dev.sh — Reliable `tauri dev` launcher for Windows + Defender environments
-# 3-layer defense: Defender exclusion check → lock-polling wait → retry loop
-# Usage: bash scripts/tauri-dev.sh
+#
+# DEV MODE (default): Starts sidecar as `node dist/server.js` directly.
+#   No caxa .exe → no Defender scan → no lock polling → instant startup.
+#   Tauri reads SIDECAR_PORT env var and skips spawning the bundled binary.
+#
+# PROD MODE (--prod): Uses the caxa-bundled .exe (for testing production behavior).
+#   Full Defender defense layers apply.
+#
+# Usage: bash scripts/tauri-dev.sh [--prod]
 
-set -euo pipefail
+set -eo pipefail
+# Note: -u (nounset) deliberately omitted. Windows env vars (NVM_SYMLINK, NVM_HOME,
+# LOCALAPPDATA, APPDATA) are unreliable in non-interactive Git Bash sessions.
+# All optional vars use ${VAR:-} pattern but -u still causes issues with
+# some bash built-ins and third-party scripts sourced during PATH resolution.
+
+# ── WSL guard ───────────────────────────────────────────────────────────────
+# This script requires Git Bash (MSYS2), not WSL bash. WSL uses /mnt/c/ paths
+# and lacks cygpath — every path in this script would be wrong.
+if grep -q Microsoft /proc/version 2>/dev/null || grep -q WSL /proc/version 2>/dev/null; then
+    echo ""
+    echo "ERROR: This script was invoked under WSL bash, not Git Bash."
+    echo "Run via start.bat (which resolves Git Bash) or invoke directly:"
+    echo "  \"C:\\Program Files\\Git\\usr\\bin\\bash.exe\" scripts/tauri-dev.sh"
+    echo ""
+    exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_FILE="$PROJECT_DIR/scripts/tauri-dev.log"
 
 cd "$PROJECT_DIR"
+
+# Parse args
+USE_PROD_SIDECAR=false
+if [[ "${1:-}" == "--prod" ]]; then
+    USE_PROD_SIDECAR=true
+    shift
+fi
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 log() {
@@ -30,50 +60,147 @@ fi
 
 log_section "tauri-dev.sh started"
 
+# ── PATH resolution ─────────────────────────────────────────────────────────
+# Non-interactive bash from start.bat may not have node or cargo on PATH.
+# Strategy: check if commands exist first, then search common locations.
+
+# Cargo
 export PATH="$HOME/.cargo/bin:$PATH"
+
+# Node: check if already available, if not search common Windows locations
+if ! command -v node >/dev/null 2>&1; then
+    NODE_SEARCH_PATHS=()
+
+    # Priority 1: nvm4w active version (resolve symlink target to bypass MSYS2
+    # SYMLINKD stat flakiness AND nvm4w delete-recreate race)
+    if [ -n "${NVM_SYMLINK:-}" ]; then
+        nvm_symlink_unix="$(cygpath -u "$NVM_SYMLINK" 2>/dev/null || echo "")"
+        # readlink resolves the symlink to the actual versioned dir
+        nvm_active="$(readlink -f "$nvm_symlink_unix" 2>/dev/null || echo "")"
+        [ -n "$nvm_active" ] && [ -d "$nvm_active" ] && NODE_SEARCH_PATHS+=("$nvm_active")
+        # Also add the symlink itself as fallback
+        NODE_SEARCH_PATHS+=("$nvm_symlink_unix")
+    fi
+
+    # Priority 2: nvm4w versioned dirs (if symlink is broken, find any installed version)
+    if [ -n "${NVM_HOME:-}" ]; then
+        nvm_home_unix="$(cygpath -u "$NVM_HOME" 2>/dev/null || echo "")"
+        if [ -n "$nvm_home_unix" ] && [ -d "$nvm_home_unix" ]; then
+            # Sort reverse so newest version is tried first
+            for vdir in $(ls -d "$nvm_home_unix"/v*/ 2>/dev/null | sort -rV); do
+                [ -d "$vdir" ] && NODE_SEARCH_PATHS+=("${vdir%/}")
+            done
+        fi
+    fi
+
+    # Priority 3: common static install locations
+    NODE_SEARCH_PATHS+=(
+        "/c/nvm4w/nodejs"
+        "/c/Program Files/nodejs"
+        "$HOME/AppData/Local/Programs/nodejs"
+    )
+
+    # Use [ -f node.exe ] not [ -x node ] — MSYS2 -x test is unreliable on
+    # Windows SYMLINKD in non-interactive mode (winsymlinks:deepcopy default)
+    for np in "${NODE_SEARCH_PATHS[@]}"; do
+        if [ -n "$np" ] && [ -f "$np/node.exe" ]; then
+            export PATH="$np:$PATH"
+            log "Found node at: $np"
+            break
+        fi
+    done
+fi
+
+# Last resort: ask Windows where node is (works even when bash PATH is broken)
+if ! command -v node >/dev/null 2>&1; then
+    win_node=$(cmd.exe //c "where node.exe" 2>/dev/null | head -1 | tr -d '\r')
+    if [ -n "$win_node" ]; then
+        node_dir="$(cygpath -u "$(dirname "$win_node")" 2>/dev/null || echo "")"
+        if [ -n "$node_dir" ]; then
+            export PATH="$node_dir:$PATH"
+            log "Found node via Windows PATH: $node_dir"
+        fi
+    fi
+fi
+
+# Validate node exists — fail fast with clear message
+if ! command -v node >/dev/null 2>&1; then
+    log "FATAL: node not found on PATH"
+    echo ""
+    echo "┌──────────────────────────────────────────────────────────────┐"
+    echo "│  ERROR: node not found                                       │"
+    echo "│                                                              │"
+    echo "│  The sidecar requires Node.js. Ensure node is installed     │"
+    echo "│  and on your PATH, or set NVM_SYMLINK / NVM_HOME.          │"
+    echo "│                                                              │"
+    echo "│  node --version should work in Git Bash.                    │"
+    echo "└──────────────────────────────────────────────────────────────┘"
+    echo ""
+    exit 1
+fi
+
+log "node: $(command -v node) ($(node --version 2>/dev/null || echo 'unknown'))"
+
 export CARGO_INCREMENTAL=0
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C codegen-units=1"
 
 SIDECAR_BIN="$PROJECT_DIR/src-tauri/binaries/sidecar-x86_64-pc-windows-msvc.exe"
+SIDECAR_NODE_PID=""
+
+# ── APPDATA resolution ──────────────────────────────────────────────────────
+# $APPDATA may be a Windows path (C:\Users\...) or unset in some bash contexts.
+resolve_appdata() {
+    if [ -n "${APPDATA:-}" ]; then
+        if command -v cygpath >/dev/null 2>&1; then
+            cygpath -u "$APPDATA"
+        else
+            echo "$APPDATA"
+        fi
+    else
+        echo "$HOME/AppData/Roaming"
+    fi
+}
+APPDATA_UNIX="$(resolve_appdata)"
+DISCOVERY_DIR="$APPDATA_UNIX/chat-overlay-widget"
+DISCOVERY_FILE="$DISCOVERY_DIR/api.port"
+
+# ── Cleanup on exit ────────────────────────────────────────────────────────
+cleanup() {
+    if [ -n "$SIDECAR_NODE_PID" ]; then
+        log "Cleaning up dev sidecar (PID: $SIDECAR_NODE_PID)"
+        kill "$SIDECAR_NODE_PID" 2>/dev/null || true
+        taskkill //T //F //PID "$SIDECAR_NODE_PID" >/dev/null 2>&1 || true
+    fi
+}
+trap cleanup EXIT
 
 # ── Layer 0: Diagnostics ────────────────────────────────────────────────────
 diagnose_environment() {
     log_section "DIAGNOSTICS"
 
-    # Sidecar binary info
-    if [ -f "$SIDECAR_BIN" ]; then
-        local size mtime now age
-        size=$(wc -c < "$SIDECAR_BIN" 2>/dev/null || echo "unknown")
-        mtime=$(stat -c %Y "$SIDECAR_BIN" 2>/dev/null || powershell.exe -NoProfile -Command "(Get-Item (Resolve-Path '$SIDECAR_BIN' -ErrorAction SilentlyContinue).Path).LastWriteTimeUtc | Get-Date -UFormat '%s'" 2>/dev/null || echo 0)
-        now=$(date +%s)
-        age=$(( now - ${mtime%.*} ))
-        log "Sidecar binary: exists, ${size} bytes, ${age}s old"
+    if [ "$USE_PROD_SIDECAR" = true ]; then
+        log "Mode: PRODUCTION (caxa .exe)"
+        if [ -f "$SIDECAR_BIN" ]; then
+            local size age
+            size=$(wc -c < "$SIDECAR_BIN" 2>/dev/null || echo "unknown")
+            local mtime now
+            mtime=$(stat -c %Y "$SIDECAR_BIN" 2>/dev/null || echo 0)
+            now=$(date +%s)
+            age=$(( now - ${mtime%.*} ))
+            log "Sidecar binary: exists, ${size} bytes, ${age}s old"
+        else
+            log "Sidecar binary: MISSING at $SIDECAR_BIN"
+        fi
     else
-        log "Sidecar binary: MISSING at $SIDECAR_BIN"
+        log "Mode: DEV (node direct)"
+        if [ -f "$PROJECT_DIR/sidecar/dist/server.js" ]; then
+            log "Sidecar dist/server.js: exists"
+        else
+            log "Sidecar dist/server.js: MISSING — will compile"
+        fi
     fi
 
-    # Defender exclusion check (non-admin, read-only)
-    local exclusion_status
-    exclusion_status=$(powershell.exe -NoProfile -Command "
-        try {
-            \$prefs = Get-MpPreference -ErrorAction Stop
-            \$binDir = (Resolve-Path '$PROJECT_DIR/src-tauri/binaries' -ErrorAction SilentlyContinue).Path
-            \$targetDir = (Resolve-Path '$PROJECT_DIR/src-tauri/target' -ErrorAction SilentlyContinue).Path
-            \$paths = \$prefs.ExclusionPath
-            if (-not \$paths) { 'NO_EXCLUSIONS'; exit 0 }
-            \$binOk = \$false; \$tgtOk = \$false
-            foreach (\$p in \$paths) {
-                if (\$binDir -and \$p -eq \$binDir) { \$binOk = \$true }
-                if (\$targetDir -and \$p -eq \$targetDir) { \$tgtOk = \$true }
-            }
-            \"binaries=\$binOk target=\$tgtOk\"
-        } catch {
-            'QUERY_FAILED: ' + \$_.Exception.Message
-        }
-    " 2>/dev/null || echo "PS_ERROR")
-    log "Defender exclusions: $exclusion_status"
-
-    # Check if Defender real-time protection is active
+    # Defender status (quick check)
     local rt_status
     rt_status=$(powershell.exe -NoProfile -Command "
         try {
@@ -83,7 +210,7 @@ diagnose_environment() {
     " 2>/dev/null || echo "PS_ERROR")
     log "Defender status: $rt_status"
 
-    # Check for stale sidecar processes (the #1 cause of "Access Denied" on build)
+    # Check for stale sidecar processes
     local stale_procs
     stale_procs=$(powershell.exe -NoProfile -Command "
         \$procs = @()
@@ -94,59 +221,13 @@ diagnose_environment() {
         } else { 'NONE' }
     " 2>/dev/null || echo "PS_ERROR")
     log "Stale sidecar processes: $stale_procs"
-
-    # File lock test on source binary
-    if [ -f "$SIDECAR_BIN" ]; then
-        local win_path
-        win_path=$(powershell.exe -NoProfile -Command "(Resolve-Path '${SIDECAR_BIN}' -ErrorAction SilentlyContinue).Path" 2>/dev/null || echo "$SIDECAR_BIN")
-        local lock_result
-        lock_result=$(powershell.exe -NoProfile -Command "
-            try {
-                \$f = [System.IO.File]::Open(
-                    '${win_path}',
-                    [System.IO.FileMode]::Open,
-                    [System.IO.FileAccess]::Read,
-                    [System.IO.FileShare]::Read)
-                \$f.Close(); \$f.Dispose()
-                'UNLOCKED'
-            } catch {
-                'LOCKED: ' + \$_.Exception.Message
-            }
-        " 2>/dev/null || echo "PS_ERROR")
-        log "Sidecar source lock: $lock_result"
-    fi
-
-    # File lock test on target/debug/sidecar.exe (tauri-build destination — most common blocker)
-    local dest_bin="$PROJECT_DIR/src-tauri/target/debug/sidecar.exe"
-    if [ -f "$dest_bin" ]; then
-        local dest_win
-        dest_win=$(powershell.exe -NoProfile -Command "(Resolve-Path '${dest_bin}' -ErrorAction SilentlyContinue).Path" 2>/dev/null || echo "$dest_bin")
-        local dest_lock
-        dest_lock=$(powershell.exe -NoProfile -Command "
-            try {
-                \$f = [System.IO.File]::Open(
-                    '${dest_win}',
-                    [System.IO.FileMode]::Open,
-                    [System.IO.FileAccess]::ReadWrite,
-                    [System.IO.FileShare]::Delete)
-                \$f.Close(); \$f.Dispose()
-                'UNLOCKED'
-            } catch {
-                'LOCKED: ' + \$_.Exception.Message
-            }
-        " 2>/dev/null || echo "PS_ERROR")
-        log "Sidecar dest lock (target/debug/sidecar.exe): $dest_lock"
-    fi
 }
 
 diagnose_environment
 
-# ── Layer 0b: Kill stale sidecar processes ───────────────────────────────────
-# tauri-build calls remove_file() on target/debug/sidecar.exe before copying.
-# Windows can't delete a running EXE → OS error 5 "Access is denied."
+# ── Kill stale sidecar processes ───────────────────────────────────────────
 kill_stale_sidecars() {
     local killed=0
-    # Kill sidecar.exe and sidecar-x86_64-pc-windows-msvc.exe by image name
     if taskkill //F //IM "sidecar.exe" >/dev/null 2>&1; then
         log "Killed stale sidecar.exe"
         killed=1
@@ -155,20 +236,86 @@ kill_stale_sidecars() {
         log "Killed stale sidecar-x86_64-pc-windows-msvc.exe"
         killed=1
     fi
-    # Kill caxa-extracted node processes
     wmic process where "Name='node.exe' and CommandLine like '%caxa%sidecar%'" call terminate >/dev/null 2>&1 && {
         log "Killed caxa-extracted sidecar node"
         killed=1
     }
     if [ "$killed" -eq 1 ]; then
         echo "[tauri-dev] Killed stale sidecar processes from previous session"
-        sleep 1  # brief pause for Windows to release file handles
+        sleep 1
     fi
 }
 
 kill_stale_sidecars
 
-# ── Layer 1: Defender exclusion nudge ────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# DEV MODE: Start sidecar as `node dist/server.js` directly
+# ══════════════════════════════════════════════════════════════════════════════
+if [ "$USE_PROD_SIDECAR" = false ]; then
+
+    # Ensure dist/ is compiled
+    if [ ! -f "$PROJECT_DIR/sidecar/dist/server.js" ]; then
+        log "Compiling sidecar TypeScript..."
+        echo "[tauri-dev] Compiling sidecar (npm run build)..."
+        (cd "$PROJECT_DIR/sidecar" && npm run build) 2>&1 | tee -a "$LOG_FILE"
+    fi
+
+    # Clean stale discovery file
+    rm -f "$DISCOVERY_FILE" 2>/dev/null || true
+
+    # Start sidecar as background node process (from sidecar/ dir for correct relative paths)
+    log "Starting dev sidecar (node dist/server.js)..."
+    (cd "$PROJECT_DIR/sidecar" && node dist/server.js) &
+    SIDECAR_NODE_PID=$!
+    log "Dev sidecar started: PID=$SIDECAR_NODE_PID"
+
+    # Wait for discovery file — sidecar writes it on successful startup
+    max_wait=15
+    waited=0
+    dev_port=""
+    while [ "$waited" -lt "$max_wait" ]; do
+        if [ -f "$DISCOVERY_FILE" ]; then
+            # Parse port: try grep (no dependencies), fall back to node
+            dev_port=$(grep -oP '"port":\s*\K[0-9]+' "$DISCOVERY_FILE" 2>/dev/null \
+                    || node -e "const fs=require('fs'); console.log(JSON.parse(fs.readFileSync(process.argv[1],'utf8')).port)" "$DISCOVERY_FILE" 2>/dev/null \
+                    || echo "")
+            if [ -n "$dev_port" ] && [ "$dev_port" != "undefined" ]; then
+                break
+            fi
+        fi
+        sleep 0.5
+        waited=$((waited + 1))
+    done
+
+    if [ -z "$dev_port" ] || [ "$dev_port" = "undefined" ]; then
+        log "ERROR: Dev sidecar did not write discovery file within ${max_wait}s"
+        log "Discovery file: $DISCOVERY_FILE (exists: $([ -f "$DISCOVERY_FILE" ] && echo 'yes' || echo 'no'))"
+        log "APPDATA_UNIX: $APPDATA_UNIX"
+        # Check if the process is still alive
+        if kill -0 "$SIDECAR_NODE_PID" 2>/dev/null; then
+            log "Sidecar process $SIDECAR_NODE_PID is still running"
+        else
+            log "Sidecar process $SIDECAR_NODE_PID has exited"
+        fi
+        echo "[tauri-dev] ERROR: Sidecar failed to start. Check sidecar/dist/server.js"
+        exit 1
+    fi
+
+    log "Dev sidecar ready on port $dev_port"
+    echo "[tauri-dev] Dev sidecar on port $dev_port (node direct — no caxa)"
+    export SIDECAR_PORT="$dev_port"
+
+    # Launch Tauri (reads SIDECAR_PORT env var, skips spawning .exe)
+    log_section "LAUNCHING TAURI (dev sidecar on port $dev_port)"
+    npx tauri dev "$@" 2>&1 | tee -a "$LOG_FILE"
+    exit ${PIPESTATUS[0]}
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PROD MODE: Full Defender defense layers (caxa .exe path)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Defender exclusion nudge ────────────────────────────────────────────────
 check_defender_exclusion() {
     local has_exclusion
     has_exclusion=$(powershell.exe -NoProfile -Command "
@@ -198,8 +345,7 @@ check_defender_exclusion() {
 
 check_defender_exclusion
 
-# ── Layer 2: Lock-polling wait ───────────────────────────────────────────────
-# Uses [System.IO.File]::Open() with FileShare.Read to match what cargo needs
+# ── Lock-polling wait ───────────────────────────────────────────────────────
 wait_for_sidecar_unlock() {
     if [ ! -f "$SIDECAR_BIN" ]; then
         log "Lock check: skipped (binary does not exist)"
@@ -207,7 +353,7 @@ wait_for_sidecar_unlock() {
     fi
 
     local mtime now age
-    mtime=$(stat -c %Y "$SIDECAR_BIN" 2>/dev/null || powershell.exe -NoProfile -Command "(Get-Item (Resolve-Path '${SIDECAR_BIN}' -ErrorAction SilentlyContinue).Path).LastWriteTimeUtc | Get-Date -UFormat '%s'" 2>/dev/null || echo 0)
+    mtime=$(stat -c %Y "$SIDECAR_BIN" 2>/dev/null || echo 0)
     now=$(date +%s)
     age=$(( now - ${mtime%.*} ))
 
@@ -257,7 +403,7 @@ wait_for_sidecar_unlock() {
 
 wait_for_sidecar_unlock
 
-# ── Layer 3: Retry loop ─────────────────────────────────────────────────────
+# ── Retry loop ─────────────────────────────────────────────────────────────
 MAX_RETRIES=5
 RETRY_DELAY=5
 
@@ -265,7 +411,6 @@ for i in $(seq 1 $MAX_RETRIES); do
     log_section "BUILD ATTEMPT $i/$MAX_RETRIES"
     echo "[tauri-dev] Attempt $i/$MAX_RETRIES"
 
-    # Capture stderr separately to detect specific errors
     TMPLOG=$(mktemp)
     if npx tauri dev "$@" 2>&1 | tee -a "$LOG_FILE" | tee "$TMPLOG"; then
         log "App closed cleanly"
@@ -274,7 +419,6 @@ for i in $(seq 1 $MAX_RETRIES); do
         exit 0
     else
         EXIT_CODE=$?
-        # Classify the failure
         failure_type="unknown"
         if grep -qi "os error 32\|os error 5\|Access is denied\|PermissionDenied\|being used by another process" "$TMPLOG" 2>/dev/null; then
             failure_type="defender_lock"
@@ -300,7 +444,6 @@ for i in $(seq 1 $MAX_RETRIES); do
             log "Waiting ${RETRY_DELAY}s before retry..."
             sleep $RETRY_DELAY
 
-            # Re-check lock before retrying
             if [ "$failure_type" = "defender_lock" ]; then
                 wait_for_sidecar_unlock
             fi

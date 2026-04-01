@@ -54,6 +54,9 @@ public class BatchThumb {
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetParent(IntPtr hWnd);
+
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT { public int Left, Top, Right, Bottom; }
 
@@ -88,6 +91,9 @@ public class BatchThumb {
             var exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
             if ((exStyle & WS_EX_TOOLWINDOW) != 0) return true;
 
+            // Filter 5: root windows only (PROT-03)
+            if (GetParent(hWnd) != IntPtr.Zero) return true;
+
             // Get process name
             uint pid = 0;
             GetWindowThreadProcessId(hWnd, out pid);
@@ -100,7 +106,7 @@ public class BatchThumb {
             try {
                 // Handle minimized windows
                 if (IsIconic(hWnd)) {
-                    results.Add(new { title = title, processName = processName, error = "MINIMIZED" });
+                    results.Add(new { title = title, processName = processName, hwnd = hWnd.ToInt64(), pid = (long)pid, error = "MINIMIZED" });
                     return true;
                 }
 
@@ -112,7 +118,7 @@ public class BatchThumb {
                 int height = bounds.Bottom - bounds.Top;
 
                 if (width <= 0 || height <= 0) {
-                    results.Add(new { title = title, processName = processName, error = "ZERO_BOUNDS" });
+                    results.Add(new { title = title, processName = processName, hwnd = hWnd.ToInt64(), pid = (long)pid, error = "ZERO_BOUNDS" });
                     return true;
                 }
 
@@ -132,12 +138,12 @@ public class BatchThumb {
                         using (var ms = new MemoryStream()) {
                             thumb.Save(ms, ImageFormat.Png);
                             string b64 = Convert.ToBase64String(ms.ToArray());
-                            results.Add(new { title = title, processName = processName, thumbnail = b64 });
+                            results.Add(new { title = title, processName = processName, hwnd = hWnd.ToInt64(), pid = (long)pid, thumbnail = b64 });
                         }
                     }
                 }
             } catch (Exception ex) {
-                results.Add(new { title = title, processName = processName, error = ex.Message });
+                results.Add(new { title = title, processName = processName, hwnd = hWnd.ToInt64(), pid = (long)pid, error = ex.Message });
             }
 
             return true;

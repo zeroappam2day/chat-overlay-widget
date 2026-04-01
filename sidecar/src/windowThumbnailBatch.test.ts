@@ -25,8 +25,8 @@ function makeFakeProcess(stdout: string, exitCode = 0) {
 }
 
 const FAKE_WINDOW_JSON = JSON.stringify([
-  { title: 'Chrome', processName: 'chrome', thumbnail: 'iVBORw0KGgoAAAANSUhEUgAA...' },
-  { title: 'Minimized', processName: 'notepad', error: 'MINIMIZED' },
+  { title: 'Chrome', processName: 'chrome', hwnd: 131234, pid: 4567, thumbnail: 'iVBORw0KGgoAAAANSUhEUgAA...' },
+  { title: 'Minimized', processName: 'notepad', hwnd: 65790, pid: 1234, error: 'MINIMIZED' },
 ]);
 
 describe('windowThumbnailBatch', () => {
@@ -55,6 +55,10 @@ describe('windowThumbnailBatch', () => {
     expect(typeof chromeEntry!.processName).toBe('string');
     expect(typeof chromeEntry!.thumbnail).toBe('string');
     expect(chromeEntry!.thumbnail!.startsWith('iVBOR')).toBe(true);
+    expect(chromeEntry!.hwnd).toBe(131234);
+    expect(typeof chromeEntry!.hwnd).toBe('number');
+    expect(chromeEntry!.pid).toBe(4567);
+    expect(typeof chromeEntry!.pid).toBe('number');
   });
 
   it('Test 3 (THUMB-02): entry with error field has no thumbnail, error is a string (minimized case)', async () => {
@@ -109,5 +113,8 @@ describe('windowThumbnailBatch', () => {
     expect(script).toContain('SetProcessDpiAwarenessContext');
     expect(script).toContain('GetWindowLongPtr');
     expect(script).toContain('Convert.ToBase64String');
+    expect(script).toContain('GetParent');
+    expect(script).toContain('hWnd.ToInt64()');
+    expect(script).toContain('(long)pid');
   });
 });
