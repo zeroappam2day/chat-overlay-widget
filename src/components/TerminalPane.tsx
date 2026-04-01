@@ -11,6 +11,7 @@ import { HistoryViewer } from './HistoryViewer';
 import { WindowPicker } from './WindowPicker';
 import type { ServerMessage, WindowThumbnail } from '../protocol';
 import { formatCaptureBlock } from '../utils/formatCaptureBlock';
+import { useAgentEventStore } from '../store/agentEventStore';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -116,6 +117,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         setPendingInjection(block);
         break;
       }
+      case 'agent-event':
+        useAgentEventStore.getState().pushEvent(msg.event);
+        break;
       default:
         // Delegate history-sessions, history-chunk, history-end, session-start
         handleHistoryMessageRef.current(msg);
