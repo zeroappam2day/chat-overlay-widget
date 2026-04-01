@@ -12,6 +12,8 @@ import { crFold, stripAnsiSync, initStripAnsi } from './terminalBuffer.js';
 import { scrub } from './secretScrubber.js';
 import { captureSelfScreenshot } from './screenshotSelf.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
+import { normalizeAgentEvent, agentEventBuffer } from './agentEvent.js';
+import type { AgentEvent } from './agentEvent.js';
 import { listWindows } from './windowEnumerator.js';
 import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
@@ -88,6 +90,32 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
   }
   // Parse URL for new routes that use query parameters
   const url = new URL(req.url!, 'http://localhost');
+
+  if (req.method === 'POST' && url.pathname === '/hook-event') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const raw = JSON.parse(body) as Record<string, unknown>;
+        const hookType = (raw['hook_event_name'] ?? raw['type']) as string | undefined;
+        if (!hookType || typeof hookType !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'type or hook_event_name required' }));
+          return;
+        }
+        const event = normalizeAgentEvent(raw);
+        agentEventBuffer.push(event);
+        broadcastAgentEvent(event);
+        console.log(`[sidecar] hook-event received: type=${event.type} source=${event.tool}`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
 
   if (req.method === 'GET' && url.pathname === '/terminal-state') {
     const session = [...activeSessions.values()][0];
@@ -230,6 +258,12 @@ const activeSessions = new Map<WebSocket, PTYSession>();
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
     ws.send(JSON.stringify(msg));
+  }
+}
+
+function broadcastAgentEvent(event: AgentEvent): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'agent-event', event });
   }
 }
 
