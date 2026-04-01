@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Agent Hooks & MCP Integration
-status: executing
-stopped_at: Phase 27 planned — 1 plan, 2 tasks, ready to execute
-last_updated: "2026-04-01T09:43:22.959Z"
+status: verifying
+stopped_at: Completed 27-01-PLAN.md
+last_updated: "2026-04-01T09:52:17.068Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 26 — hook-receiver-event-schema
+**Current focus:** Phase 27 — mcp-server
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
-Status: Ready to execute
+Phase: 27 (mcp-server) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
 Last activity: 2026-04-01
 
 Progress: [░░░░░░░░░░] 0% (v1.6 milestone — 0/4 phases complete)
@@ -47,6 +47,9 @@ Baseline decisions: see PROJECT.md Key Decisions table.
 - [Phase 26-hook-receiver-event-schema]: AgentEvent defined only in agentEvent.ts; protocol.ts imports from there (one-directional, no circular dep)
 - [Phase 26-hook-receiver-event-schema]: hook_event_name takes priority over type in normalizeAgentEvent for Claude Code compatibility
 - [Phase 26-hook-receiver-event-schema]: broadcastAgentEvent defined after sendMsg, AgentEvent imported as type separately from normalizeAgentEvent/agentEventBuffer
+- [Phase 27-mcp-server]: uncaughtException handler swallows server.ts guard throw in mcp-server.ts — prevents native addon loading while preserving async stdio transport event loop
+- [Phase 27-mcp-server]: McpServer at @modelcontextprotocol/sdk/server/mcp.js (not /server/index.js which exports lower-level Server class)
+- [Phase 27-mcp-server]: Discovery file read fresh per MCP tool call — sidecar restarts transparent to MCP clients
 
 ### Todos
 
@@ -66,9 +69,10 @@ None.
 
 **Recommendation:** Validate A1 and A2 via a 30-min spike before Phase 26 planning.
 | Phase 26-hook-receiver-event-schema P01 | 2 | 2 tasks | 4 files |
+| Phase 27-mcp-server P01 | 5 | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-04-01T09:43:22.955Z
-Stopped at: Phase 27 planned — 1 plan, 2 tasks, ready to execute
+Last session: 2026-04-01T09:52:17.065Z
+Stopped at: Completed 27-01-PLAN.md
 Next action: `/gsd:new-milestone` or `/gsd:discuss-phase 26` to start v1.6
