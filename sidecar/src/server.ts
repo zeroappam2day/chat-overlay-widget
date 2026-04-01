@@ -25,6 +25,7 @@ import { captureSelfScreenshot } from './screenshotSelf.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 import { normalizeAgentEvent, agentEventBuffer } from './agentEvent.js';
 import type { AgentEvent } from './agentEvent.js';
+import { selectAdapter } from './adapters/adapter.js';
 import { listWindows } from './windowEnumerator.js';
 import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
@@ -110,13 +111,18 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         // Strip UTF-8 BOM if present (PowerShell Invoke-RestMethod may prepend it)
         const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
         const raw = JSON.parse(cleaned) as Record<string, unknown>;
-        const hookType = (raw['hook_event_name'] ?? raw['type']) as string | undefined;
+        const hookType = (raw['hook_event_name'] ?? raw['type'] ?? raw['agent_action_name']) as string | undefined;
         if (!hookType || typeof hookType !== 'string') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'type or hook_event_name required' }));
+          res.end(JSON.stringify({ error: 'type, hook_event_name, or agent_action_name required' }));
           return;
         }
-        const event = normalizeAgentEvent(raw);
+        let event: AgentEvent;
+        try {
+          event = selectAdapter(raw).normalize(raw);
+        } catch {
+          event = normalizeAgentEvent(raw);
+        }
         agentEventBuffer.push(event);
         broadcastAgentEvent(event);
         console.log(`[sidecar] hook-event received: type=${event.type} source=${event.tool}`);
