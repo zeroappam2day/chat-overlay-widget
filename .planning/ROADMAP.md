@@ -110,7 +110,9 @@ Plans:
   2. An MCP client can call `query_session_history` and receive historical PTY output from the SQLite store
   3. An MCP client can call `capture_screenshot` and receive a PNG of the app window (blurred if the caller is a cloud provider)
   4. The MCP server starts via stdio transport and registers cleanly with no manual setup beyond the `.mcp.json` file
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 27-01-PLAN.md — MCP stdio server with 3 tool handlers (read_terminal_output, query_session_history, capture_screenshot)
 
 ### Phase 28: Adapter Layer & Sidebar
 **Goal**: Hook events from Claude Code, Windsurf, and Cursor are normalized through typed adapters, and structured agent activity is visible in the app UI
@@ -146,7 +148,7 @@ Plans:
 | 21-22 | v1.4 | 4/4 | Complete | 2026-03-31 |
 | 23-25 | v1.5 | 7/7 | Complete | 2026-04-01 |
 | 26. Hook Receiver & Event Schema | v1.6 | 2/2 | Complete    | 2026-04-01 |
-| 27. MCP Server | v1.6 | 0/TBD | Not started | - |
+| 27. MCP Server | v1.6 | 0/1 | Not started | - |
 | 28. Adapter Layer & Sidebar | v1.6 | 0/TBD | Not started | - |
 | 29. Auto-Configuration | v1.6 | 0/TBD | Not started | - |
 
