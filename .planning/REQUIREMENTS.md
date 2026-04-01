@@ -3,22 +3,9 @@
 **Defined:** 2026-03-31
 **Core Value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
 
-## v1.5 Requirements
+## v1.6 Requirements
 
-Requirements for Self-Observation & Agent Visibility milestone. Each maps to roadmap phases.
-
-### Terminal Observation
-
-- [ ] **TERM-01**: Sidecar maintains a 64KB rolling ring buffer of PTY output via a second `onData` listener
-- [ ] **TERM-02**: Ring buffer strips ANSI/OSC escape codes at write time using `strip-ansi` or Node.js built-in
-- [ ] **TERM-03**: `GET /terminal-state?lines=N&since=cursor` returns only new content since caller's last read position
-- [ ] **TERM-04**: `query_session_history` queries SQLite `session_chunks` read-only for historical output before current buffer
-
-### Screenshot
-
-- [ ] **SCRN-01**: `GET /screenshot` captures the app's own Tauri window via PrintWindow and returns PNG
-- [ ] **SCRN-02**: Secret-region blurring detects secret patterns in buffer text and blacks out matching pixel rows in the PNG
-- [ ] **SCRN-03**: Provider-gated screenshot: cloud LLMs receive blurred PNG, local models receive raw PNG
+Requirements for Agent Hooks & MCP Integration milestone (Phases 26-29).
 
 ### Agent Visibility
 
@@ -31,8 +18,6 @@ Requirements for Self-Observation & Agent Visibility milestone. Each maps to roa
 
 - [ ] **LLM-01**: MCP server (stdio transport) exposes `read_terminal_output`, `query_session_history`, `capture_screenshot` tools
 - [ ] **LLM-02**: Adapter layer with ClaudeCodeAdapter, WindsurfAdapter, CursorAdapter, FallbackAdapter normalizing hook events
-- [x] **LLM-03**: Provider trust tier config: local models receive unscrubbed content, cloud providers receive scrubbed content
-- [x] **LLM-04**: Best-effort secret scrubber (regex for API keys, tokens, connection strings) with explicit "not a security boundary" warning
 
 ## Future Requirements
 
@@ -55,29 +40,19 @@ Requirements for Self-Observation & Agent Visibility milestone. Each maps to roa
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| TERM-01 | Phase 23 | Pending |
-| TERM-02 | Phase 23 | Pending |
-| TERM-03 | Phase 23 | Pending |
-| TERM-04 | Phase 23 | Pending |
-| LLM-04 | Phase 24 | Complete |
-| LLM-03 | Phase 24 | Complete |
-| SCRN-01 | Phase 25 | Pending |
-| SCRN-02 | Phase 25 | Pending |
-| SCRN-03 | Phase 25 | Pending |
-| AGNT-01 | Phase 26 | Pending |
-| AGNT-02 | Phase 26 | Pending |
-| LLM-01 | Phase 27 | Pending |
-| LLM-02 | Phase 28 | Pending |
-| AGNT-03 | Phase 28 | Pending |
-| AGNT-04 | Phase 29 | Pending |
+| Requirement | Phase | Milestone | Status |
+|-------------|-------|-----------|--------|
+| AGNT-01 | Phase 26 | v1.6 | Pending |
+| AGNT-02 | Phase 26 | v1.6 | Pending |
+| LLM-01 | Phase 27 | v1.6 | Pending |
+| LLM-02 | Phase 28 | v1.6 | Pending |
+| AGNT-03 | Phase 28 | v1.6 | Pending |
+| AGNT-04 | Phase 29 | v1.6 | Pending |
 
 **Coverage:**
-- v1.5 requirements: 15 total
-- Mapped to phases: 15
+- v1.6 requirements: 6 total, 0 complete
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 — traceability mapped to phases 23-29*
+*v1.5 requirements archived to .planning/milestones/v1.5-REQUIREMENTS.md*
+*Last updated: 2026-04-01 — v1.5 completed, v1.6 requirements retained*

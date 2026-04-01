@@ -7,7 +7,8 @@
 - ✅ **v1.2 Live App Awareness & Capture** — Phases 10-15 (shipped 2026-03-30)
 - ✅ **v1.3 Window Picker & LLM-Actionable Capture** — Phases 16-20 (shipped 2026-03-31)
 - ✅ **v1.4 Stable Window Targeting** — Phases 21-22 (shipped 2026-03-31)
-- 🚧 **v1.5 Self-Observation & Agent Visibility** — Phases 23-29 (in progress)
+- ✅ **v1.5 Self-Observation & Agent Visibility** — Phases 23-25 (shipped 2026-04-01)
+- 🚧 **v1.6 Agent Hooks & MCP Integration** — Phases 26-29 (planned)
 
 ## Phases
 
@@ -63,13 +64,19 @@
 
 </details>
 
-### 🚧 v1.5 Self-Observation & Agent Visibility (In Progress)
+<details>
+<summary>✅ v1.5 Self-Observation & Agent Visibility (Phases 23-25) — SHIPPED 2026-04-01</summary>
+
+- [x] Phase 23: Terminal Buffer Layer (2/2 plans) — completed 2026-03-31
+- [x] Phase 24: Secret Scrubber & Trust Tiers (3/3 plans) — completed 2026-03-31
+- [x] Phase 25: Screenshot Self-Capture (2/2 plans) — completed 2026-03-31
+
+</details>
+
+### 🚧 v1.6 Agent Hooks & MCP Integration (Planned)
 
 **Milestone Goal:** Let any MCP-capable LLM running in the app autonomously read the terminal, observe agent activity, and capture screenshots — with a layered adapter architecture that degrades gracefully for non-MCP LLMs.
 
-- [x] **Phase 23: Terminal Buffer Layer** - Ring buffer, ANSI stripping, HTTP endpoint, SQLite history query (completed 2026-03-31)
-- [ ] **Phase 24: Secret Scrubber & Trust Tiers** - Best-effort secret scrubbing and provider trust tier config (gap closure in progress)
-- [ ] **Phase 25: Screenshot Self-Capture** - App self-capture, secret-region blurring, provider-gated delivery
 - [ ] **Phase 26: Hook Receiver & Event Schema** - Hook endpoint, normalized AgentEvent schema
 - [ ] **Phase 27: MCP Server** - stdio MCP server wrapping terminal, history, and screenshot tools
 - [ ] **Phase 28: Adapter Layer & Sidebar** - Hook adapters for Claude Code/Windsurf/Cursor, sidebar event panel
@@ -77,48 +84,13 @@
 
 ## Phase Details
 
-### Phase 23: Terminal Buffer Layer
-**Goal**: Any caller can query the app's terminal output as clean, paginated plain text
-**Depends on**: Phase 22
-**Requirements**: TERM-01, TERM-02, TERM-03, TERM-04
-**Success Criteria** (what must be TRUE):
-  1. `GET /terminal-state?lines=50` returns the last 50 lines of terminal output as plain text with no ANSI codes
-  2. `GET /terminal-state?since=<cursor>` returns only output that appeared after the caller's last read position
-  3. A tool reading historical output via `query_session_history` can retrieve PTY output from before the current buffer window
-  4. ANSI/OSC escape codes are stripped at write time — the stored buffer contains only readable text
-**Plans**: 2 plans
-Plans:
-- [x] 23-01-PLAN.md -- TerminalBuffer core (ring buffer, ANSI strip, PTYSession wiring)
-- [x] 23-02-PLAN.md -- HTTP endpoints (/terminal-state, /session-history) + live verify
+> v1.5 phase details archived to `.planning/milestones/v1.5-ROADMAP.md`
 
-### Phase 24: Secret Scrubber & Trust Tiers
-**Goal**: Sensitive values in terminal output are identified and redacted before leaving the local machine
-**Depends on**: Phase 23
-**Requirements**: LLM-04, LLM-03
-**Success Criteria** (what must be TRUE):
-  1. API keys, tokens, and connection strings matching known patterns are replaced with `[REDACTED]` in terminal content before it is returned to any LLM caller
-  2. A visible warning in the app communicates that scrubbing is best-effort, not a security guarantee
-  3. Local model callers receive unscrubbed terminal content; cloud provider callers receive scrubbed content based on the configured trust tier
-**Plans**: 3 plans
-Plans:
-- [x] 24-01-PLAN.md — Secret scrubber module (scrub, detectSecrets, ~18 regex patterns)
-- [x] 24-02-PLAN.md — HTTP route integration (?scrub param, X-Scrub-Warning header, warning field)
-- [ ] 24-03-PLAN.md — Gap closure: UI scrub warning chip in AppHeader (ROADMAP criterion 2)
-
-### Phase 25: Screenshot Self-Capture
-**Goal**: The app can capture and deliver its own window as a PNG, with secrets blurred for cloud transmission
-**Depends on**: Phase 24
-**Requirements**: SCRN-01, SCRN-02, SCRN-03
-**Success Criteria** (what must be TRUE):
-  1. `GET /screenshot` returns a PNG of the current Tauri app window, captured via PrintWindow
-  2. Pixel rows corresponding to lines that contain secret patterns are blacked out in the PNG before it is returned to a cloud LLM caller
-  3. A local model caller requesting a screenshot receives the raw unblurred PNG; a cloud caller receives the blurred version
-**Plans**: TBD
-**UI hint**: yes
+## v1.6 Phase Details
 
 ### Phase 26: Hook Receiver & Event Schema
 **Goal**: The sidecar can receive and normalize lifecycle events from any supported AI coding agent
-**Depends on**: Phase 22
+**Depends on**: Phase 25
 **Requirements**: AGNT-01, AGNT-02
 **Success Criteria** (what must be TRUE):
   1. `POST /hook-event` on the sidecar accepts hook payloads (SubagentStart, SubagentStop, PreToolUse, PostToolUse) and responds within 500ms
@@ -169,13 +141,11 @@ Plans:
 | 10-15 | v1.2 | 9/9 | Complete | 2026-03-30 |
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
 | 21-22 | v1.4 | 4/4 | Complete | 2026-03-31 |
-| 23. Terminal Buffer Layer | v1.5 | 2/2 | Complete    | 2026-03-31 |
-| 24. Secret Scrubber & Trust Tiers | v1.5 | 2/3 | Gap closure | 2026-03-31 |
-| 25. Screenshot Self-Capture | v1.5 | 0/TBD | Not started | - |
-| 26. Hook Receiver & Event Schema | v1.5 | 0/TBD | Not started | - |
-| 27. MCP Server | v1.5 | 0/TBD | Not started | - |
-| 28. Adapter Layer & Sidebar | v1.5 | 0/TBD | Not started | - |
-| 29. Auto-Configuration | v1.5 | 0/TBD | Not started | - |
+| 23-25 | v1.5 | 7/7 | Complete | 2026-04-01 |
+| 26. Hook Receiver & Event Schema | v1.6 | 0/TBD | Not started | - |
+| 27. MCP Server | v1.6 | 0/TBD | Not started | - |
+| 28. Adapter Layer & Sidebar | v1.6 | 0/TBD | Not started | - |
+| 29. Auto-Configuration | v1.6 | 0/TBD | Not started | - |
 
 ---
 *Full phase details archived in `.planning/milestones/`*

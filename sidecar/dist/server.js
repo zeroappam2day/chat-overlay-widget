@@ -41,6 +41,9 @@ const path = __importStar(require("node:path"));
 const ptySession_js_1 = require("./ptySession.js");
 const shellDetect_js_1 = require("./shellDetect.js");
 const historyStore_js_1 = require("./historyStore.js");
+const terminalBuffer_js_1 = require("./terminalBuffer.js");
+const secretScrubber_js_1 = require("./secretScrubber.js");
+const screenshotSelf_js_1 = require("./screenshotSelf.js");
 const discoveryFile_js_1 = require("./discoveryFile.js");
 const windowEnumerator_js_1 = require("./windowEnumerator.js");
 const windowCapture_js_1 = require("./windowCapture.js");
@@ -49,6 +52,8 @@ const windowThumbnailBatch_js_1 = require("./windowThumbnailBatch.js");
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
 sweepScreenshotTempFiles();
+// Pre-load strip-ansi ESM module so stripAnsiSync is ready before any request
+(0, terminalBuffer_js_1.initStripAnsi)().catch(err => console.error('[sidecar] initStripAnsi failed:', err));
 console.log('[sidecar] SQLite session database initialized');
 // Clean any stale discovery file from a previous force-killed session
 (0, discoveryFile_js_1.cleanStaleDiscoveryFile)();
@@ -110,6 +115,102 @@ function handleHttpRequest(req, res) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: String(err) }));
             }
+        });
+        return;
+    }
+    // Parse URL for new routes that use query parameters
+    const url = new URL(req.url, 'http://localhost');
+    if (req.method === 'GET' && url.pathname === '/terminal-state') {
+        const session = [...activeSessions.values()][0];
+        if (!session) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'No active session' }));
+            return;
+        }
+        const n = Math.min(500, Math.max(1, parseInt(url.searchParams.get('lines') ?? '50', 10) || 50));
+        const sinceParam = url.searchParams.get('since');
+        const since = sinceParam !== null ? parseInt(sinceParam, 10) : undefined;
+        const snapshot = session.terminalBuffer.getLines(n, since);
+        const shouldScrub = url.searchParams.get('scrub') !== 'false';
+        const lines = shouldScrub ? snapshot.lines.map(line => (0, secretScrubber_js_1.scrub)(line)) : snapshot.lines;
+        if (shouldScrub) {
+            res.writeHead(200, { 'Content-Type': 'application/json', 'X-Scrub-Warning': 'best-effort' });
+            res.end(JSON.stringify({ lines, cursor: snapshot.cursor, warning: 'Secret scrubbing is best-effort. Do not rely on it as a security boundary.' }));
+        }
+        else {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ lines, cursor: snapshot.cursor }));
+        }
+        return;
+    }
+    if (req.method === 'GET' && url.pathname === '/session-history') {
+        const sessionIdParam = url.searchParams.get('sessionId') ?? '';
+        const sessionId = parseInt(sessionIdParam, 10);
+        if (isNaN(sessionId)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'sessionId required' }));
+            return;
+        }
+        const lines = Math.min(500, Math.max(1, parseInt(url.searchParams.get('lines') ?? '100', 10) || 100));
+        const chunks = (0, historyStore_js_1.getSessionChunks)(sessionId);
+        const raw = chunks.map(c => c.data.toString('utf8')).join('');
+        const cleaned = (0, terminalBuffer_js_1.stripAnsiSync)((0, terminalBuffer_js_1.crFold)(raw));
+        const allLines = cleaned.split('\n').filter(l => l.trim() !== '');
+        const result = allLines.slice(-lines);
+        const shouldScrub = url.searchParams.get('scrub') !== 'false';
+        const outputLines = shouldScrub ? result.map(line => (0, secretScrubber_js_1.scrub)(line)) : result;
+        if (shouldScrub) {
+            res.writeHead(200, { 'Content-Type': 'application/json', 'X-Scrub-Warning': 'best-effort' });
+            res.end(JSON.stringify({ lines: outputLines, sessionId, total: allLines.length, warning: 'Secret scrubbing is best-effort. Do not rely on it as a security boundary.' }));
+        }
+        else {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ lines: outputLines, sessionId, total: allLines.length }));
+        }
+        return;
+    }
+    if (req.method === 'GET' && url.pathname === '/screenshot') {
+        const session = [...activeSessions.values()][0];
+        if (!session) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'No active session' }));
+            return;
+        }
+        const shouldBlur = url.searchParams.get('blur') !== 'false';
+        const lineHeight = url.searchParams.has('lineHeight')
+            ? parseInt(url.searchParams.get('lineHeight'), 10)
+            : undefined;
+        const topOffset = url.searchParams.has('topOffset')
+            ? parseInt(url.searchParams.get('topOffset'), 10)
+            : undefined;
+        const opts = (lineHeight || topOffset)
+            ? { lineHeight: lineHeight || undefined, topOffset: topOffset || undefined }
+            : undefined;
+        (0, screenshotSelf_js_1.captureSelfScreenshot)(session.terminalBuffer, shouldBlur, opts)
+            .then(result => {
+            if (!result.ok) {
+                const status = result.error === 'SELF_NOT_FOUND' ? 404
+                    : result.error === 'MINIMIZED' ? 409
+                        : result.error === 'BLANK_CAPTURE' ? 502
+                            : 500;
+                res.writeHead(status, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: result.error }));
+                return;
+            }
+            const headers = {
+                'Content-Type': 'image/png',
+                'Content-Length': String(result.buffer.length),
+            };
+            if (result.blurred) {
+                headers['X-Blur-Warning'] = 'best-effort';
+            }
+            res.writeHead(200, headers);
+            res.end(result.buffer);
+        })
+            .catch(err => {
+            console.error('[sidecar] screenshot error:', err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: String(err) }));
         });
         return;
     }

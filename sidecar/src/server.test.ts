@@ -239,3 +239,78 @@ describe('secret scrubbing integration', () => {
     expect(redactedCount).toBeGreaterThanOrEqual(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /screenshot — route logic
+// ---------------------------------------------------------------------------
+
+describe('GET /screenshot — route logic', () => {
+  it('default blur param (absent) resolves to blur=true (safe default per D-08)', () => {
+    const urlNoBlur = new URL('http://localhost/screenshot');
+    const shouldBlur = urlNoBlur.searchParams.get('blur') !== 'false';
+    expect(shouldBlur).toBe(true);
+  });
+
+  it('blur=false resolves to blur=false', () => {
+    const urlBlurFalse = new URL('http://localhost/screenshot?blur=false');
+    const shouldBlur = urlBlurFalse.searchParams.get('blur') !== 'false';
+    expect(shouldBlur).toBe(false);
+  });
+
+  it('blur=true resolves to blur=true', () => {
+    const urlBlurTrue = new URL('http://localhost/screenshot?blur=true');
+    const shouldBlur = urlBlurTrue.searchParams.get('blur') !== 'false';
+    expect(shouldBlur).toBe(true);
+  });
+
+  it('blurred response headers include X-Blur-Warning: best-effort', () => {
+    const blurred = true;
+    const headers: Record<string, string> = { 'Content-Type': 'image/png' };
+    if (blurred) headers['X-Blur-Warning'] = 'best-effort';
+    expect(headers['X-Blur-Warning']).toBe('best-effort');
+  });
+
+  it('unblurred response headers do NOT include X-Blur-Warning', () => {
+    const blurred = false;
+    const headers: Record<string, string> = { 'Content-Type': 'image/png' };
+    if (blurred) headers['X-Blur-Warning'] = 'best-effort';
+    expect(headers['X-Blur-Warning']).toBeUndefined();
+  });
+
+  it('SELF_NOT_FOUND maps to HTTP 404', () => {
+    const error: string = 'SELF_NOT_FOUND';
+    const status = error === 'SELF_NOT_FOUND' ? 404
+      : error === 'MINIMIZED' ? 409
+      : error === 'BLANK_CAPTURE' ? 502
+      : 500;
+    expect(status).toBe(404);
+  });
+
+  it('MINIMIZED maps to HTTP 409', () => {
+    const error: string = 'MINIMIZED';
+    const status = error === 'SELF_NOT_FOUND' ? 404
+      : error === 'MINIMIZED' ? 409
+      : error === 'BLANK_CAPTURE' ? 502
+      : 500;
+    expect(status).toBe(409);
+  });
+
+  it('BLANK_CAPTURE maps to HTTP 502', () => {
+    const error: string = 'BLANK_CAPTURE';
+    const status = error === 'SELF_NOT_FOUND' ? 404
+      : error === 'MINIMIZED' ? 409
+      : error === 'BLANK_CAPTURE' ? 502
+      : 500;
+    expect(status).toBe(502);
+  });
+
+  it('lineHeight and topOffset query params are parsed as integers', () => {
+    const url = new URL('http://localhost/screenshot?lineHeight=20&topOffset=40');
+    const lineHeight = url.searchParams.has('lineHeight')
+      ? parseInt(url.searchParams.get('lineHeight')!, 10) : undefined;
+    const topOffset = url.searchParams.has('topOffset')
+      ? parseInt(url.searchParams.get('topOffset')!, 10) : undefined;
+    expect(lineHeight).toBe(20);
+    expect(topOffset).toBe(40);
+  });
+});

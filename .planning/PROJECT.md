@@ -38,29 +38,38 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 - Stale HWND detection via GetWindowThreadProcessId + PID cross-check — v1.4 (Phase 22)
 - Blank-bitmap detection for elevated window capture — v1.4 (Phase 22)
 - Title+processName fallback for stale HWNDs — v1.4 (Phase 22)
+- Cursor-paginated terminal buffer with ANSI/OSC stripping, exposed via HTTP — v1.5 (Phase 23)
+- Best-effort secret scrubbing with provider trust tiers (local unscrubbed, cloud scrubbed) — v1.5 (Phase 24)
+- Screenshot self-capture with secret-region blurring before cloud transmission — v1.5 (Phase 25)
 
 ### Active
 
-- [ ] Cursor-paginated terminal buffer with ANSI/OSC stripping, exposed via HTTP + MCP
-- [ ] Best-effort secret scrubbing with provider trust tiers (local unscrubbed, cloud scrubbed)
-- [ ] Screenshot self-capture with secret-region blurring before cloud transmission
-- [ ] MCP server (stdio) wrapping HTTP APIs for autonomous LLM tool access
 - [ ] Hook receiver normalizing Claude Code/Windsurf/Cursor events into shared AgentEvent schema
+- [ ] MCP server (stdio) wrapping HTTP APIs for autonomous LLM tool access
+- [ ] Adapter layer for LLM-specific integrations (ClaudeCode, Windsurf, Cursor, Fallback)
 - [ ] Sidebar event panel showing structured agent activity (tool name, file, status)
 - [ ] Auto-configuration: app injects hook config + MCP registration on startup
-- [ ] Adapter layer for LLM-specific integrations (ClaudeCode, Windsurf, Cursor, Fallback)
 
-## Current Milestone: v1.5 Self-Observation & Agent Visibility
+## Current Milestone: v1.6 Agent Hooks & MCP Integration
 
 **Goal:** Let any MCP-capable LLM running in the app autonomously read the terminal, observe agent activity, and capture screenshots — with a layered adapter architecture that degrades gracefully for non-MCP LLMs.
 
 **Target features:**
-- Layer 1: Universal HTTP APIs (/terminal-state, /screenshot) with cursor pagination and ANSI stripping
-- Layer 2: MCP server wrapping Layer 1 for autonomous LLM access (stdio + optional SSE)
-- Layer 3: Adapter layer normalizing hooks from Claude Code, Windsurf, Cursor into AgentEvent schema
+- Hook receiver normalizing Claude Code/Windsurf/Cursor lifecycle events
+- MCP server (stdio) wrapping HTTP APIs for autonomous LLM tool access
+- Adapter layer with typed adapters per tool + fallback
 - Sidebar event panel with structured agent activity display
 - Auto-configuration (zero manual setup for hooks + MCP)
-- Provider trust tiers for secret scrubbing (local vs cloud)
+
+## Previous Milestone: v1.5 Self-Observation & Agent Visibility (shipped 2026-04-01)
+
+**Goal:** The app can observe its own terminal output and capture its own window — with secret scrubbing, trust tiers, and HTTP APIs.
+
+**Delivered:**
+- Universal HTTP APIs (/terminal-state, /session-history, /screenshot) with cursor pagination and ANSI stripping
+- 18-pattern best-effort secret scrubber with provider trust tiers (local unscrubbed, cloud scrubbed)
+- Self-capture via PrintWindow with secret-region blurring (sharp SVG compositing)
+- 140 sidecar tests, 9/9 requirements verified
 
 ### Out of Scope
 
@@ -77,8 +86,9 @@ v1.1 shipped: shell path quoting + input bar resize (Phase 6). HTTP API approach
 v1.2 shipped: split fix, capture infrastructure, window enumeration, window capture, CLI wrapper, Claude skill (Phases 10-15)
 v1.3 shipped: protocol extension, batch thumbnails, enriched capture, window picker UI, metadata injection (Phases 16-20)
 v1.4 shipped: HWND+PID protocol threading, direct HWND capture, stale detection, blank-bitmap warning, fallback (Phases 21-22)
-Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 22 phases shipped across 4 milestones.
-v1.5 context: Stress-tested from 5 adversarial views (token efficiency, security, UX, portability, architecture). Virtual xterm.js agent panes rejected — sidebar panel chosen. MCP broadly adopted (Claude, Cursor, Windsurf, Cline, GPT-4, Gemini). Hook systems fragmented across tools — adapter layer required. Secret scrubber is best-effort, not a security boundary.
+Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 25 phases shipped across 5 milestones.
+v1.5 shipped: Terminal buffer, secret scrubbing, self-screenshot — HTTP APIs for any caller. 3 phases, 7 plans, 140 sidecar tests, 9/9 requirements verified. Phases 23-25.
+v1.6 scope: Hook receiver, MCP server, adapter layer, sidebar, auto-config — Phases 26-29. Stress-tested from 5 adversarial views. Virtual xterm.js agent panes rejected — sidebar panel chosen. MCP broadly adopted (Claude, Cursor, Windsurf, Cline, GPT-4, Gemini). Hook systems fragmented across tools — adapter layer required. Secret scrubber is best-effort, not a security boundary.
 
 ## Key Decisions
 
@@ -101,16 +111,11 @@ v1.5 context: Stress-tested from 5 adversarial views (token efficiency, security
 | Grid sampling for blank-bitmap detection | Full pixel scan too slow at 4K; 100-point grid with luminance < 5/255 threshold | Validated (Phase 22) |
 | Single-window gate for processName fallback | Chrome/VS Code have many same-process windows; fallback only safe for unique processes | Validated (Phase 22) |
 
-## Evolution
-
-Updates at phase transitions: invalidate/validate requirements, log decisions, check core value accuracy.
-Updates at milestones: full review, core value check, out-of-scope audit.
-
-| Sidebar over virtual terminal panes for agent visibility | Stress test: raw JSONL in xterm.js is unreadable; panes accumulate; category error (terminal for log data) | — Pending |
-| Layered architecture (HTTP → MCP → Adapters) | LLM portability: HTTP is universal, MCP is broadly adopted, adapters handle fragmented hooks | — Pending |
-| Best-effort secret scrubbing (not security boundary) | Regex bypass vectors (ANSI-split, base64, line-wrap); explicit user warning instead of false guarantee | — Pending |
-| Provider trust tiers (local unscrubbed, cloud scrubbed) | Multi-LLM data leakage: same content to all providers defeats purpose of local models for sensitive work | — Pending |
-| Cursor-paginated terminal reads over full buffer dump | 64KB raw dump = 16K-20K tokens; catastrophic for small-context models (Haiku, local Llama) | — Pending |
+| Best-effort secret scrubbing (not security boundary) | Regex bypass vectors (ANSI-split, base64, line-wrap); explicit user warning instead of false guarantee | Validated (Phase 24) |
+| Provider trust tiers (local unscrubbed, cloud scrubbed) | Multi-LLM data leakage: same content to all providers defeats purpose of local models for sensitive work | Validated (Phase 24) |
+| Cursor-paginated terminal reads over full buffer dump | 64KB raw dump = 16K-20K tokens; catastrophic for small-context models (Haiku, local Llama) | Validated (Phase 23) |
+| Sidebar over virtual terminal panes for agent visibility | Stress test: raw JSONL in xterm.js is unreadable; panes accumulate; category error (terminal for log data) | — Pending (v1.6) |
+| Layered architecture (HTTP → MCP → Adapters) | LLM portability: HTTP is universal, MCP is broadly adopted, adapters handle fragmented hooks | — Pending (v1.6) |
 
 ## Evolution
 
@@ -118,4 +123,4 @@ Updates at phase transitions: invalidate/validate requirements, log decisions, c
 Updates at milestones: full review, core value check, out-of-scope audit.
 
 ---
-*Last updated: 2026-03-31 after v1.5 milestone started*
+*Last updated: 2026-04-01 after v1.5 milestone*

@@ -10,6 +10,7 @@ import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 import { crFold, stripAnsiSync, initStripAnsi } from './terminalBuffer.js';
 import { scrub } from './secretScrubber.js';
+import { captureSelfScreenshot } from './screenshotSelf.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
 import { listWindows } from './windowEnumerator.js';
 import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
@@ -134,6 +135,58 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ lines: outputLines, sessionId, total: allLines.length }));
     }
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/screenshot') {
+    const session = [...activeSessions.values()][0];
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No active session' }));
+      return;
+    }
+
+    const shouldBlur = url.searchParams.get('blur') !== 'false';
+
+    const lineHeight = url.searchParams.has('lineHeight')
+      ? parseInt(url.searchParams.get('lineHeight')!, 10)
+      : undefined;
+    const topOffset = url.searchParams.has('topOffset')
+      ? parseInt(url.searchParams.get('topOffset')!, 10)
+      : undefined;
+    const opts = (lineHeight || topOffset)
+      ? { lineHeight: lineHeight || undefined, topOffset: topOffset || undefined }
+      : undefined;
+
+    captureSelfScreenshot(session.terminalBuffer, shouldBlur, opts)
+      .then(result => {
+        if (!result.ok) {
+          const status = result.error === 'SELF_NOT_FOUND' ? 404
+            : result.error === 'MINIMIZED' ? 409
+            : result.error === 'BLANK_CAPTURE' ? 502
+            : 500;
+          res.writeHead(status, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: result.error }));
+          return;
+        }
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'image/png',
+          'Content-Length': String(result.buffer.length),
+        };
+
+        if (result.blurred) {
+          headers['X-Blur-Warning'] = 'best-effort';
+        }
+
+        res.writeHead(200, headers);
+        res.end(result.buffer);
+      })
+      .catch(err => {
+        console.error('[sidecar] screenshot error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err) }));
+      });
     return;
   }
 

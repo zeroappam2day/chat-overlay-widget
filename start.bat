@@ -15,13 +15,27 @@ echo Starting app... (first build may take 1-2 min)
 echo Close the app window or press Ctrl+C to stop.
 echo.
 
-:: Launch via the existing bash script (Git Bash required)
-bash scripts/tauri-dev.sh
+:: Resolve Git Bash — must use Git Bash, NOT WSL bash (C:\Windows\System32\bash.exe)
+:: WSL bash uses /mnt/c/ mount points; all script paths assume Git Bash /c/ format.
+set "GITBASH="
+if exist "C:\Program Files\Git\bin\bash.exe" (
+    set "GITBASH=C:\Program Files\Git\bin\bash.exe"
+) else (
+    :: Fallback: search PATH (may pick up WSL bash — script has a WSL guard)
+    where bash.exe >nul 2>&1 && set "GITBASH=bash"
+)
+if not defined GITBASH (
+    echo [ERROR] Git Bash not found. Install Git for Windows.
+    pause
+    exit /b 1
+)
+
+"%GITBASH%" scripts/tauri-dev.sh
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] App exited with errors. Running cleanup...
-    bash scripts/kill-all.sh
+    "%GITBASH%" scripts/kill-all.sh
     echo.
     echo Diagnostic log: scripts\tauri-dev.log
     echo.

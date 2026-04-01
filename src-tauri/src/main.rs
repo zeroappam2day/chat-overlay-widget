@@ -17,14 +17,31 @@ fn get_sidecar_port(state: State<SidecarState>) -> Option<u16> {
 }
 
 fn main() {
+    // DEV MODE: If SIDECAR_PORT is set, skip spawning the caxa binary entirely.
+    // tauri-dev.sh starts `node dist/server.js` directly — no .exe, no Defender scan.
+    let pre_started_port: Option<u16> = std::env::var("SIDECAR_PORT")
+        .ok()
+        .and_then(|s| s.trim().parse().ok());
+
+    if let Some(port) = pre_started_port {
+        println!("[tauri] using pre-started sidecar on port {} (dev mode)", port);
+    }
+
     let app = tauri::Builder::default()
         .manage(SidecarState {
-            port: Arc::new(Mutex::new(None)),
+            port: Arc::new(Mutex::new(pre_started_port)),
             child: Arc::new(Mutex::new(None)),
             pid: Arc::new(Mutex::new(None)),
         })
         .invoke_handler(tauri::generate_handler![get_sidecar_port])
-        .setup(|app| {
+        .setup(move |app| {
+            // If sidecar was pre-started externally, just emit the port — no spawn needed
+            if let Some(port) = pre_started_port {
+                let _ = app.emit_all("sidecar-port", port);
+                return Ok(());
+            }
+
+            // Production path: spawn the bundled caxa binary
             let (mut rx, child) = Command::new_sidecar("sidecar")
                 .expect("failed to create sidecar command")
                 .spawn()

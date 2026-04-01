@@ -40,6 +40,7 @@ const path = __importStar(require("node:path"));
 const os = __importStar(require("node:os"));
 const crypto = __importStar(require("node:crypto"));
 const sessionRecorder_js_1 = require("./sessionRecorder.js");
+const terminalBuffer_js_1 = require("./terminalBuffer.js");
 exports.SCREENSHOT_DIR = path.join(os.tmpdir(), 'chat-overlay-screenshots');
 function send(ws, msg) {
     if (ws.readyState === ws.OPEN) {
@@ -62,6 +63,10 @@ class PTYSession {
         this.dataDisposable = this.ptyProcess.onData((data) => {
             send(ws, { type: 'output', data });
             this.recorder.append(data);
+        });
+        this.terminalBuffer = new terminalBuffer_js_1.TerminalBuffer();
+        this.bufferDisposable = this.ptyProcess.onData((data) => {
+            this.terminalBuffer.append(data);
         });
         this.exitDisposable = this.ptyProcess.onExit(({ exitCode }) => {
             this.recorder.end();
@@ -93,6 +98,7 @@ class PTYSession {
     destroy() {
         this.cleanupTempFiles();
         this.recorder.end();
+        this.bufferDisposable.dispose();
         this.dataDisposable.dispose();
         this.exitDisposable.dispose();
         try {

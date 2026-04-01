@@ -1,12 +1,15 @@
 import type WebSocket from 'ws';
+import { TerminalBuffer } from './terminalBuffer.js';
 export declare const SCREENSHOT_DIR: string;
 export declare class PTYSession {
     private ws;
     private ptyProcess;
     private dataDisposable;
+    private bufferDisposable;
     private exitDisposable;
     private recorder;
     private tempFiles;
+    readonly terminalBuffer: TerminalBuffer;
     constructor(ws: WebSocket, shellExe: string, cols?: number, rows?: number);
     write(data: string): void;
     resize(cols: number, rows: number): void;

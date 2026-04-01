@@ -1,5 +1,27 @@
 # Milestones
 
+## v1.5 Self-Observation & Agent Visibility (Shipped: 2026-04-01)
+
+**Phases:** 23-25 (3 phases, 7 plans)
+**Timeline:** 1 day (2026-03-31)
+**Commits:** 14 | **Files changed:** 16 | **Lines:** +1,797 / -230
+**Git range:** `87adf11..909797e` (+ Phase 25 uncommitted files)
+
+**Delivered:** The app can observe its own terminal output and capture its own window as a PNG — with secret scrubbing, provider trust tiers, and HTTP APIs for any caller.
+
+**Key accomplishments:**
+
+- 64KB rolling ring buffer with ANSI/OSC stripping — TerminalBuffer class wired into PTYSession via second onData listener
+- Cursor-paginated HTTP APIs: GET /terminal-state and GET /session-history with SQLite historical output
+- Best-effort secret scrubber with 18 regex patterns (API keys, tokens, connection strings) — scrub() and detectSecrets()
+- Provider trust tiers via ?scrub param: default scrubbed responses include X-Scrub-Warning header; ?scrub=false bypasses for local models
+- Self-screenshot capture via PrintWindow with secret-region blurring using sharp SVG compositing
+- GET /screenshot route with ?blur param (default=true), error mapping, and X-Blur-Warning header
+
+**Requirements:** 9/9 v1.5 requirements complete (TERM-01–04, LLM-03–04, SCRN-01–03)
+
+---
+
 ## v1.4 Stable Window Targeting (Shipped: 2026-03-31)
 
 **Phases:** 21-22 (2 phases, 4 plans, 8 tasks)
