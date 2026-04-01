@@ -145,7 +145,7 @@ Plans:
 | 16-20 | v1.3 | 7/7 | Complete | 2026-03-31 |
 | 21-22 | v1.4 | 4/4 | Complete | 2026-03-31 |
 | 23-25 | v1.5 | 7/7 | Complete | 2026-04-01 |
-| 26. Hook Receiver & Event Schema | v1.6 | 2/2 | Complete   | 2026-04-01 |
+| 26. Hook Receiver & Event Schema | v1.6 | 2/2 | Complete    | 2026-04-01 |
 | 27. MCP Server | v1.6 | 0/TBD | Not started | - |
 | 28. Adapter Layer & Sidebar | v1.6 | 0/TBD | Not started | - |
 | 29. Auto-Configuration | v1.6 | 0/TBD | Not started | - |
