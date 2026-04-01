@@ -10,7 +10,7 @@ Requirements for Agent Hooks & MCP Integration milestone (Phases 26-29).
 ### Agent Visibility
 
 - [ ] **AGNT-01**: `POST /hook-event` endpoint on sidecar receives hook payloads (SubagentStart/Stop/PreToolUse/PostToolUse)
-- [ ] **AGNT-02**: Normalized `AgentEvent` schema (tool, type, timestamp, sessionId, payload) consumed by all downstream components
+- [x] **AGNT-02**: Normalized `AgentEvent` schema (tool, type, timestamp, sessionId, payload) consumed by all downstream components
 - [ ] **AGNT-03**: Collapsible sidebar panel in React UI shows structured agent activity (tool name, file path, status indicator)
 - [ ] **AGNT-04**: Auto-configuration injects hook config + MCP registration into settings.json on app startup
 

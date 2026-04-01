@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Agent Hooks & MCP Integration
-status: planning
-stopped_at: v1.5 milestone completed, v1.6 ready to plan
-last_updated: "2026-04-01T07:50:00.000Z"
+status: executing
+stopped_at: Completed 26-01-PLAN.md
+last_updated: "2026-04-01T07:48:50.844Z"
 last_activity: 2026-04-01
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 8
+  completed_phases: 7
+  total_plans: 13
+  completed_plans: 12
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** v1.6 Phase 26 — Hook Receiver & Event Schema
+**Current focus:** Phase 26 — hook-receiver-event-schema
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
-Status: Ready to plan
+Phase: 26 (hook-receiver-event-schema) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-01
 
 Progress: [░░░░░░░░░░] 0% (v1.6 milestone — 0/4 phases complete)
@@ -43,6 +43,9 @@ Revision rate: 0%
 ### Decisions
 
 Baseline decisions: see PROJECT.md Key Decisions table.
+
+- [Phase 26-hook-receiver-event-schema]: AgentEvent defined only in agentEvent.ts; protocol.ts imports from there (one-directional, no circular dep)
+- [Phase 26-hook-receiver-event-schema]: hook_event_name takes priority over type in normalizeAgentEvent for Claude Code compatibility
 
 ### Todos
 
@@ -61,9 +64,10 @@ None.
 | A2 | MCP stdio server launched by Claude Code can connect back to the sidecar HTTP API (no circular dependency) | 27, 29 | MCP architecture may need SSE or different process model | Register a stub MCP server, call a tool that hits localhost sidecar |
 
 **Recommendation:** Validate A1 and A2 via a 30-min spike before Phase 26 planning.
+| Phase 26-hook-receiver-event-schema P01 | 2 | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-04-01
-Stopped at: v1.5 milestone completed
+Last session: 2026-04-01T07:48:50.840Z
+Stopped at: Completed 26-01-PLAN.md
 Next action: `/gsd:new-milestone` or `/gsd:discuss-phase 26` to start v1.6
