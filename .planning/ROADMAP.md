@@ -123,9 +123,9 @@ Plans:
   2. Unrecognized hook formats are handled by a FallbackAdapter that preserves the raw payload without crashing
   3. The app sidebar shows a list of recent agent events with tool name, file path (where applicable), and a status indicator (running/complete/error)
   4. The sidebar can be collapsed and expanded without losing the accumulated event history for the current session
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 Plans:
-- [ ] 28-01-PLAN.md — Adapter layer: IAdapter interface, ClaudeCode/Windsurf/Cursor/Fallback adapters, selectAdapter factory, server.ts integration
+- [x] 28-01-PLAN.md — Adapter layer: IAdapter interface, ClaudeCode/Windsurf/Cursor/Fallback adapters, selectAdapter factory, server.ts integration
 - [x] 28-02-PLAN.md — Sidebar UI: Zustand agent event store, AgentSidebar component, PaneContainer/TerminalPane wiring
 **UI hint**: yes
 
@@ -152,7 +152,7 @@ Plans:
 | 23-25 | v1.5 | 7/7 | Complete | 2026-04-01 |
 | 26. Hook Receiver & Event Schema | v1.6 | 2/2 | Complete    | 2026-04-01 |
 | 27. MCP Server | v1.6 | 1/1 | Complete    | 2026-04-01 |
-| 28. Adapter Layer & Sidebar | v1.6 | 1/2 | In Progress|  |
+| 28. Adapter Layer & Sidebar | v1.6 | 2/2 | Complete |  |
 | 29. Auto-Configuration | v1.6 | 0/TBD | Not started | - |
 
 ---
