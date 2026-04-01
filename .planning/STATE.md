@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Agent Hooks & MCP Integration
-status: verifying
-stopped_at: Completed 27-01-PLAN.md
-last_updated: "2026-04-01T10:08:42.959Z"
+status: executing
+stopped_at: Completed 28-02-PLAN.md (checkpoint awaiting visual verify)
+last_updated: "2026-04-01T11:13:22.055Z"
 last_activity: 2026-04-01
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 9
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 16
+  completed_plans: 15
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 27 — mcp-server
+**Current focus:** Phase 28 — adapter-layer-sidebar
 
 ## Current Position
 
-Phase: 27
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 28 (adapter-layer-sidebar) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-01
 
 Progress: [░░░░░░░░░░] 0% (v1.6 milestone — 0/4 phases complete)
@@ -50,6 +50,8 @@ Baseline decisions: see PROJECT.md Key Decisions table.
 - [Phase 27-mcp-server]: uncaughtException handler swallows server.ts guard throw in mcp-server.ts — prevents native addon loading while preserving async stdio transport event loop
 - [Phase 27-mcp-server]: McpServer at @modelcontextprotocol/sdk/server/mcp.js (not /server/index.js which exports lower-level Server class)
 - [Phase 27-mcp-server]: Discovery file read fresh per MCP tool call — sidecar restarts transparent to MCP clients
+- [Phase 28-adapter-layer-sidebar]: Sidebar inserted as peer to layoutContainerRef div in flex-row wrapper to prevent terminal resize flash on collapse/expand
+- [Phase 28-adapter-layer-sidebar]: useAgentEventStore.getState() used in TerminalPane WebSocket callback — correct Zustand pattern for non-React contexts
 
 ### Todos
 
@@ -70,9 +72,10 @@ None.
 **Recommendation:** Validate A1 and A2 via a 30-min spike before Phase 26 planning.
 | Phase 26-hook-receiver-event-schema P01 | 2 | 2 tasks | 4 files |
 | Phase 27-mcp-server P01 | 5 | 2 tasks | 3 files |
+| Phase 28-adapter-layer-sidebar P02 | 15 | 2 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-04-01T09:52:17.065Z
-Stopped at: Completed 27-01-PLAN.md
+Last session: 2026-04-01T11:13:22.052Z
+Stopped at: Completed 28-02-PLAN.md (checkpoint awaiting visual verify)
 Next action: `/gsd:new-milestone` or `/gsd:discuss-phase 26` to start v1.6
