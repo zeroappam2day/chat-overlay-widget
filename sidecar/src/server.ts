@@ -96,7 +96,9 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
     req.on('end', () => {
       try {
-        const raw = JSON.parse(body) as Record<string, unknown>;
+        // Strip UTF-8 BOM if present (PowerShell Invoke-RestMethod may prepend it)
+        const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+        const raw = JSON.parse(cleaned) as Record<string, unknown>;
         const hookType = (raw['hook_event_name'] ?? raw['type']) as string | undefined;
         if (!hookType || typeof hookType !== 'string') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -109,9 +111,10 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         console.log(`[sidecar] hook-event received: type=${event.type} source=${event.tool}`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
-      } catch {
+      } catch (err) {
+        console.error('[sidecar] hook-event error:', err);
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        res.end(JSON.stringify({ error: `Invalid request: ${err instanceof Error ? err.message : String(err)}` }));
       }
     });
     return;
