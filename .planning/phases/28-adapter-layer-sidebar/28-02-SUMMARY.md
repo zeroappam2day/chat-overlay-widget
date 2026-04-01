@@ -60,7 +60,7 @@ completed: 2026-04-01
 - **Duration:** ~15 min
 - **Started:** 2026-04-01T12:05:00Z
 - **Completed:** 2026-04-01T12:15:00Z
-- **Tasks:** 2 of 3 automated (Task 3 is a human-verify checkpoint)
+- **Tasks:** 3/3 complete (2 automated + 1 visual verification approved)
 - **Files modified:** 5
 
 ## Accomplishments
@@ -75,7 +75,7 @@ completed: 2026-04-01
 
 1. **Task 1: Create Zustand store, AgentSidebar component, and wire into PaneContainer** - `df12fc3` (feat)
 2. **Task 2: Create AgentSidebar component tests** - `afc77d9` (test)
-3. **Task 3: Visual verification of sidebar** - checkpoint awaiting user verification
+3. **Task 3: Visual verification of sidebar** - approved (events visible, collapse/expand works, no terminal flash)
 
 ## Files Created/Modified
 
@@ -105,7 +105,7 @@ None — no external service configuration required.
 
 ## Next Phase Readiness
 
-- AGNT-03 is functionally complete pending visual verification (Task 3 checkpoint)
+- AGNT-03 is complete: visual verification approved by user
 - Phase 29 (auto-config) can proceed: sidebar and store are wired; auto-config only needs to inject hook config and MCP registration on startup
 - Known: sidebar history is session-local from WebSocket connection time — no ring buffer backfill (deferred to Phase 29 evaluation per RESEARCH.md open question 1)
 
