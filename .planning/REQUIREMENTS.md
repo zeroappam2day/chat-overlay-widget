@@ -9,15 +9,15 @@ Requirements for Agent Hooks & MCP Integration milestone (Phases 26-29).
 
 ### Agent Visibility
 
-- [ ] **AGNT-01**: `POST /hook-event` endpoint on sidecar receives hook payloads (SubagentStart/Stop/PreToolUse/PostToolUse)
-- [ ] **AGNT-02**: Normalized `AgentEvent` schema (tool, type, timestamp, sessionId, payload) consumed by all downstream components
-- [ ] **AGNT-03**: Collapsible sidebar panel in React UI shows structured agent activity (tool name, file path, status indicator)
+- [x] **AGNT-01**: `POST /hook-event` endpoint on sidecar receives hook payloads (SubagentStart/Stop/PreToolUse/PostToolUse)
+- [x] **AGNT-02**: Normalized `AgentEvent` schema (tool, type, timestamp, sessionId, payload) consumed by all downstream components
+- [x] **AGNT-03**: Collapsible sidebar panel in React UI shows structured agent activity (tool name, file path, status indicator)
 - [ ] **AGNT-04**: Auto-configuration injects hook config + MCP registration into settings.json on app startup
 
 ### LLM Integration
 
-- [ ] **LLM-01**: MCP server (stdio transport) exposes `read_terminal_output`, `query_session_history`, `capture_screenshot` tools
-- [ ] **LLM-02**: Adapter layer with ClaudeCodeAdapter, WindsurfAdapter, CursorAdapter, FallbackAdapter normalizing hook events
+- [x] **LLM-01**: MCP server (stdio transport) exposes `read_terminal_output`, `query_session_history`, `capture_screenshot` tools
+- [x] **LLM-02**: Adapter layer with ClaudeCodeAdapter, WindsurfAdapter, CursorAdapter, FallbackAdapter normalizing hook events
 
 ## Future Requirements
 

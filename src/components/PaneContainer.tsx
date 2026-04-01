@@ -6,6 +6,7 @@ import { usePaneStore, getAllPaneIds } from '../store/paneStore';
 import type { LayoutNode, SplitNode } from '../store/paneStore';
 import { TerminalPane } from './TerminalPane';
 import { AppHeader } from './AppHeader';
+import { AgentSidebar } from './AgentSidebar';
 
 // --- usePanelRects ---
 // Tracks each Panel placeholder div's bounding rect relative to the layout container.
@@ -178,32 +179,35 @@ export function PaneContainer() {
   return (
     <div className="flex flex-col h-screen bg-[#1e1e1e]" ref={outerRef}>
       <AppHeader />
-      <div className="relative flex-1 min-h-0" ref={layoutContainerRef}>
-        {/* Layout layer — react-resizable-panels sizing placeholders only, no TerminalPane */}
-        <div className="absolute inset-0">
-          {renderLayoutPanels(layout, isNarrow, registerPanel, setSizes)}
-        </div>
-        {/* Terminal layer — flat stable tree position, absolutely positioned to match panel rects */}
-        {allPaneIds.map((paneId) => (
-          <div
-            key={paneId}
-            className="absolute"
-            style={{
-              top: rects.get(paneId)?.top ?? 0,
-              left: rects.get(paneId)?.left ?? 0,
-              width: rects.get(paneId)?.width ?? 0,
-              height: rects.get(paneId)?.height ?? 0,
-              // Hide until panel rect is measured to prevent flash of zero-size terminal
-              visibility: rects.has(paneId) ? 'visible' : 'hidden',
-            }}
-          >
-            <TerminalPane
-              paneId={paneId}
-              droppedImagePath={activePaneId === paneId ? droppedImagePath : null}
-              onDroppedPathConsumed={clearDroppedPath}
-            />
+      <div className="flex flex-row flex-1 min-h-0">
+        <AgentSidebar />
+        <div className="relative flex-1 min-h-0" ref={layoutContainerRef}>
+          {/* Layout layer — react-resizable-panels sizing placeholders only, no TerminalPane */}
+          <div className="absolute inset-0">
+            {renderLayoutPanels(layout, isNarrow, registerPanel, setSizes)}
           </div>
-        ))}
+          {/* Terminal layer — flat stable tree position, absolutely positioned to match panel rects */}
+          {allPaneIds.map((paneId) => (
+            <div
+              key={paneId}
+              className="absolute"
+              style={{
+                top: rects.get(paneId)?.top ?? 0,
+                left: rects.get(paneId)?.left ?? 0,
+                width: rects.get(paneId)?.width ?? 0,
+                height: rects.get(paneId)?.height ?? 0,
+                // Hide until panel rect is measured to prevent flash of zero-size terminal
+                visibility: rects.has(paneId) ? 'visible' : 'hidden',
+              }}
+            >
+              <TerminalPane
+                paneId={paneId}
+                droppedImagePath={activePaneId === paneId ? droppedImagePath : null}
+                onDroppedPathConsumed={clearDroppedPath}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

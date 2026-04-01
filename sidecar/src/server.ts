@@ -1,3 +1,14 @@
+// MCP subcommand routing — must be FIRST, before any imports (per D-03)
+// This guard runs before native addon initialization (node-pty, better-sqlite3, sharp).
+// mcp-server.ts installs an uncaughtException handler to swallow the throw below,
+// allowing the async stdio transport to stay alive.
+if (process.argv[2] === 'mcp') {
+  require('./mcp-server.js');
+  // Throw to prevent execution from falling through to native addon initialization.
+  // mcp-server.ts handles this specific error via uncaughtException handler.
+  throw new Error('mcp-server should not return');
+}
+
 import * as http from 'node:http';
 import * as crypto from 'node:crypto';
 import { WebSocketServer } from 'ws';
@@ -12,6 +23,9 @@ import { crFold, stripAnsiSync, initStripAnsi } from './terminalBuffer.js';
 import { scrub } from './secretScrubber.js';
 import { captureSelfScreenshot } from './screenshotSelf.js';
 import { writeDiscoveryFile, deleteDiscoveryFile, cleanStaleDiscoveryFile } from './discoveryFile.js';
+import { normalizeAgentEvent, agentEventBuffer } from './agentEvent.js';
+import type { AgentEvent } from './agentEvent.js';
+import { selectAdapter } from './adapters/adapter.js';
 import { listWindows } from './windowEnumerator.js';
 import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
@@ -88,6 +102,40 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
   }
   // Parse URL for new routes that use query parameters
   const url = new URL(req.url!, 'http://localhost');
+
+  if (req.method === 'POST' && url.pathname === '/hook-event') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        // Strip UTF-8 BOM if present (PowerShell Invoke-RestMethod may prepend it)
+        const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+        const raw = JSON.parse(cleaned) as Record<string, unknown>;
+        const hookType = (raw['hook_event_name'] ?? raw['type'] ?? raw['agent_action_name']) as string | undefined;
+        if (!hookType || typeof hookType !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'type, hook_event_name, or agent_action_name required' }));
+          return;
+        }
+        let event: AgentEvent;
+        try {
+          event = selectAdapter(raw).normalize(raw);
+        } catch {
+          event = normalizeAgentEvent(raw);
+        }
+        agentEventBuffer.push(event);
+        broadcastAgentEvent(event);
+        console.log(`[sidecar] hook-event received: type=${event.type} source=${event.tool}`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        console.error('[sidecar] hook-event error:', err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid request: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
 
   if (req.method === 'GET' && url.pathname === '/terminal-state') {
     const session = [...activeSessions.values()][0];
@@ -230,6 +278,12 @@ const activeSessions = new Map<WebSocket, PTYSession>();
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
     ws.send(JSON.stringify(msg));
+  }
+}
+
+function broadcastAgentEvent(event: AgentEvent): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'agent-event', event });
   }
 }
 

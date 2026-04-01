@@ -1,3 +1,5 @@
+import type { AgentEvent } from './agentEvent.js';
+
 // Client -> Server messages
 export type ClientMessage =
   | { type: 'input'; data: string }
@@ -46,4 +48,5 @@ export type ServerMessage =
   | { type: 'history-end'; sessionId: number }
   | { type: 'save-image-result'; path: string }
   | { type: 'window-thumbnails'; windows: WindowThumbnail[] }
-  | { type: 'capture-result-with-metadata'; path: string; title: string; hwnd: number; pid: number; bounds: { x: number; y: number; w: number; h: number }; captureSize: { w: number; h: number }; dpiScale: number };
+  | { type: 'capture-result-with-metadata'; path: string; title: string; hwnd: number; pid: number; bounds: { x: number; y: number; w: number; h: number }; captureSize: { w: number; h: number }; dpiScale: number }
+  | { type: 'agent-event'; event: AgentEvent };
