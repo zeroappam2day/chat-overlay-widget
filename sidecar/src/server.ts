@@ -1,6 +1,11 @@
 // MCP subcommand routing — must be FIRST, before any imports (per D-03)
+// This guard runs before native addon initialization (node-pty, better-sqlite3, sharp).
+// mcp-server.ts installs an uncaughtException handler to swallow the throw below,
+// allowing the async stdio transport to stay alive.
 if (process.argv[2] === 'mcp') {
   require('./mcp-server.js');
+  // Throw to prevent execution from falling through to native addon initialization.
+  // mcp-server.ts handles this specific error via uncaughtException handler.
   throw new Error('mcp-server should not return');
 }
 
