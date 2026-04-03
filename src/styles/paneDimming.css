@@ -1,0 +1,9 @@
+.pane-wrapper {
+  transition: opacity 150ms ease;
+}
+.pane-wrapper.pane-inactive {
+  opacity: var(--inactive-pane-opacity, 0.6);
+}
+.pane-wrapper.pane-active {
+  opacity: 1;
+}

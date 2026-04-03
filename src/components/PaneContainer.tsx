@@ -8,6 +8,8 @@ import { TerminalPane } from './TerminalPane';
 import { AppHeader } from './AppHeader';
 import { AgentSidebar } from './AgentSidebar';
 import { useShortcuts } from '../hooks/useShortcuts';
+import { usePaneDimming } from '../hooks/usePaneDimming';
+import '../styles/paneDimming.css';
 
 // --- usePanelRects ---
 // Tracks each Panel placeholder div's bounding rect relative to the layout container.
@@ -130,6 +132,7 @@ function renderLayoutPanels(
 
 export function PaneContainer() {
   useShortcuts(); // Phase 8: global keyboard shortcuts
+  usePaneDimming(); // Phase 9: inactive pane dimming
 
   const layout = usePaneStore((state) => state.layout);
   const activePaneId = usePaneStore((state) => state.activePaneId);
@@ -193,7 +196,8 @@ export function PaneContainer() {
           {allPaneIds.map((paneId) => (
             <div
               key={paneId}
-              className="absolute"
+              data-pane-id={paneId}
+              className="absolute pane-wrapper pane-active"
               style={{
                 top: rects.get(paneId)?.top ?? 0,
                 left: rects.get(paneId)?.left ?? 0,

@@ -53,7 +53,7 @@ Begin by reading the plan file now.
 | 6 | Prompt History & Notes | DONE | 2026-04-03 | PR #11, 9ab5b49 — promptHistoryStore + PromptHistoryPanel(portal/tabs/search) + TerminalHeader button + TerminalPane recording |
 | 7 | Agent Exit Notifications | DONE | 2026-04-03 | PR #12, e868924 — ExitNotifier + Tauri notification allowlist + TerminalPane wiring |
 | 8 | Keyboard Navigation System | DONE | 2026-04-03 | PR #13, 528bd31 — shortcuts.ts + useShortcuts + PaneContainer/TerminalPane wiring |
-| 9 | Inactive Pane Dimming | PENDING | — | — |
+| 9 | Inactive Pane Dimming | DONE | 2026-04-03 | usePaneDimming hook + paneDimming.css + PaneContainer wiring |
 | 10 | Enhanced Session Persistence | PENDING | — | — |
 
 ---
@@ -1493,7 +1493,14 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** Shortcut listener uses a module-level `Set<Shortcut>` and `listenerAttached` boolean. If React StrictMode double-mounts, the first cleanup removes the listener and clears shortcuts, then the second mount re-attaches. This is safe because `initShortcutListener` is idempotent (checks `listenerAttached` flag).
 
 ### Phase 9 Handover
-*(pending)*
+- **Files created:** `src/hooks/usePaneDimming.ts`, `src/styles/paneDimming.css`
+- **Files modified (additive only):** `src/components/PaneContainer.tsx` (import hook + CSS, add `pane-wrapper`/`data-pane-id` to terminal layer divs, call `usePaneDimming()`)
+- **usePaneDimming:** Reads `inactivePaneDimming` flag and `activePaneId` from stores. On each change, queries all `.pane-wrapper` elements and sets `.pane-active` or `.pane-inactive` class based on `data-pane-id` match. When flag OFF: all panes get `.pane-active` (full opacity).
+- **paneDimming.css:** `.pane-wrapper` gets `transition: opacity 150ms ease`. `.pane-inactive` reads `--inactive-pane-opacity` CSS custom property (default 0.6). `.pane-active` is opacity 1.
+- **Feature flag:** `inactivePaneDimming` — already existed from Phase 0, defaults to `false` (OFF). User must opt in via settings panel.
+- **No layout shift:** Opacity change only — no reflow, no size change.
+- **No new protocol messages** — purely frontend CSS/store-driven.
+- **Gotcha:** The hook uses `document.querySelectorAll('.pane-wrapper')` DOM query on each re-render triggered by `activePaneId` or `enabled` change. This is lightweight (typically 1-4 elements) and avoids needing to pass refs through the component tree. The `data-pane-id` attribute on each wrapper div is the link between React state and DOM manipulation.
 
 ### Phase 10 Handover
 *(pending)*
