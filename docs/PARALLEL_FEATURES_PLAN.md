@@ -32,6 +32,7 @@ Rules:
 6. This project uses Tauri v1.8 (NOT v2, NOT Electron), React 18, Zustand, xterm.js 5.5, node-pty 1.1, WebSocket (ws 8.18).
 7. The sidecar is a Node.js process at sidecar/src/. The frontend is at src/. They communicate via WebSocket JSON messages defined in sidecar/src/protocol.ts.
 8. Start work through a GSD command: /gsd:quick for the phase, or /gsd:execute-phase if phase is already planned.
+9. After implementation, you MUST run the Phase Delivery Protocol (see section below): create feature branch, reset main, push, create PR with exhaustive description, squash-merge, pull, clean up branch. Every phase ships as a single revertible squash commit on main via PR. No exceptions.
 
 Begin by reading the plan file now.
 ```
@@ -229,6 +230,115 @@ The constraint "do not modify existing files" means we use COMPOSITION and WRAPP
 4. **Sidecar Extension:** New route handlers in new files. `server.ts` gets ONE line added per feature: an import + registration call. This is the minimal, unavoidable touch point.
 
 **IMPORTANT EXCEPTION:** `sidecar/src/server.ts` and `src/components/PaneContainer.tsx` are the two integration points where minimal, additive-only changes (import + wire-up) are unavoidable. Each phase specifies EXACTLY what line to add. No existing lines are changed or removed.
+
+---
+
+## Phase Delivery Protocol (MANDATORY after every phase)
+
+Every completed phase MUST go through this protocol before the phase is considered DONE. This produces a single squash-merge commit on `main` with a GitHub PR trail, matching the pattern established by Phases 1-3 (PRs #6, #7, #8).
+
+### Why
+
+- **Single rollback point:** `git revert <merge-commit>` undoes an entire phase cleanly
+- **Audit trail:** GitHub PR preserves the full diff, description, and test plan for future sessions
+- **Clean history:** Squash merge = one commit per phase on `main` regardless of how many task commits the executor produced
+- **Consistency:** Every phase in the progress tracker maps to exactly one PR number
+
+### Steps (execute in order, no skipping)
+
+**Precondition:** All phase commits are on `main` locally, ahead of `origin/main`, not yet pushed.
+
+```
+PHASE_NAME="phase-N-short-name"           # e.g. phase-5-terminal-bookmarks
+BRANCH="feat/${PHASE_NAME}"
+BASE_COMMIT=$(git merge-base HEAD origin/main)   # last common ancestor with remote
+
+# 1. Preserve commits on a feature branch
+git branch "$BRANCH"
+
+# 2. Reset main to match remote (safe — commits preserved on branch)
+git reset --hard "$BASE_COMMIT"
+
+# 3. Push feature branch
+git push -u origin "$BRANCH"
+
+# 4. Create PR (see template below)
+gh pr create --base main --head "$BRANCH" \
+  --title "feat: Phase N — Title (#PR)" \
+  --body "$(cat <<'EOF'
+<PR body from template>
+EOF
+)"
+
+# 5. Squash-merge
+gh pr merge <PR#> --squash \
+  --subject "feat: Phase N — Title (#PR)" \
+  --body "<one-line summary>"
+
+# 6. Pull squash commit to local main
+git pull origin main
+
+# 7. Clean up branch
+git branch -d "$BRANCH"
+git push origin --delete "$BRANCH"
+
+# 8. Verify
+git log --oneline -3   # squash commit should be HEAD
+```
+
+### PR Body Template
+
+Every PR body MUST include these sections:
+
+```markdown
+## Summary
+
+- Bullet list of what was built (component names, file names, behavior)
+- Protocol messages added (if any)
+- Integration points touched (server.ts, TerminalPane.tsx, etc.)
+- Feature flag name and default value
+
+### Files changed
+
+| File | Change |
+|------|--------|
+| `path/to/new-file.ts` | **NEW** — description (N lines) |
+| `path/to/modified-file.ts` | description of additive change |
+
+### Architecture
+
+- How it follows the composition/wrapper pattern
+- Which DO-NOT-MODIFY files were NOT touched
+- Cleanup behavior (timer/watcher destruction on teardown)
+
+### Rollback
+
+`git revert <merge-commit>` or toggle `featureFlagName` flag OFF at runtime.
+
+## Test plan
+
+- [ ] Test case 1 — what to do, what to expect
+- [ ] Test case 2 — edge case
+- [ ] Test case N — flag OFF behavior (zero behavior change)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+### Progress Tracker Update
+
+After squash-merge, update the Progress Tracker row with:
+- Status: `DONE`
+- Date: today's date
+- Handover Notes: `PR #N, <squash-commit-hash> — <brief summary>`
+
+### Established PR History
+
+| Phase | PR | Squash Commit | Method |
+|-------|----|---------------|--------|
+| 0 | *(direct push — pre-protocol)* | ff7dc13 | direct |
+| 1 | #6 | cc75c70 | squash-merge |
+| 2 | #7 | 83b05c4 | squash-merge |
+| 3 | #8 | 161c5be | squash-merge |
 
 ---
 
