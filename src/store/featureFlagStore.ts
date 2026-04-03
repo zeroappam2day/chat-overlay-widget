@@ -13,6 +13,7 @@ export interface FeatureFlags {
   enhancedPersistence: boolean;  // Phase 10
   annotationOverlay: boolean;    // Phase 11
   themePresets: boolean;         // Phase 12
+  ctrlWheelZoom: boolean;        // Phase 13
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -39,6 +40,7 @@ const defaults: FeatureFlags = {
   enhancedPersistence: true,
   annotationOverlay: false,  // OFF by default — feature incomplete
   themePresets: true,
+  ctrlWheelZoom: true,
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -66,6 +68,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         enhancedPersistence: next.enhancedPersistence,
         annotationOverlay: next.annotationOverlay,
         themePresets: next.themePresets,
+        ctrlWheelZoom: next.ctrlWheelZoom,
       }));
       return { [key]: value };
     }),

@@ -10,7 +10,9 @@ import { AgentSidebar } from './AgentSidebar';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { usePaneDimming } from '../hooks/usePaneDimming';
 import { usePersistence } from '../hooks/usePersistence';
+import { useZoom } from '../hooks/useZoom';
 import '../styles/paneDimming.css';
+import '../styles/zoom.css';
 
 // --- usePanelRects ---
 // Tracks each Panel placeholder div's bounding rect relative to the layout container.
@@ -135,6 +137,7 @@ export function PaneContainer() {
   useShortcuts(); // Phase 8: global keyboard shortcuts
   usePaneDimming(); // Phase 9: inactive pane dimming
   usePersistence(); // Phase 10: enhanced session persistence
+  useZoom(); // Phase 13: Ctrl+Wheel zoom
 
   const layout = usePaneStore((state) => state.layout);
   const activePaneId = usePaneStore((state) => state.activePaneId);
