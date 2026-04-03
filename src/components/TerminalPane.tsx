@@ -43,6 +43,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   const [pendingInjection, setPendingInjection] = useState<string | null>(null);
   const [inputBarHeight, setInputBarHeight] = useState(144); // INBAR-01: ~144px default
   const [lastSentCommand, setLastSentCommand] = useState('');
+  const [bookmarkBarVisible, setBookmarkBarVisible] = useState(true); // Phase 8: toggled via Ctrl+B
+  const handleRequestDiffRef = useRef<(() => void) | null>(null); // Phase 8: ref for keyboard shortcut
   const isDraggingRef = useRef(false);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(144);
@@ -236,6 +238,19 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     };
     document.addEventListener('terminal-toggle-search', gatedToggleSearch);
 
+    // Phase 8: keyboard shortcut events (dispatched by useShortcuts)
+    const gatedRequestDiff = () => {
+      if (!isActiveRef.current) return;
+      handleRequestDiffRef.current?.();
+    };
+    document.addEventListener('keyboard-request-diff', gatedRequestDiff);
+
+    const gatedToggleBookmarks = () => {
+      if (!isActiveRef.current) return;
+      setBookmarkBarVisible(prev => !prev);
+    };
+    document.addEventListener('toggle-bookmark-bar', gatedToggleBookmarks);
+
     const handler = (e: KeyboardEvent) => {
       if (!isActiveRef.current) return; // only active pane responds
       if (pickerOpenRef.current) return; // picker handles its own keys via stopPropagation (D-12)
@@ -277,6 +292,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     return () => {
       document.removeEventListener('keydown', handler);
       document.removeEventListener('terminal-toggle-search', gatedToggleSearch);
+      document.removeEventListener('keyboard-request-diff', gatedRequestDiff);
+      document.removeEventListener('toggle-bookmark-bar', gatedToggleBookmarks);
       document.removeEventListener('paste', handleDocPaste);
     };
   }, [searchOpen]);
@@ -331,6 +348,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     if (!diffFlag) return;
     sendMessage({ type: 'request-diff' });
   }, [sendMessage]);
+  handleRequestDiffRef.current = handleRequestDiff; // Phase 8: sync ref for keyboard shortcut
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     isDraggingRef.current = true;
@@ -434,8 +452,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         onMouseDown={handleDragStart}
       />
 
-      {/* Bookmark bar (Phase 5) — rendered above input, gated by terminalBookmarks flag */}
-      <BookmarkBar onSendCommand={handleSendInput} currentInput={lastSentCommand} />
+      {/* Bookmark bar (Phase 5) — rendered above input, gated by terminalBookmarks flag + Phase 8 toggle */}
+      {bookmarkBarVisible && <BookmarkBar onSendCommand={handleSendInput} currentInput={lastSentCommand} />}
 
       <ChatInputBar
         onSend={handleSendInput}
