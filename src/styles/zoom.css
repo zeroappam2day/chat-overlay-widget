@@ -1,0 +1,9 @@
+/* Prevent zoom from affecting xterm.js terminal */
+.xterm {
+  font-size: initial !important;
+}
+
+/* Prevent zoom from affecting elements that should stay fixed */
+.zoom-exempt {
+  font-size: initial !important;
+}
