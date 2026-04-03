@@ -8,6 +8,7 @@ interface TerminalHeaderProps {
   onToggleSidebar: () => void;
   onTogglePicker: () => void;
   onRequestDiff?: () => void;
+  onToggleHistory?: () => void;
   onSplitHorizontal: () => void;
   onSplitVertical: () => void;
   onClose: () => void;
@@ -26,6 +27,7 @@ export function TerminalHeader({
   onSplitHorizontal,
   onSplitVertical,
   onClose,
+  onToggleHistory,
   canSplit,
   canClose,
 }: TerminalHeaderProps) {
@@ -84,6 +86,20 @@ export function TerminalHeader({
               <path d="M2 3h5v1H2V3zm0 3h5v1H2V6zm7-3h5v1H9V3zm0 3h5v1H9V6zM2 9h12v1H2V9zm0 3h12v1H2v-1z" fillOpacity="0.7" />
               <rect x="0" y="2" width="1" height="4" fill="#4ec9b0" />
               <rect x="7" y="2" width="1" height="4" fill="#f14c4c" />
+            </svg>
+          </button>
+        )}
+
+        {/* Prompt history button (Phase 6) — hidden when promptHistory flag is OFF */}
+        {useFeatureFlagStore.getState().promptHistory && onToggleHistory && (
+          <button
+            onClick={onToggleHistory}
+            className="text-gray-400 hover:text-gray-200 px-1"
+            title="Prompt history (Ctrl+H)"
+            aria-label="Toggle prompt history"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.2A5.8 5.8 0 1 1 2.2 8 5.8 5.8 0 0 1 8 2.2zM7.5 4v4.5l3.5 2.1.5-.85L8.5 8V4h-1z" />
             </svg>
           </button>
         )}

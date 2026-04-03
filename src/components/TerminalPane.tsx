@@ -19,6 +19,8 @@ import { useFeatureFlagStore } from '../store/featureFlagStore';
 import { parseUnifiedDiff } from '../lib/diffParser';
 import { DiffPanel } from './DiffPanel';
 import { BookmarkBar } from './BookmarkBar';
+import { PromptHistoryPanel } from './PromptHistoryPanel';
+import { usePromptHistoryStore } from '../store/promptHistoryStore';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -267,7 +269,13 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     sendMessage({ type: 'input', data: text });
     // Track last sent command for bookmark bar (Phase 5)
     const clean = text.replace(/\r$/, '').trim();
-    if (clean) setLastSentCommand(clean);
+    if (clean) {
+      setLastSentCommand(clean);
+      // Record in prompt history (Phase 6) — gated by feature flag
+      if (useFeatureFlagStore.getState().promptHistory) {
+        usePromptHistoryStore.getState().addEntry(clean, paneId);
+      }
+    }
   }, [sendMessage]);
 
   const handleShellChange = useCallback((newShell: string) => {
@@ -354,6 +362,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         onToggleSidebar={() => setSidebarOpen(s => !s)}
         onTogglePicker={handleOpenPicker}
         onRequestDiff={handleRequestDiff}
+        onToggleHistory={() => document.dispatchEvent(new Event('toggle-prompt-history'))}
         onSplitHorizontal={() => splitPane(paneId, 'h')}
         onSplitVertical={() => splitPane(paneId, 'v')}
         onClose={() => closePane(paneId)}
@@ -418,6 +427,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
       {/* Diff panel (Phase 4) — portal-rendered, gated by diffViewer flag */}
       <DiffPanel />
+
+      {/* Prompt history panel (Phase 6) — portal-rendered, gated by promptHistory flag */}
+      <PromptHistoryPanel onInsertCommand={handleSendInput} />
     </div>
   );
 }
