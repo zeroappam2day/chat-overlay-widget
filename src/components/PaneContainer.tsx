@@ -7,6 +7,7 @@ import type { LayoutNode, SplitNode } from '../store/paneStore';
 import { TerminalPane } from './TerminalPane';
 import { AppHeader } from './AppHeader';
 import { AgentSidebar } from './AgentSidebar';
+import { useShortcuts } from '../hooks/useShortcuts';
 
 // --- usePanelRects ---
 // Tracks each Panel placeholder div's bounding rect relative to the layout container.
@@ -128,6 +129,8 @@ function renderLayoutPanels(
 }
 
 export function PaneContainer() {
+  useShortcuts(); // Phase 8: global keyboard shortcuts
+
   const layout = usePaneStore((state) => state.layout);
   const activePaneId = usePaneStore((state) => state.activePaneId);
   const setSizes = usePaneStore((state) => state.setSizes);
