@@ -27,6 +27,19 @@
       },
       "notification": {
         "all": true
+      },
+      "fs": {
+        "all": false,
+        "readFile": true,
+        "writeFile": true,
+        "exists": true,
+        "copyFile": true,
+        "createDir": true,
+        "renameFile": true,
+        "scope": ["$APPDATA/**"]
+      },
+      "path": {
+        "all": true
       }
     },
     "bundle": {

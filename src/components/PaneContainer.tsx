@@ -9,6 +9,7 @@ import { AppHeader } from './AppHeader';
 import { AgentSidebar } from './AgentSidebar';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { usePaneDimming } from '../hooks/usePaneDimming';
+import { usePersistence } from '../hooks/usePersistence';
 import '../styles/paneDimming.css';
 
 // --- usePanelRects ---
@@ -133,6 +134,7 @@ function renderLayoutPanels(
 export function PaneContainer() {
   useShortcuts(); // Phase 8: global keyboard shortcuts
   usePaneDimming(); // Phase 9: inactive pane dimming
+  usePersistence(); // Phase 10: enhanced session persistence
 
   const layout = usePaneStore((state) => state.layout);
   const activePaneId = usePaneStore((state) => state.activePaneId);
