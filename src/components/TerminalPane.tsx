@@ -21,6 +21,7 @@ import { DiffPanel } from './DiffPanel';
 import { BookmarkBar } from './BookmarkBar';
 import { PromptHistoryPanel } from './PromptHistoryPanel';
 import { usePromptHistoryStore } from '../store/promptHistoryStore';
+import { ExitNotifier } from '../lib/exitNotifier';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -49,6 +50,23 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   const getDimensionsRef = useRef<() => { cols: number; rows: number }>(() => ({ cols: 80, rows: 24 }));
   const writeRef = useRef<(data: string) => void>(() => { /* noop until terminal mounts */ });
   const sendMessageRef = useRef<(msg: Parameters<ReturnType<typeof useWebSocket>['sendMessage']>[0]) => void>(() => { /* noop until ws connects */ });
+
+  // Exit notifier (Phase 7) — persists across renders, cleaned up on unmount
+  const exitNotifierRef = useRef<ExitNotifier>(new ExitNotifier(useFeatureFlagStore.getState().exitNotifications));
+
+  // Sync exitNotifier enabled state with feature flag
+  useEffect(() => {
+    const unsub = useFeatureFlagStore.subscribe((state) => {
+      exitNotifierRef.current.enabled = state.exitNotifications;
+    });
+    return () => unsub();
+  }, []);
+
+  // Cleanup notifier on unmount
+  useEffect(() => {
+    const notifier = exitNotifierRef.current;
+    return () => notifier.destroy();
+  }, []);
 
   // Pane store bindings
   const setActivePane = usePaneStore(state => state.setActivePane);
@@ -91,6 +109,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       }
       case 'pty-exit':
         writeRef.current(`\r\n[Process exited with code ${msg.exitCode}]\r\n`);
+        // Desktop notification (Phase 7) — fires only when window not focused and flag ON
+        exitNotifierRef.current.notify({
+          exitCode: msg.exitCode,
+          shell: currentShellRef.current ?? 'unknown',
+          paneId,
+        });
         // Auto-respawn after 1 second (D-07) — reset spawnedRef so the effect can re-trigger
         spawnedRef.current = false;
         setTimeout(() => {
