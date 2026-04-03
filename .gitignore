@@ -39,3 +39,7 @@ Desktop.ini
 .env
 .env.local
 scripts/tauri-dev.log
+scripts/tauri-dev.log.prev
+
+# MCP config (machine-specific absolute paths)
+.mcp.json
