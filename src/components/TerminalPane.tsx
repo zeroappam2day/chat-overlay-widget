@@ -12,6 +12,7 @@ import { WindowPicker } from './WindowPicker';
 import type { ServerMessage, WindowThumbnail } from '../protocol';
 import { formatCaptureBlock } from '../utils/formatCaptureBlock';
 import { useAgentEventStore } from '../store/agentEventStore';
+import { useFlagSync } from '../hooks/useFlagSync';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -129,6 +130,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
   const { state, sendMessage } = useWebSocket({ onMessage: handleServerMessage });
   sendMessageRef.current = sendMessage;
+
+  // Sync feature flags to sidecar (Phase 1: output batching)
+  useFlagSync(sendMessage, state === 'connected');
 
   const {
     sessions,

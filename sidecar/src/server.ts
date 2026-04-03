@@ -17,6 +17,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { ClientMessage, ServerMessage, SessionMeta } from './protocol.js';
 import { PTYSession, SCREENSHOT_DIR } from './ptySession.js';
+import { BatchedPTYSession } from './batchedPtySession.js';
 import { detectShells } from './shellDetect.js';
 import { openDb, markOrphans, listSessions, getSessionChunks } from './historyStore.js';
 import { crFold, stripAnsiSync, initStripAnsi } from './terminalBuffer.js';
@@ -29,6 +30,7 @@ import { selectAdapter } from './adapters/adapter.js';
 import { listWindows } from './windowEnumerator.js';
 import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
+import { getActiveWindowRect } from './spatial_engine.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -67,6 +69,17 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Window enumeration failed' }));
     }
+    return;
+  }
+  if (req.method === 'GET' && req.url === '/active-window-rect') {
+    getActiveWindowRect().then(rect => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(rect));
+    }).catch(err => {
+      console.error('[sidecar] active-window-rect error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    });
     return;
   }
   if (req.method === 'POST' && req.url === '/capture/window') {
@@ -273,7 +286,12 @@ httpServer.listen(0, '127.0.0.1', () => {
   portFilePath = writeDiscoveryFile(addr.port, authToken);
 });
 
-const activeSessions = new Map<WebSocket, PTYSession>();
+const activeSessions = new Map<WebSocket, PTYSession | BatchedPTYSession>();
+
+// Sidecar-side feature flags (synced from frontend via 'set-flags' message)
+const sidecarFlags: Record<string, boolean> = {
+  outputBatching: true,
+};
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
@@ -339,9 +357,9 @@ wss.on('connection', (ws: WebSocket) => {
         const shellExe = shellInfo?.exe ?? msg.shell;
         console.log(`[sidecar] resolved shell exe: ${shellExe}`);
         try {
-          const session = new PTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24);
+          const session = new BatchedPTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24, sidecarFlags.outputBatching ?? true);
           activeSessions.set(ws, session);
-          console.log(`[sidecar] PTY session created successfully`);
+          console.log(`[sidecar] PTY session created successfully (batching=${sidecarFlags.outputBatching ?? true})`);
           console.log(`[sidecar] session started: id=${session.sessionId}`);
           sendMsg(ws, { type: 'session-start', sessionId: session.sessionId });
         } catch (err) {
@@ -433,6 +451,22 @@ wss.on('connection', (ws: WebSocket) => {
         } else {
           console.log(`[sidecar] capture-window-with-metadata failed: ${result.error}`);
           sendMsg(ws, { type: 'error', message: `capture failed: ${result.error}` });
+        }
+        break;
+      }
+      case 'set-flags': {
+        const flags = (msg as unknown as { type: 'set-flags'; flags: Record<string, boolean> }).flags;
+        if (flags && typeof flags === 'object') {
+          Object.assign(sidecarFlags, flags);
+          console.log(`[sidecar] feature flags updated: ${JSON.stringify(sidecarFlags)}`);
+          // Live-update batching on active sessions
+          if ('outputBatching' in flags) {
+            for (const session of activeSessions.values()) {
+              if (session instanceof BatchedPTYSession) {
+                session.batchingEnabled = flags.outputBatching;
+              }
+            }
+          }
         }
         break;
       }

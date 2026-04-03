@@ -1,9 +1,12 @@
 import { useState, useCallback } from 'react';
 import { appWindow } from '@tauri-apps/api/window';
 import { exit } from '@tauri-apps/api/process';
+import { useOverlayStore } from '../store/overlayStore';
+import { FeatureFlagPanel } from './FeatureFlagPanel';
 
 export function AppHeader() {
   const [pinned, setPinned] = useState(false);
+  const toggleOverlay = useOverlayStore((state) => state.toggleOverlay);
 
   const togglePin = useCallback(async () => {
     const next = !pinned;
@@ -36,6 +39,17 @@ export function AppHeader() {
         </div>
       </div>
       <div className="flex items-center gap-1">
+        <FeatureFlagPanel />
+        <button
+          onClick={toggleOverlay}
+          className="px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-300 transition-colors"
+          title="Toggle annotation overlay"
+          aria-label="Toggle overlay"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M12.89 1.45l1.66 1.66c.19.19.19.51 0 .7l-1.07 1.07-2.36-2.36 1.07-1.07c.19-.19.51-.19.7 0zM10.41 3.16l2.36 2.36L5.64 12.65l-2.91.41.41-2.91L10.41 3.16zM3.5 13.5l.5-.5H3v.5h.5zM2 11v3h3l8-8-3-3-8 8z" />
+          </svg>
+        </button>
         <button
           onClick={togglePin}
           className={`px-1.5 py-0.5 rounded transition-colors ${
