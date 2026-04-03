@@ -51,7 +51,7 @@ Begin by reading the plan file now.
 | 4 | Unified Diff Viewer | DONE | 2026-04-03 | PR #9, 1dab019 — diffParser + DiffPanel(portal) + diffHandler(execSync) + request-diff/diff-result protocol |
 | 5 | Terminal Bookmarks | DONE | 2026-04-03 | PR #10, 74f3537 — bookmarkStore + BookmarkBar + TerminalPane wiring |
 | 6 | Prompt History & Notes | DONE | 2026-04-03 | PR #11, 9ab5b49 — promptHistoryStore + PromptHistoryPanel(portal/tabs/search) + TerminalHeader button + TerminalPane recording |
-| 7 | Agent Exit Notifications | PENDING | — | — |
+| 7 | Agent Exit Notifications | DONE | 2026-04-03 | PR #12, e868924 — ExitNotifier + Tauri notification allowlist + TerminalPane wiring |
 | 8 | Keyboard Navigation System | PENDING | — | — |
 | 9 | Inactive Pane Dimming | PENDING | — | — |
 | 10 | Enhanced Session Persistence | PENDING | — | — |
@@ -374,6 +374,7 @@ After squash-merge, update the Progress Tracker row with:
 | 4 | #9 | 1dab019 | squash-merge |
 | 5 | #10 | 74f3537 | squash-merge |
 | 6 | #11 | 9ab5b49 | squash-merge |
+| 7 | #12 | e868924 | squash-merge |
 
 ---
 
@@ -1467,7 +1468,15 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** Only the first TerminalPane instance's PromptHistoryPanel will respond to the toggle event if multiple panes exist. In practice this is fine since the panel is a global portal overlay, not per-pane. Multiple panes recording to the same store is intentional — entries include `paneId` for traceability.
 
 ### Phase 7 Handover
-*(pending)*
+- **PR:** #12, **Squash commit:** e868924
+- **Files created:** `src/lib/exitNotifier.ts`
+- **Files modified (additive only):** `src-tauri/tauri.conf.json`, `src/components/TerminalPane.tsx`
+- **ExitNotifier:** Standalone class using `@tauri-apps/api/notification`. 3s debounce batches rapid exits. Focus suppression via `document.hasFocus()`. Permission requested on first use. Single exit → "Process Exited: shell exited with code N". Multi-exit → "N Processes Exited: shell1 (code N), shell2 (code N)".
+- **Tauri config:** Added `"notification": { "all": true }` to allowlist. Additive only — no existing keys changed.
+- **TerminalPane integration:** `exitNotifierRef` created via `useRef(new ExitNotifier(...))`. Flag sync via `useFeatureFlagStore.subscribe()` — live toggle without re-render. `notify()` called in `pty-exit` case before auto-respawn. `destroy()` on unmount clears timer and pending queue.
+- **Feature flag:** `exitNotifications` — already existed from Phase 0, defaults to `true`. When OFF: `enabled` setter cancels timer and clears pending queue.
+- **No new protocol messages** — uses existing `pty-exit` server message.
+- **Gotcha:** Each TerminalPane creates its own ExitNotifier instance. Multiple panes exiting simultaneously won't batch across instances — each pane sends its own notification independently. In practice this is fine since the 3s debounce is per-pane and rapid multi-pane exit is rare.
 
 ### Phase 8 Handover
 *(pending)*
