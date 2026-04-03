@@ -1,0 +1,27 @@
+/**
+ * Fallback CSS custom properties for --co-* vars.
+ * Values match the 'default' (Graphite) theme in THEME_PRESETS.
+ *
+ * These ensure components using var(--co-*) have valid fallbacks
+ * even before JS loads or when themePresets flag is OFF.
+ */
+
+:root {
+  --co-bg-primary: #1e1e1e;
+  --co-bg-secondary: #252525;
+  --co-bg-tertiary: #2d2d2d;
+  --co-bg-hover: #333333;
+  --co-border: #404040;
+  --co-text-primary: #d4d4d4;
+  --co-text-secondary: #a0a0a0;
+  --co-text-muted: #666666;
+  --co-accent: #007acc;
+  --co-accent-hover: #1a8ad4;
+  --co-success: #4ec9b0;
+  --co-warning: #dcdcaa;
+  --co-error: #f44747;
+  --co-diff-add-bg: #1e3a1e;
+  --co-diff-remove-bg: #3a1e1e;
+  --co-diff-add-text: #86efac;
+  --co-diff-remove-text: #fca5a5;
+}
