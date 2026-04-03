@@ -45,7 +45,7 @@ Begin by reading the plan file now.
 | 0 | Feature Flag Store | DONE | 2026-04-03 | ff7dc13 — featureFlagStore.ts + FeatureFlagPanel.tsx + AppHeader wired |
 | 1 | Terminal Output Batching | DONE | 2026-04-03 | ringBuffer + outputBatcher + batchedPtySession + set-flags protocol + useFlagSync hook |
 | 2 | Auto-Trust Dialog Detection | DONE | 2026-04-03 | bf48136/83b05c4 — autoTrust.ts + batchedPtySession integration + protocol + server wiring |
-| 3 | Plan File Watcher | PENDING | — | — |
+| 3 | Plan File Watcher | DONE | 2026-04-03 | 2ef9018/a6ab2f0 — PlanWatcher(fs.watch+poll+debounce) + plan-update/plan-read protocol + planStore + PlanPanel(portal+regex-md) |
 | 4 | Unified Diff Viewer | PENDING | — | — |
 | 5 | Terminal Bookmarks | PENDING | — | — |
 | 6 | Prompt History & Notes | PENDING | — | — |
