@@ -52,7 +52,7 @@ Begin by reading both plan files now.
 | # | Phase | Status | Date | Handover Notes |
 |---|-------|--------|------|----------------|
 | 12 | Theme Presets | DONE | 2026-04-03 | Created themes.ts (4 presets, 17 CSS vars each), themeStore.ts (Zustand + localStorage), ThemeSelector.tsx (accent dot buttons), theme.css (fallback vars). Added themePresets flag to featureFlagStore. ThemeSelector renders in FeatureFlagPanel when flag ON. Also added themePresets to usePersistence.ts gatherState to fix TS error. |
-| 13 | Ctrl+Wheel Zoom | PENDING | — | — |
+| 13 | Ctrl+Wheel Zoom | DONE | 2026-04-03 | Created wheelZoom.ts (pure zoom math), useZoom.ts (React hook with wheel listener + localStorage + custom events), zoom.css (xterm isolation). Added ctrlWheelZoom flag to featureFlagStore. Integrated into PaneContainer (useZoom call + CSS import), useShortcuts (Ctrl+0/+/-), usePersistence (gatherState), FeatureFlagPanel (label). |
 | 14 | Diff Search & Context Collapse | PENDING | — | — |
 | 15 | Syntax Highlighting in Diffs | PENDING | — | — |
 | 16 | Ask About Code | PENDING | — | — |
@@ -1880,6 +1880,13 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 - **Modified:** `src/store/featureFlagStore.ts` (+themePresets flag), `src/components/FeatureFlagPanel.tsx` (+ThemeSelector render), `src/index.css` (+theme.css import), `src/hooks/usePersistence.ts` (+themePresets in gatherState)
 - **Gotcha:** `usePersistence.ts` has a `gatherState()` function that serializes ALL feature flags — any new flag must be added there too, or TS will error
 - **Commits:** `37bf10e` (theme system files), `184344b` (ThemeSelector + integration)
+
+### Phase 13 (2026-04-03)
+- **Created:** `src/lib/wheelZoom.ts`, `src/hooks/useZoom.ts`, `src/styles/zoom.css`
+- **Modified:** `src/store/featureFlagStore.ts` (+ctrlWheelZoom flag), `src/components/FeatureFlagPanel.tsx` (+label), `src/components/PaneContainer.tsx` (+useZoom call + zoom.css import), `src/hooks/useShortcuts.ts` (+Ctrl+0/+/- shortcuts via custom events), `src/hooks/usePersistence.ts` (+ctrlWheelZoom in gatherState)
+- **Pattern:** useZoom dispatches/listens to custom DOM events (`zoom-reset`, `zoom-in`, `zoom-out`) so useShortcuts doesn't directly call zoom functions — clean separation
+- **Gotcha:** Same as Phase 12 — any new feature flag MUST be added to `usePersistence.ts` gatherState or TS will error
+- **Commits:** `e8105aa` (zoom utility + hook + CSS), `7329f9a` (integration into flags + UI)
 
 ---
 
