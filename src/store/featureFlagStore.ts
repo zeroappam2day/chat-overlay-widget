@@ -15,6 +15,7 @@ export interface FeatureFlags {
   themePresets: boolean;         // Phase 12
   ctrlWheelZoom: boolean;        // Phase 13
   diffSearch: boolean;           // Phase 14
+  diffSyntaxHighlight: boolean;  // Phase 15
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -43,6 +44,7 @@ const defaults: FeatureFlags = {
   themePresets: true,
   ctrlWheelZoom: true,
   diffSearch: true,
+  diffSyntaxHighlight: true,
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -72,6 +74,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         themePresets: next.themePresets,
         ctrlWheelZoom: next.ctrlWheelZoom,
         diffSearch: next.diffSearch,
+        diffSyntaxHighlight: next.diffSyntaxHighlight,
       }));
       return { [key]: value };
     }),

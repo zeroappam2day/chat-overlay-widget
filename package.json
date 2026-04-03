@@ -19,6 +19,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-resizable-panels": "^4.7.6",
+    "shiki": "^4.0.2",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
