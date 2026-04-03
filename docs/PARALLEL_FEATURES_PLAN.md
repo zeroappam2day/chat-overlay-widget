@@ -1269,7 +1269,16 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** `AutoTrustDetector.destroy()` is called in `BatchedPTYSession.destroy()` before batcher — ensure timer cleanup on session teardown
 
 ### Phase 3 Handover
-*(pending)*
+- **Commits:** 2ef9018 (PlanWatcher class + protocol), a6ab2f0 (planStore + PlanPanel + wiring)
+- **Files created:** `sidecar/src/planWatcher.ts`, `src/store/planStore.ts`, `src/components/PlanPanel.tsx`
+- **Files modified (additive only):** `sidecar/src/protocol.ts`, `src/protocol.ts`, `sidecar/src/server.ts`, `src/components/TerminalPane.tsx`, `src/components/FeatureFlagPanel.tsx`
+- **PlanWatcher:** Watches `.claude/plans/` and `docs/plans/` via `fs.watch()` for existing dirs + 3s poll for non-existent ones. 200ms debounce on changes. `readNow()` for one-shot `plan-read` requests. `stop()` cleans all watchers/timers.
+- **Protocol:** `plan-update` (server→client: fileName, content, mtime), `plan-read` (client→server: optional cwd)
+- **Server wiring:** `planWatchers` Map keyed by WebSocket. Created on `spawn`, stopped on `kill`/`ws.close`. `set-flags` toggles live. `plan-read` returns one-shot scan.
+- **PlanPanel:** Portal-based 320px fixed right-side panel. Regex markdown renderer (headings, lists, checkboxes, code blocks, bold, italic). Hidden when flag OFF or no content.
+- **planStore:** Zustand store with content, fileName, visible, setContent, toggleVisible, setVisible.
+- **TerminalPane integration:** `plan-update` case in onmessage switch routes to `usePlanStore.getState().setContent()`
+- **Gotcha:** PlanPanel is rendered via `createPortal(document.body)` from FeatureFlagPanel — avoids touching App.tsx or PaneContainer.tsx (DO NOT MODIFY files)
 
 ### Phase 4 Handover
 *(pending)*
