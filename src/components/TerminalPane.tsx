@@ -14,6 +14,10 @@ import { formatCaptureBlock } from '../utils/formatCaptureBlock';
 import { useAgentEventStore } from '../store/agentEventStore';
 import { useFlagSync } from '../hooks/useFlagSync';
 import { usePlanStore } from '../store/planStore';
+import { useDiffStore } from '../store/diffStore';
+import { useFeatureFlagStore } from '../store/featureFlagStore';
+import { parseUnifiedDiff } from '../lib/diffParser';
+import { DiffPanel } from './DiffPanel';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -125,6 +129,11 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       case 'plan-update':
         usePlanStore.getState().setContent(msg.content, msg.fileName);
         break;
+      case 'diff-result': {
+        const parsed = parseUnifiedDiff(msg.raw);
+        useDiffStore.getState().setDiffs(parsed, msg.raw);
+        break;
+      }
       default:
         // Delegate history-sessions, history-chunk, history-end, session-start
         handleHistoryMessageRef.current(msg);
@@ -280,6 +289,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     });
   }, [sendMessage]);
 
+  const handleRequestDiff = useCallback(() => {
+    const diffFlag = useFeatureFlagStore.getState().diffViewer;
+    if (!diffFlag) return;
+    sendMessage({ type: 'request-diff' });
+  }, [sendMessage]);
+
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     isDraggingRef.current = true;
     dragStartYRef.current = e.clientY;
@@ -333,6 +348,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         onShellChange={handleShellChange}
         onToggleSidebar={() => setSidebarOpen(s => !s)}
         onTogglePicker={handleOpenPicker}
+        onRequestDiff={handleRequestDiff}
         onSplitHorizontal={() => splitPane(paneId, 'h')}
         onSplitVertical={() => splitPane(paneId, 'v')}
         onClose={() => closePane(paneId)}
@@ -391,6 +407,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         pendingInjection={pendingInjection}
         onInjectionConsumed={() => setPendingInjection(null)}
       />
+
+      {/* Diff panel (Phase 4) — portal-rendered, gated by diffViewer flag */}
+      <DiffPanel />
     </div>
   );
 }

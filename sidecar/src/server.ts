@@ -32,6 +32,7 @@ import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from '.
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
 import { getActiveWindowRect } from './spatial_engine.js';
 import { PlanWatcher } from './planWatcher.js';
+import { execGitDiff } from './diffHandler.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -541,6 +542,12 @@ wss.on('connection', (ws: WebSocket) => {
           content: result?.content ?? null,
           mtime: result?.mtime ?? 0,
         });
+        break;
+      }
+      case 'request-diff': {
+        const cwd = (msg as { type: 'request-diff'; cwd?: string }).cwd ?? process.cwd();
+        const { raw, error } = execGitDiff(cwd);
+        sendMsg(ws, { type: 'diff-result', raw, cwd, error });
         break;
       }
     }

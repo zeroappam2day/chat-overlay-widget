@@ -1,3 +1,5 @@
+import { useFeatureFlagStore } from '../store/featureFlagStore';
+
 interface TerminalHeaderProps {
   connectionState: string;
   currentShell: string | null;
@@ -5,6 +7,7 @@ interface TerminalHeaderProps {
   onShellChange: (shell: string) => void;
   onToggleSidebar: () => void;
   onTogglePicker: () => void;
+  onRequestDiff?: () => void;
   onSplitHorizontal: () => void;
   onSplitVertical: () => void;
   onClose: () => void;
@@ -19,6 +22,7 @@ export function TerminalHeader({
   onShellChange,
   onToggleSidebar,
   onTogglePicker,
+  onRequestDiff,
   onSplitHorizontal,
   onSplitVertical,
   onClose,
@@ -67,6 +71,22 @@ export function TerminalHeader({
             <rect x="9" y="9" width="6" height="6" rx="1" />
           </svg>
         </button>
+
+        {/* Git diff button (Phase 4) — hidden when diffViewer flag is OFF */}
+        {useFeatureFlagStore.getState().diffViewer && onRequestDiff && (
+          <button
+            onClick={onRequestDiff}
+            className="text-gray-400 hover:text-gray-200 px-1"
+            title="Show git diff"
+            aria-label="Show git diff"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 3h5v1H2V3zm0 3h5v1H2V6zm7-3h5v1H9V3zm0 3h5v1H9V6zM2 9h12v1H2V9zm0 3h12v1H2v-1z" fillOpacity="0.7" />
+              <rect x="0" y="2" width="1" height="4" fill="#4ec9b0" />
+              <rect x="7" y="2" width="1" height="4" fill="#f14c4c" />
+            </svg>
+          </button>
+        )}
 
         {/* Split horizontal button (per D-10) */}
         <button

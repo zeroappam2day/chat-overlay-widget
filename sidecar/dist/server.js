@@ -33,21 +33,37 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+// MCP subcommand routing — must be FIRST, before any imports (per D-03)
+// This guard runs before native addon initialization (node-pty, better-sqlite3, sharp).
+// mcp-server.ts installs an uncaughtException handler to swallow the throw below,
+// allowing the async stdio transport to stay alive.
+if (process.argv[2] === 'mcp') {
+    require('./mcp-server.js');
+    // Throw to prevent execution from falling through to native addon initialization.
+    // mcp-server.ts handles this specific error via uncaughtException handler.
+    throw new Error('mcp-server should not return');
+}
 const http = __importStar(require("node:http"));
 const crypto = __importStar(require("node:crypto"));
 const ws_1 = require("ws");
 const fs = __importStar(require("node:fs"));
 const path = __importStar(require("node:path"));
 const ptySession_js_1 = require("./ptySession.js");
+const batchedPtySession_js_1 = require("./batchedPtySession.js");
 const shellDetect_js_1 = require("./shellDetect.js");
 const historyStore_js_1 = require("./historyStore.js");
 const terminalBuffer_js_1 = require("./terminalBuffer.js");
 const secretScrubber_js_1 = require("./secretScrubber.js");
 const screenshotSelf_js_1 = require("./screenshotSelf.js");
 const discoveryFile_js_1 = require("./discoveryFile.js");
+const agentEvent_js_1 = require("./agentEvent.js");
+const adapter_js_1 = require("./adapters/adapter.js");
 const windowEnumerator_js_1 = require("./windowEnumerator.js");
 const windowCapture_js_1 = require("./windowCapture.js");
 const windowThumbnailBatch_js_1 = require("./windowThumbnailBatch.js");
+const spatial_engine_js_1 = require("./spatial_engine.js");
+const planWatcher_js_1 = require("./planWatcher.js");
+const diffHandler_js_1 = require("./diffHandler.js");
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
@@ -85,6 +101,17 @@ function handleHttpRequest(req, res) {
         }
         return;
     }
+    if (req.method === 'GET' && req.url === '/active-window-rect') {
+        (0, spatial_engine_js_1.getActiveWindowRect)().then(rect => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(rect));
+        }).catch(err => {
+            console.error('[sidecar] active-window-rect error:', err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: String(err) }));
+        });
+        return;
+    }
     if (req.method === 'POST' && req.url === '/capture/window') {
         let body = '';
         req.on('data', (chunk) => { body += chunk.toString(); });
@@ -120,6 +147,41 @@ function handleHttpRequest(req, res) {
     }
     // Parse URL for new routes that use query parameters
     const url = new URL(req.url, 'http://localhost');
+    if (req.method === 'POST' && url.pathname === '/hook-event') {
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                // Strip UTF-8 BOM if present (PowerShell Invoke-RestMethod may prepend it)
+                const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+                const raw = JSON.parse(cleaned);
+                const hookType = (raw['hook_event_name'] ?? raw['type'] ?? raw['agent_action_name']);
+                if (!hookType || typeof hookType !== 'string') {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'type, hook_event_name, or agent_action_name required' }));
+                    return;
+                }
+                let event;
+                try {
+                    event = (0, adapter_js_1.selectAdapter)(raw).normalize(raw);
+                }
+                catch {
+                    event = (0, agentEvent_js_1.normalizeAgentEvent)(raw);
+                }
+                agentEvent_js_1.agentEventBuffer.push(event);
+                broadcastAgentEvent(event);
+                console.log(`[sidecar] hook-event received: type=${event.type} source=${event.tool}`);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true }));
+            }
+            catch (err) {
+                console.error('[sidecar] hook-event error:', err);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: `Invalid request: ${err instanceof Error ? err.message : String(err)}` }));
+            }
+        });
+        return;
+    }
     if (req.method === 'GET' && url.pathname === '/terminal-state') {
         const session = [...activeSessions.values()][0];
         if (!session) {
@@ -244,9 +306,21 @@ httpServer.listen(0, '127.0.0.1', () => {
     portFilePath = (0, discoveryFile_js_1.writeDiscoveryFile)(addr.port, authToken);
 });
 const activeSessions = new Map();
+const planWatchers = new Map();
+// Sidecar-side feature flags (synced from frontend via 'set-flags' message)
+const sidecarFlags = {
+    outputBatching: true,
+    autoTrust: false,
+    planWatcher: true,
+};
 function sendMsg(ws, msg) {
     if (ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify(msg));
+    }
+}
+function broadcastAgentEvent(event) {
+    for (const client of wss.clients) {
+        sendMsg(client, { type: 'agent-event', event });
     }
 }
 async function sweepScreenshotTempFiles() {
@@ -296,11 +370,27 @@ wss.on('connection', (ws) => {
                 const shellExe = shellInfo?.exe ?? msg.shell;
                 console.log(`[sidecar] resolved shell exe: ${shellExe}`);
                 try {
-                    const session = new ptySession_js_1.PTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24);
+                    const session = new batchedPtySession_js_1.BatchedPTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24, sidecarFlags.outputBatching ?? true);
                     activeSessions.set(ws, session);
-                    console.log(`[sidecar] PTY session created successfully`);
+                    console.log(`[sidecar] PTY session created successfully (batching=${sidecarFlags.outputBatching ?? true})`);
                     console.log(`[sidecar] session started: id=${session.sessionId}`);
                     sendMsg(ws, { type: 'session-start', sessionId: session.sessionId });
+                    // Start PlanWatcher if flag is enabled (Phase 3)
+                    if (sidecarFlags.planWatcher ?? true) {
+                        const planWatcher = new planWatcher_js_1.PlanWatcher({
+                            onPlanUpdate: (plan) => {
+                                sendMsg(ws, {
+                                    type: 'plan-update',
+                                    fileName: plan?.fileName ?? null,
+                                    content: plan?.content ?? null,
+                                    mtime: plan?.mtime ?? 0,
+                                });
+                            },
+                            enabled: true,
+                        });
+                        planWatcher.start(process.cwd());
+                        planWatchers.set(ws, planWatcher);
+                    }
                 }
                 catch (err) {
                     console.error(`[sidecar] PTY spawn failed: ${err}`);
@@ -324,6 +414,8 @@ wss.on('connection', (ws) => {
                     session.destroy();
                     activeSessions.delete(ws);
                 }
+                planWatchers.get(ws)?.stop();
+                planWatchers.delete(ws);
                 break;
             }
             case 'history-list': {
@@ -395,6 +487,80 @@ wss.on('connection', (ws) => {
                 }
                 break;
             }
+            case 'set-flags': {
+                const flags = msg.flags;
+                if (flags && typeof flags === 'object') {
+                    Object.assign(sidecarFlags, flags);
+                    console.log(`[sidecar] feature flags updated: ${JSON.stringify(sidecarFlags)}`);
+                    // Live-update batching on active sessions
+                    if ('outputBatching' in flags) {
+                        for (const session of activeSessions.values()) {
+                            if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
+                                session.batchingEnabled = flags.outputBatching;
+                            }
+                        }
+                    }
+                    // Live-update autoTrust on active sessions
+                    if ('autoTrust' in flags) {
+                        for (const session of activeSessions.values()) {
+                            if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
+                                session.autoTrustEnabled = flags.autoTrust;
+                            }
+                        }
+                    }
+                    // Live-update planWatcher (Phase 3)
+                    if ('planWatcher' in flags) {
+                        if (flags.planWatcher) {
+                            // Turn ON: create watcher for any connected clients that don't have one
+                            for (const client of wss.clients) {
+                                if (!planWatchers.has(client)) {
+                                    const planWatcher = new planWatcher_js_1.PlanWatcher({
+                                        onPlanUpdate: (plan) => {
+                                            sendMsg(client, {
+                                                type: 'plan-update',
+                                                fileName: plan?.fileName ?? null,
+                                                content: plan?.content ?? null,
+                                                mtime: plan?.mtime ?? 0,
+                                            });
+                                        },
+                                        enabled: true,
+                                    });
+                                    planWatcher.start(process.cwd());
+                                    planWatchers.set(client, planWatcher);
+                                }
+                            }
+                        }
+                        else {
+                            // Turn OFF: stop all plan watchers
+                            for (const [client, planWatcher] of planWatchers) {
+                                planWatcher.stop();
+                                planWatchers.delete(client);
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case 'plan-read': {
+                const cwd = msg.cwd ?? process.cwd();
+                const existingWatcher = planWatchers.get(ws);
+                const result = existingWatcher
+                    ? existingWatcher.readNow(cwd)
+                    : new planWatcher_js_1.PlanWatcher({ onPlanUpdate: () => { } }).readNow(cwd);
+                sendMsg(ws, {
+                    type: 'plan-update',
+                    fileName: result?.fileName ?? null,
+                    content: result?.content ?? null,
+                    mtime: result?.mtime ?? 0,
+                });
+                break;
+            }
+            case 'request-diff': {
+                const cwd = msg.cwd ?? process.cwd();
+                const { raw, error } = (0, diffHandler_js_1.execGitDiff)(cwd);
+                sendMsg(ws, { type: 'diff-result', raw, cwd, error });
+                break;
+            }
         }
     });
     ws.on('close', () => {
@@ -404,6 +570,8 @@ wss.on('connection', (ws) => {
             session.destroy();
             activeSessions.delete(ws);
         }
+        planWatchers.get(ws)?.stop();
+        planWatchers.delete(ws);
     });
 });
 // Cleanup all PTY sessions and discovery file on sidecar exit (D-08, CAPI-04)

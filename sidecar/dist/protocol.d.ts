@@ -1,3 +1,4 @@
+import type { AgentEvent } from './agentEvent.js';
 export type ClientMessage = {
     type: 'input';
     data: string;
@@ -27,6 +28,15 @@ export type ClientMessage = {
     hwnd: number;
     pid: number;
     title: string;
+} | {
+    type: 'set-flags';
+    flags: Record<string, boolean>;
+} | {
+    type: 'plan-read';
+    cwd?: string;
+} | {
+    type: 'request-diff';
+    cwd?: string;
 };
 export interface SessionMeta {
     id: number;
@@ -100,4 +110,22 @@ export type ServerMessage = {
         h: number;
     };
     dpiScale: number;
+} | {
+    type: 'agent-event';
+    event: AgentEvent;
+} | {
+    type: 'auto-trust-event';
+    action: 'accepted' | 'blocked';
+    pattern: string;
+    timestamp: string;
+} | {
+    type: 'plan-update';
+    fileName: string | null;
+    content: string | null;
+    mtime: number;
+} | {
+    type: 'diff-result';
+    raw: string;
+    cwd: string;
+    error?: string;
 };

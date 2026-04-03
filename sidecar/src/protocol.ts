@@ -12,7 +12,8 @@ export type ClientMessage =
   | { type: 'list-windows-with-thumbnails' }
   | { type: 'capture-window-with-metadata'; hwnd: number; pid: number; title: string }
   | { type: 'set-flags'; flags: Record<string, boolean> }
-  | { type: 'plan-read'; cwd?: string };
+  | { type: 'plan-read'; cwd?: string }
+  | { type: 'request-diff'; cwd?: string };
 
 export interface SessionMeta {
   id: number;
@@ -53,4 +54,5 @@ export type ServerMessage =
   | { type: 'capture-result-with-metadata'; path: string; title: string; hwnd: number; pid: number; bounds: { x: number; y: number; w: number; h: number }; captureSize: { w: number; h: number }; dpiScale: number }
   | { type: 'agent-event'; event: AgentEvent }
   | { type: 'auto-trust-event'; action: 'accepted' | 'blocked'; pattern: string; timestamp: string }
-  | { type: 'plan-update'; fileName: string | null; content: string | null; mtime: number };
+  | { type: 'plan-update'; fileName: string | null; content: string | null; mtime: number }
+  | { type: 'diff-result'; raw: string; cwd: string; error?: string };
