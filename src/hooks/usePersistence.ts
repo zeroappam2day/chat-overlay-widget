@@ -35,6 +35,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       themePresets: flags.themePresets,
       ctrlWheelZoom: flags.ctrlWheelZoom,
       diffSearch: flags.diffSearch,
+      diffSyntaxHighlight: flags.diffSyntaxHighlight,
     },
     windowState,
   };

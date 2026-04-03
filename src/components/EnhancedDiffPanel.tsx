@@ -5,6 +5,7 @@ import { useFeatureFlagStore } from '../store/featureFlagStore';
 import { DiffSearchBar } from './DiffSearchBar';
 import { CollapsedRow, collapseContextRuns, type CollapsedEntry } from './CollapsibleContext';
 import { renderHighlightedLine, countMatchesInDiff, highlightSearchMatches } from '../lib/diffSearch';
+import { useSyntaxHighlight } from '../hooks/useSyntaxHighlight';
 import type { FileDiff, Hunk, DiffLine } from '../lib/diffParser';
 import { DiffPanel } from './DiffPanel';
 
@@ -31,9 +32,10 @@ interface EnhancedDiffLineRowProps {
   searchQuery: string;
   currentGlobalIndex: number;
   globalOffset: number;
+  highlightedHtml?: string;
 }
 
-function EnhancedDiffLineRow({ line, searchQuery, currentGlobalIndex, globalOffset }: EnhancedDiffLineRowProps) {
+function EnhancedDiffLineRow({ line, searchQuery, currentGlobalIndex, globalOffset, highlightedHtml }: EnhancedDiffLineRowProps) {
   const bgClass =
     line.type === 'add'
       ? 'bg-[#1e3a1e]'
@@ -48,16 +50,40 @@ function EnhancedDiffLineRow({ line, searchQuery, currentGlobalIndex, globalOffs
         : 'text-gray-400';
   const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' ';
 
-  const content = searchQuery
-    ? renderHighlightedLine(line.content, searchQuery, [currentGlobalIndex], globalOffset)
-    : line.content;
+  // Search highlighting takes precedence over syntax highlighting
+  if (searchQuery) {
+    const content = renderHighlightedLine(line.content, searchQuery, [currentGlobalIndex], globalOffset);
+    return (
+      <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`}>
+        <LineNumber num={line.oldLine} />
+        <LineNumber num={line.newLine} />
+        <span className={`${textClass} whitespace-pre overflow-x-auto flex-1 px-1`}>
+          {prefix}{content}
+        </span>
+      </div>
+    );
+  }
+
+  // Syntax highlighting: render HTML from Shiki
+  if (highlightedHtml) {
+    return (
+      <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`}>
+        <LineNumber num={line.oldLine} />
+        <LineNumber num={line.newLine} />
+        <span className="whitespace-pre overflow-x-auto flex-1 px-1">
+          <span className="select-none">{prefix}</span>
+          <span dangerouslySetInnerHTML={{ __html: highlightedHtml }} />
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`}>
       <LineNumber num={line.oldLine} />
       <LineNumber num={line.newLine} />
       <span className={`${textClass} whitespace-pre overflow-x-auto flex-1 px-1`}>
-        {prefix}{content}
+        {prefix}{line.content}
       </span>
     </div>
   );
@@ -70,9 +96,10 @@ interface EnhancedHunkViewProps {
   searchQuery: string;
   currentGlobalIndex: number;
   globalMatchOffset: number;
+  highlightMap: Map<string, string> | null;
 }
 
-function EnhancedHunkView({ hunk, searchQuery, currentGlobalIndex, globalMatchOffset }: EnhancedHunkViewProps) {
+function EnhancedHunkView({ hunk, searchQuery, currentGlobalIndex, globalMatchOffset, highlightMap }: EnhancedHunkViewProps) {
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
   const displayItems = useMemo(() => collapseContextRuns(hunk.lines), [hunk.lines]);
@@ -110,6 +137,7 @@ function EnhancedHunkView({ hunk, searchQuery, currentGlobalIndex, globalMatchOf
               searchQuery={searchQuery}
               currentGlobalIndex={currentGlobalIndex}
               globalOffset={localMatchOffset}
+              highlightedHtml={highlightMap?.get(line.content)}
             />,
           );
           localMatchOffset += matchCount;
@@ -141,6 +169,7 @@ function EnhancedHunkView({ hunk, searchQuery, currentGlobalIndex, globalMatchOf
           searchQuery={searchQuery}
           currentGlobalIndex={currentGlobalIndex}
           globalOffset={localMatchOffset}
+          highlightedHtml={highlightMap?.get(line.content)}
         />,
       );
       localMatchOffset += matchCount;
@@ -174,6 +203,7 @@ function EnhancedFileDiffView({
   globalMatchOffset,
 }: EnhancedFileDiffViewProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const highlightMap = useSyntaxHighlight(file);
   const addCount = file.hunks.reduce((n, h) => n + h.lines.filter((l) => l.type === 'add').length, 0);
   const removeCount = file.hunks.reduce((n, h) => n + h.lines.filter((l) => l.type === 'remove').length, 0);
 
@@ -223,6 +253,7 @@ function EnhancedFileDiffView({
                   searchQuery={searchQuery}
                   currentGlobalIndex={currentGlobalIndex}
                   globalMatchOffset={hunkOffset}
+                  highlightMap={highlightMap}
                 />
               );
               // Advance offset by match count in this hunk
