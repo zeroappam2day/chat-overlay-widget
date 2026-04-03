@@ -16,6 +16,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   enhancedPersistence: 'Enhanced Persistence',
   annotationOverlay: 'Annotation Overlay',
   themePresets: 'Theme Presets',
+  ctrlWheelZoom: 'Ctrl+Wheel Zoom',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];

@@ -129,6 +129,48 @@ export function useShortcuts(): void {
       }),
     );
 
+    // Ctrl+0: reset zoom to 100% (Phase 13)
+    unregisters.push(
+      registerShortcut({
+        key: '0',
+        ctrl: true,
+        global: true,
+        handler: () => {
+          if (useFeatureFlagStore.getState().ctrlWheelZoom) {
+            document.dispatchEvent(new Event('zoom-reset'));
+          }
+        },
+      }),
+    );
+
+    // Ctrl+=: zoom in (Phase 13)
+    unregisters.push(
+      registerShortcut({
+        key: '=',
+        ctrl: true,
+        global: true,
+        handler: () => {
+          if (useFeatureFlagStore.getState().ctrlWheelZoom) {
+            document.dispatchEvent(new Event('zoom-in'));
+          }
+        },
+      }),
+    );
+
+    // Ctrl+-: zoom out (Phase 13)
+    unregisters.push(
+      registerShortcut({
+        key: '-',
+        ctrl: true,
+        global: true,
+        handler: () => {
+          if (useFeatureFlagStore.getState().ctrlWheelZoom) {
+            document.dispatchEvent(new Event('zoom-out'));
+          }
+        },
+      }),
+    );
+
     return () => {
       unregisters.forEach((fn) => fn());
       cleanupListener();

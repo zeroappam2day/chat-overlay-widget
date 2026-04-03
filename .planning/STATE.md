@@ -69,6 +69,7 @@ None.
 | 260403-g0f | Implement Phase 0 Feature Flag Store foundation | 2026-04-03 | ff7dc13 | [260403-g0f-implement-phase-0-feature-flag-store-fou](./quick/260403-g0f-implement-phase-0-feature-flag-store-fou/) |
 | 260403-gkx | Implement Phase 2 Auto-Trust Dialog Detection | 2026-04-03 | 83b05c4 | [260403-gkx-implement-phase-2-auto-trust-dialog-dete](./quick/260403-gkx-implement-phase-2-auto-trust-dialog-dete/) |
 | 260403-gvd | Implement Phase 3 Plan File Watcher | 2026-04-03 | a6ab2f0 | [260403-gvd-phase-3-plan-file-watcher](./quick/260403-gvd-phase-3-plan-file-watcher/) |
+| 260403-mgs | Implement Phase 13 Ctrl+Wheel Zoom | 2026-04-03 | 7329f9a | [260403-mgs-implement-phase-13-ctrl-wheel-zoom-wheel](./quick/260403-mgs-implement-phase-13-ctrl-wheel-zoom-wheel/) |
 
 ### Untested Assumptions (validate via spike or during early phases)
 

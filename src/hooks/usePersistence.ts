@@ -33,6 +33,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       enhancedPersistence: flags.enhancedPersistence,
       annotationOverlay: flags.annotationOverlay,
       themePresets: flags.themePresets,
+      ctrlWheelZoom: flags.ctrlWheelZoom,
     },
     windowState,
   };
