@@ -54,7 +54,7 @@ Begin by reading both plan files now.
 | 12 | Theme Presets | DONE | 2026-04-03 | Created themes.ts (4 presets, 17 CSS vars each), themeStore.ts (Zustand + localStorage), ThemeSelector.tsx (accent dot buttons), theme.css (fallback vars). Added themePresets flag to featureFlagStore. ThemeSelector renders in FeatureFlagPanel when flag ON. Also added themePresets to usePersistence.ts gatherState to fix TS error. |
 | 13 | Ctrl+Wheel Zoom | DONE | 2026-04-03 | Created wheelZoom.ts (pure zoom math), useZoom.ts (React hook with wheel listener + localStorage + custom events), zoom.css (xterm isolation). Added ctrlWheelZoom flag to featureFlagStore. Integrated into PaneContainer (useZoom call + CSS import), useShortcuts (Ctrl+0/+/-), usePersistence (gatherState), FeatureFlagPanel (label). |
 | 14 | Diff Search & Context Collapse | DONE | 2026-04-03 | Created diffSearch.ts (search utils + match positions), DiffSearchBar.tsx (32px bar with prev/next/close, Enter/Shift+Enter/Escape), CollapsibleContext.tsx (collapseContextRuns + CollapsedRow), EnhancedDiffPanel.tsx (portal panel with Ctrl+F toggle, search highlighting, context collapse). Added diffSearch flag to featureFlagStore. Added searchQuery/currentMatchIndex to diffStore. Swapped DiffPanel import in TerminalPane to EnhancedDiffPanel. When diffSearch OFF, falls through to original DiffPanel. |
-| 15 | Syntax Highlighting in Diffs | PENDING | — | — |
+| 15 | Syntax Highlighting in Diffs | DONE | 2026-04-03 | Created syntaxHighlighter.ts (lazy Shiki singleton, detectLanguage 45+ extensions, highlightLines with fallback), useSyntaxHighlight.ts (React hook with content→HTML map, per-file caching). Added diffSyntaxHighlight flag to featureFlagStore. Modified EnhancedDiffPanel: EnhancedDiffLineRow accepts highlightedHtml prop, search highlighting takes precedence, useSyntaxHighlight called per file in EnhancedFileDiffView. Shiki code-split by Vite into lazy chunks. |
 | 16 | Ask About Code | PENDING | — | — |
 | 17 | Completion Stats | PENDING | — | — |
 | 18 | Focus Trap for Dialogs | PENDING | — | — |
@@ -1895,6 +1895,14 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 - **Gotcha:** Same gatherState rule — any new flag MUST be added to usePersistence.ts. Context collapse uses MIN_COLLAPSE_LINES=5, keeping first 2 + last 2 context lines visible.
 - **Commits:** `61f256c` (search utils + DiffSearchBar + CollapsibleContext), `887fbae` (EnhancedDiffPanel + flag wiring)
 
+### Phase 15 (2026-04-03)
+- **Created:** `src/lib/syntaxHighlighter.ts`, `src/hooks/useSyntaxHighlight.ts`
+- **Modified:** `src/store/featureFlagStore.ts` (+diffSyntaxHighlight flag), `src/components/FeatureFlagPanel.tsx` (+label), `src/hooks/usePersistence.ts` (+diffSyntaxHighlight in gatherState), `src/components/EnhancedDiffPanel.tsx` (+syntax highlight integration)
+- **npm:** Added `shiki` dependency
+- **Pattern:** useSyntaxHighlight returns a `Map<string, string>` (content→HTML). EnhancedDiffLineRow checks: searchQuery first (wins), then highlightedHtml, then plain text fallback. Three-tier rendering priority.
+- **Gotcha:** Same gatherState rule — any new flag MUST be added to usePersistence.ts. Shiki WASM chunk is ~600KB but only loads when diff panel opens AND flag is ON.
+- **Commits:** squash-merged via PR #20
+
 ---
 
 ## Established PR History (continued from Volume 1)
@@ -1904,7 +1912,7 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 | 12 | — | — | — |
 | 13 | — | — | — |
 | 14 | — | — | — |
-| 15 | — | — | — |
+| 15 | #20 | 3327e1e | squash-merge |
 | 16 | — | — | — |
 | 17 | — | — | — |
 | 18 | — | — | — |
