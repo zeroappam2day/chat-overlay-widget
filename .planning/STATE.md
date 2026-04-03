@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 Phase: 28 (adapter-layer-sidebar) — EXECUTING
 Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-03 - Completed quick task 260403-gvd: Implement Phase 3 Plan File Watcher
+Last activity: 2026-04-03 - Completed quick task 260403-msm: Phase 14 Diff Search & Context Collapse
 
 Progress: [░░░░░░░░░░] 0% (v1.6 milestone — 0/4 phases complete)
 
@@ -70,6 +70,7 @@ None.
 | 260403-gkx | Implement Phase 2 Auto-Trust Dialog Detection | 2026-04-03 | 83b05c4 | [260403-gkx-implement-phase-2-auto-trust-dialog-dete](./quick/260403-gkx-implement-phase-2-auto-trust-dialog-dete/) |
 | 260403-gvd | Implement Phase 3 Plan File Watcher | 2026-04-03 | a6ab2f0 | [260403-gvd-phase-3-plan-file-watcher](./quick/260403-gvd-phase-3-plan-file-watcher/) |
 | 260403-mgs | Implement Phase 13 Ctrl+Wheel Zoom | 2026-04-03 | 7329f9a | [260403-mgs-implement-phase-13-ctrl-wheel-zoom-wheel](./quick/260403-mgs-implement-phase-13-ctrl-wheel-zoom-wheel/) |
+| 260403-msm | Phase 14: Diff Search & Context Collapse | 2026-04-03 | 887fbae | [260403-msm-phase-14-diff-search-context-collapse](./quick/260403-msm-phase-14-diff-search-context-collapse/) |
 
 ### Untested Assumptions (validate via spike or during early phases)
 

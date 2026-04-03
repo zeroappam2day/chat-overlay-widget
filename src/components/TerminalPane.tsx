@@ -17,7 +17,7 @@ import { usePlanStore } from '../store/planStore';
 import { useDiffStore } from '../store/diffStore';
 import { useFeatureFlagStore } from '../store/featureFlagStore';
 import { parseUnifiedDiff } from '../lib/diffParser';
-import { DiffPanel } from './DiffPanel';
+import { EnhancedDiffPanel as DiffPanel } from './EnhancedDiffPanel';
 import { BookmarkBar } from './BookmarkBar';
 import { PromptHistoryPanel } from './PromptHistoryPanel';
 import { usePromptHistoryStore } from '../store/promptHistoryStore';
