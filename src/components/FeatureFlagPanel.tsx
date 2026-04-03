@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useFeatureFlagStore, type FeatureFlags } from '../store/featureFlagStore';
 import { PlanPanel } from './PlanPanel';
+import { ThemeSelector } from './ThemeSelector';
 
 const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   outputBatching: 'Output Batching',
@@ -14,6 +15,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   inactivePaneDimming: 'Inactive Pane Dimming',
   enhancedPersistence: 'Enhanced Persistence',
   annotationOverlay: 'Annotation Overlay',
+  themePresets: 'Theme Presets',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
@@ -79,6 +81,7 @@ export function FeatureFlagPanel() {
               </div>
             ))}
           </div>
+          <ThemeSelector />
         </div>
       )}
     </div>

@@ -32,6 +32,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       inactivePaneDimming: flags.inactivePaneDimming,
       enhancedPersistence: flags.enhancedPersistence,
       annotationOverlay: flags.annotationOverlay,
+      themePresets: flags.themePresets,
     },
     windowState,
   };
