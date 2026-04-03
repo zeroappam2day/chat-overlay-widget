@@ -53,7 +53,7 @@ Begin by reading the plan file now.
 | 6 | Prompt History & Notes | DONE | 2026-04-03 | PR #11, 9ab5b49 — promptHistoryStore + PromptHistoryPanel(portal/tabs/search) + TerminalHeader button + TerminalPane recording |
 | 7 | Agent Exit Notifications | DONE | 2026-04-03 | PR #12, e868924 — ExitNotifier + Tauri notification allowlist + TerminalPane wiring |
 | 8 | Keyboard Navigation System | DONE | 2026-04-03 | PR #13, 528bd31 — shortcuts.ts + useShortcuts + PaneContainer/TerminalPane wiring |
-| 9 | Inactive Pane Dimming | DONE | 2026-04-03 | usePaneDimming hook + paneDimming.css + PaneContainer wiring |
+| 9 | Inactive Pane Dimming | DONE | 2026-04-03 | PR #14, 0addabc — usePaneDimming hook + paneDimming.css + PaneContainer wiring |
 | 10 | Enhanced Session Persistence | PENDING | — | — |
 
 ---
@@ -376,6 +376,7 @@ After squash-merge, update the Progress Tracker row with:
 | 6 | #11 | 9ab5b49 | squash-merge |
 | 7 | #12 | e868924 | squash-merge |
 | 8 | #13 | 528bd31 | squash-merge |
+| 9 | #14 | 0addabc | squash-merge |
 
 ---
 
