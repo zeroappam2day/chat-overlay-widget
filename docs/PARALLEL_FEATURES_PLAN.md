@@ -45,7 +45,7 @@ Begin by reading the plan file now.
 | 0 | Feature Flag Store | DONE | 2026-04-03 | ff7dc13 — featureFlagStore.ts + FeatureFlagPanel.tsx + AppHeader wired |
 | 1 | Terminal Output Batching | DONE | 2026-04-03 | ringBuffer + outputBatcher + batchedPtySession + set-flags protocol + useFlagSync hook |
 | 2 | Auto-Trust Dialog Detection | DONE | 2026-04-03 | bf48136/83b05c4 — autoTrust.ts + batchedPtySession integration + protocol + server wiring |
-| 3 | Plan File Watcher | PENDING | — | — |
+| 3 | Plan File Watcher | DONE | 2026-04-03 | 2ef9018/a6ab2f0 — PlanWatcher(fs.watch+poll+debounce) + plan-update/plan-read protocol + planStore + PlanPanel(portal+regex-md) |
 | 4 | Unified Diff Viewer | PENDING | — | — |
 | 5 | Terminal Bookmarks | PENDING | — | — |
 | 6 | Prompt History & Notes | PENDING | — | — |
@@ -1269,7 +1269,16 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** `AutoTrustDetector.destroy()` is called in `BatchedPTYSession.destroy()` before batcher — ensure timer cleanup on session teardown
 
 ### Phase 3 Handover
-*(pending)*
+- **Commits:** 2ef9018 (PlanWatcher class + protocol), a6ab2f0 (planStore + PlanPanel + wiring)
+- **Files created:** `sidecar/src/planWatcher.ts`, `src/store/planStore.ts`, `src/components/PlanPanel.tsx`
+- **Files modified (additive only):** `sidecar/src/protocol.ts`, `src/protocol.ts`, `sidecar/src/server.ts`, `src/components/TerminalPane.tsx`, `src/components/FeatureFlagPanel.tsx`
+- **PlanWatcher:** Watches `.claude/plans/` and `docs/plans/` via `fs.watch()` for existing dirs + 3s poll for non-existent ones. 200ms debounce on changes. `readNow()` for one-shot `plan-read` requests. `stop()` cleans all watchers/timers.
+- **Protocol:** `plan-update` (server→client: fileName, content, mtime), `plan-read` (client→server: optional cwd)
+- **Server wiring:** `planWatchers` Map keyed by WebSocket. Created on `spawn`, stopped on `kill`/`ws.close`. `set-flags` toggles live. `plan-read` returns one-shot scan.
+- **PlanPanel:** Portal-based 320px fixed right-side panel. Regex markdown renderer (headings, lists, checkboxes, code blocks, bold, italic). Hidden when flag OFF or no content.
+- **planStore:** Zustand store with content, fileName, visible, setContent, toggleVisible, setVisible.
+- **TerminalPane integration:** `plan-update` case in onmessage switch routes to `usePlanStore.getState().setContent()`
+- **Gotcha:** PlanPanel is rendered via `createPortal(document.body)` from FeatureFlagPanel — avoids touching App.tsx or PaneContainer.tsx (DO NOT MODIFY files)
 
 ### Phase 4 Handover
 *(pending)*

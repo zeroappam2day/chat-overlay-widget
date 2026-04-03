@@ -31,6 +31,7 @@ import { listWindows } from './windowEnumerator.js';
 import { captureWindow, captureWindowWithMetadata, captureWindowByHwnd } from './windowCapture.js';
 import { listWindowsWithThumbnails } from './windowThumbnailBatch.js';
 import { getActiveWindowRect } from './spatial_engine.js';
+import { PlanWatcher } from './planWatcher.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -287,11 +288,13 @@ httpServer.listen(0, '127.0.0.1', () => {
 });
 
 const activeSessions = new Map<WebSocket, PTYSession | BatchedPTYSession>();
+const planWatchers = new Map<WebSocket, PlanWatcher>();
 
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
 const sidecarFlags: Record<string, boolean> = {
   outputBatching: true,
   autoTrust: false,
+  planWatcher: true,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -363,6 +366,22 @@ wss.on('connection', (ws: WebSocket) => {
           console.log(`[sidecar] PTY session created successfully (batching=${sidecarFlags.outputBatching ?? true})`);
           console.log(`[sidecar] session started: id=${session.sessionId}`);
           sendMsg(ws, { type: 'session-start', sessionId: session.sessionId });
+          // Start PlanWatcher if flag is enabled (Phase 3)
+          if (sidecarFlags.planWatcher ?? true) {
+            const planWatcher = new PlanWatcher({
+              onPlanUpdate: (plan) => {
+                sendMsg(ws, {
+                  type: 'plan-update',
+                  fileName: plan?.fileName ?? null,
+                  content: plan?.content ?? null,
+                  mtime: plan?.mtime ?? 0,
+                });
+              },
+              enabled: true,
+            });
+            planWatcher.start(process.cwd());
+            planWatchers.set(ws, planWatcher);
+          }
         } catch (err) {
           console.error(`[sidecar] PTY spawn failed: ${err}`);
           sendMsg(ws, { type: 'error', message: `Failed to spawn shell: ${err}` });
@@ -385,6 +404,8 @@ wss.on('connection', (ws: WebSocket) => {
           session.destroy();
           activeSessions.delete(ws);
         }
+        planWatchers.get(ws)?.stop();
+        planWatchers.delete(ws);
         break;
       }
       case 'history-list': {
@@ -476,7 +497,50 @@ wss.on('connection', (ws: WebSocket) => {
               }
             }
           }
+          // Live-update planWatcher (Phase 3)
+          if ('planWatcher' in flags) {
+            if (flags.planWatcher) {
+              // Turn ON: create watcher for any connected clients that don't have one
+              for (const client of wss.clients) {
+                if (!planWatchers.has(client)) {
+                  const planWatcher = new PlanWatcher({
+                    onPlanUpdate: (plan) => {
+                      sendMsg(client, {
+                        type: 'plan-update',
+                        fileName: plan?.fileName ?? null,
+                        content: plan?.content ?? null,
+                        mtime: plan?.mtime ?? 0,
+                      });
+                    },
+                    enabled: true,
+                  });
+                  planWatcher.start(process.cwd());
+                  planWatchers.set(client, planWatcher);
+                }
+              }
+            } else {
+              // Turn OFF: stop all plan watchers
+              for (const [client, planWatcher] of planWatchers) {
+                planWatcher.stop();
+                planWatchers.delete(client);
+              }
+            }
+          }
         }
+        break;
+      }
+      case 'plan-read': {
+        const cwd = (msg as { type: 'plan-read'; cwd?: string }).cwd ?? process.cwd();
+        const existingWatcher = planWatchers.get(ws);
+        const result = existingWatcher
+          ? existingWatcher.readNow(cwd)
+          : new PlanWatcher({ onPlanUpdate: () => { /* one-shot */ } }).readNow(cwd);
+        sendMsg(ws, {
+          type: 'plan-update',
+          fileName: result?.fileName ?? null,
+          content: result?.content ?? null,
+          mtime: result?.mtime ?? 0,
+        });
         break;
       }
     }
@@ -489,6 +553,8 @@ wss.on('connection', (ws: WebSocket) => {
       session.destroy();
       activeSessions.delete(ws);
     }
+    planWatchers.get(ws)?.stop();
+    planWatchers.delete(ws);
   });
 });
 

@@ -11,7 +11,8 @@ export type ClientMessage =
   | { type: 'save-image'; base64: string }
   | { type: 'list-windows-with-thumbnails' }
   | { type: 'capture-window-with-metadata'; hwnd: number; pid: number; title: string }
-  | { type: 'set-flags'; flags: Record<string, boolean> };
+  | { type: 'set-flags'; flags: Record<string, boolean> }
+  | { type: 'plan-read'; cwd?: string };
 
 export interface SessionMeta {
   id: number;
@@ -51,4 +52,5 @@ export type ServerMessage =
   | { type: 'window-thumbnails'; windows: WindowThumbnail[] }
   | { type: 'capture-result-with-metadata'; path: string; title: string; hwnd: number; pid: number; bounds: { x: number; y: number; w: number; h: number }; captureSize: { w: number; h: number }; dpiScale: number }
   | { type: 'agent-event'; event: AgentEvent }
-  | { type: 'auto-trust-event'; action: 'accepted' | 'blocked'; pattern: string; timestamp: string };
+  | { type: 'auto-trust-event'; action: 'accepted' | 'blocked'; pattern: string; timestamp: string }
+  | { type: 'plan-update'; fileName: string | null; content: string | null; mtime: number };

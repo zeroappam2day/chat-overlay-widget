@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useFeatureFlagStore, type FeatureFlags } from '../store/featureFlagStore';
+import { PlanPanel } from './PlanPanel';
 
 const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   outputBatching: 'Output Batching',
@@ -34,6 +35,7 @@ export function FeatureFlagPanel() {
 
   return (
     <div ref={ref} className="relative">
+      <PlanPanel />
       <button
         onClick={() => setOpen((v) => !v)}
         className="px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-300 transition-colors"
