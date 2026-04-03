@@ -48,7 +48,7 @@ Begin by reading the plan file now.
 | 2 | Auto-Trust Dialog Detection | DONE | 2026-04-03 | bf48136/83b05c4 — autoTrust.ts + batchedPtySession integration + protocol + server wiring |
 | 3 | Plan File Watcher | DONE | 2026-04-03 | 2ef9018/a6ab2f0 — PlanWatcher(fs.watch+poll+debounce) + plan-update/plan-read protocol + planStore + PlanPanel(portal+regex-md) |
 | 4 | Unified Diff Viewer | DONE | 2026-04-03 | PR #9, 1dab019 — diffParser + DiffPanel(portal) + diffHandler(execSync) + request-diff/diff-result protocol |
-| 5 | Terminal Bookmarks | DONE | 2026-04-03 | bookmarkStore + BookmarkBar + TerminalPane wiring |
+| 5 | Terminal Bookmarks | DONE | 2026-04-03 | PR #10, 74f3537 — bookmarkStore + BookmarkBar + TerminalPane wiring |
 | 6 | Prompt History & Notes | PENDING | — | — |
 | 7 | Agent Exit Notifications | PENDING | — | — |
 | 8 | Keyboard Navigation System | PENDING | — | — |
@@ -340,6 +340,7 @@ After squash-merge, update the Progress Tracker row with:
 | 2 | #7 | 83b05c4 | squash-merge |
 | 3 | #8 | 161c5be | squash-merge |
 | 4 | #9 | 1dab019 | squash-merge |
+| 5 | #10 | 74f3537 | squash-merge |
 
 ---
 
