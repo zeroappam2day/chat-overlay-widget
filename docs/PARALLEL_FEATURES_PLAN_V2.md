@@ -53,7 +53,7 @@ Begin by reading both plan files now.
 |---|-------|--------|------|----------------|
 | 12 | Theme Presets | DONE | 2026-04-03 | Created themes.ts (4 presets, 17 CSS vars each), themeStore.ts (Zustand + localStorage), ThemeSelector.tsx (accent dot buttons), theme.css (fallback vars). Added themePresets flag to featureFlagStore. ThemeSelector renders in FeatureFlagPanel when flag ON. Also added themePresets to usePersistence.ts gatherState to fix TS error. |
 | 13 | Ctrl+Wheel Zoom | DONE | 2026-04-03 | Created wheelZoom.ts (pure zoom math), useZoom.ts (React hook with wheel listener + localStorage + custom events), zoom.css (xterm isolation). Added ctrlWheelZoom flag to featureFlagStore. Integrated into PaneContainer (useZoom call + CSS import), useShortcuts (Ctrl+0/+/-), usePersistence (gatherState), FeatureFlagPanel (label). |
-| 14 | Diff Search & Context Collapse | PENDING | — | — |
+| 14 | Diff Search & Context Collapse | DONE | 2026-04-03 | Created diffSearch.ts (search utils + match positions), DiffSearchBar.tsx (32px bar with prev/next/close, Enter/Shift+Enter/Escape), CollapsibleContext.tsx (collapseContextRuns + CollapsedRow), EnhancedDiffPanel.tsx (portal panel with Ctrl+F toggle, search highlighting, context collapse). Added diffSearch flag to featureFlagStore. Added searchQuery/currentMatchIndex to diffStore. Swapped DiffPanel import in TerminalPane to EnhancedDiffPanel. When diffSearch OFF, falls through to original DiffPanel. |
 | 15 | Syntax Highlighting in Diffs | PENDING | — | — |
 | 16 | Ask About Code | PENDING | — | — |
 | 17 | Completion Stats | PENDING | — | — |
@@ -1887,6 +1887,13 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 - **Pattern:** useZoom dispatches/listens to custom DOM events (`zoom-reset`, `zoom-in`, `zoom-out`) so useShortcuts doesn't directly call zoom functions — clean separation
 - **Gotcha:** Same as Phase 12 — any new feature flag MUST be added to `usePersistence.ts` gatherState or TS will error
 - **Commits:** `e8105aa` (zoom utility + hook + CSS), `7329f9a` (integration into flags + UI)
+
+### Phase 14 (2026-04-03)
+- **Created:** `src/lib/diffSearch.ts`, `src/components/DiffSearchBar.tsx`, `src/components/CollapsibleContext.tsx`, `src/components/EnhancedDiffPanel.tsx`
+- **Modified:** `src/store/featureFlagStore.ts` (+diffSearch flag), `src/components/FeatureFlagPanel.tsx` (+label), `src/store/diffStore.ts` (+searchQuery/currentMatchIndex), `src/hooks/usePersistence.ts` (+diffSearch in gatherState), `src/components/TerminalPane.tsx` (swapped DiffPanel import to EnhancedDiffPanel)
+- **Pattern:** EnhancedDiffPanel checks `diffSearch` flag — when ON renders enhanced panel with search + collapse, when OFF renders original `<DiffPanel />` unchanged
+- **Gotcha:** Same gatherState rule — any new flag MUST be added to usePersistence.ts. Context collapse uses MIN_COLLAPSE_LINES=5, keeping first 2 + last 2 context lines visible.
+- **Commits:** `61f256c` (search utils + DiffSearchBar + CollapsibleContext), `887fbae` (EnhancedDiffPanel + flag wiring)
 
 ---
 
