@@ -49,7 +49,7 @@ Begin by reading the plan file now.
 | 3 | Plan File Watcher | DONE | 2026-04-03 | 2ef9018/a6ab2f0 — PlanWatcher(fs.watch+poll+debounce) + plan-update/plan-read protocol + planStore + PlanPanel(portal+regex-md) |
 | 4 | Unified Diff Viewer | DONE | 2026-04-03 | PR #9, 1dab019 — diffParser + DiffPanel(portal) + diffHandler(execSync) + request-diff/diff-result protocol |
 | 5 | Terminal Bookmarks | DONE | 2026-04-03 | PR #10, 74f3537 — bookmarkStore + BookmarkBar + TerminalPane wiring |
-| 6 | Prompt History & Notes | PENDING | — | — |
+| 6 | Prompt History & Notes | DONE | 2026-04-03 | PR #11, 9ab5b49 — promptHistoryStore + PromptHistoryPanel(portal/tabs/search) + TerminalHeader button + TerminalPane recording |
 | 7 | Agent Exit Notifications | PENDING | — | — |
 | 8 | Keyboard Navigation System | PENDING | — | — |
 | 9 | Inactive Pane Dimming | PENDING | — | — |
@@ -341,6 +341,7 @@ After squash-merge, update the Progress Tracker row with:
 | 3 | #8 | 161c5be | squash-merge |
 | 4 | #9 | 1dab019 | squash-merge |
 | 5 | #10 | 74f3537 | squash-merge |
+| 6 | #11 | 9ab5b49 | squash-merge |
 
 ---
 
@@ -1416,7 +1417,16 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** `currentInput` reflects the last *sent* command, not live textarea value — ChatInputBar is a DO NOT MODIFY file so we can't add an onChange callback. This means the `+` button bookmarks what was last sent, not what's currently typed. Acceptable UX tradeoff.
 
 ### Phase 6 Handover
-*(pending)*
+- **PR:** #11, **Squash commit:** 9ab5b49
+- **Files created:** `src/store/promptHistoryStore.ts`, `src/components/PromptHistoryPanel.tsx`
+- **Files modified (additive only):** `src/components/TerminalPane.tsx`, `src/components/TerminalHeader.tsx`
+- **promptHistoryStore:** Zustand store with localStorage persistence. Two keys: `chat-overlay-prompt-history` (entries array) and `chat-overlay-prompt-notes` (free-text string). 200-entry cap with oldest eviction. Consecutive dedup (skip if identical to most recent). Operations: addEntry, clearEntries, setNotes, getRecent.
+- **PromptHistoryPanel:** Portal-based 340px fixed right-side panel (z-index 1002). Two tabs: History (searchable list with click-to-send, copy-to-clipboard, timestamps) and Notes (persisted textarea). Toggled via `toggle-prompt-history` custom DOM event. Closes on outside click or Escape.
+- **TerminalHeader:** Added `onToggleHistory` optional prop + clock icon SVG button. Hidden when `promptHistory` flag OFF (uses `getState()` non-reactive read, same pattern as diffViewer button).
+- **TerminalPane integration:** Imports PromptHistoryPanel + promptHistoryStore. `handleSendInput` records cleaned command text via `addEntry(clean, paneId)` gated by `useFeatureFlagStore.getState().promptHistory`. Renders `<PromptHistoryPanel onInsertCommand={handleSendInput} />`. Wires `onToggleHistory` to dispatch `toggle-prompt-history` event.
+- **Feature flag:** `promptHistory` — already existed from Phase 0, defaults to `true`. When OFF: no recording, button hidden, panel won't open.
+- **Communication pattern:** Uses DOM custom event (`toggle-prompt-history`) dispatched by TerminalPane, listened by PromptHistoryPanel. Avoids modifying ChatInputBar (DO NOT MODIFY file). Same event-based pattern could be used by future Phase 8 keyboard shortcuts.
+- **Gotcha:** Only the first TerminalPane instance's PromptHistoryPanel will respond to the toggle event if multiple panes exist. In practice this is fine since the panel is a global portal overlay, not per-pane. Multiple panes recording to the same store is intentional — entries include `paneId` for traceability.
 
 ### Phase 7 Handover
 *(pending)*
