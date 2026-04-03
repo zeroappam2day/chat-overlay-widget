@@ -6,12 +6,16 @@
  * messages and routes them through the batcher.
  *
  * When batching is disabled, output passes through unmodified.
+ *
+ * Phase 2 addition: AutoTrustDetector receives raw output before batching.
+ * When autoTrust is disabled, detector does nothing.
  */
 
 import type WebSocket from 'ws';
 import type { ServerMessage } from './protocol.js';
 import { PTYSession } from './ptySession.js';
 import { OutputBatcher } from './outputBatcher.js';
+import { AutoTrustDetector } from './autoTrust.js';
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
@@ -22,6 +26,7 @@ function sendMsg(ws: WebSocket, msg: ServerMessage): void {
 export class BatchedPTYSession {
   private ptySession: PTYSession;
   private batcher: OutputBatcher;
+  private autoTrust: AutoTrustDetector;
 
   constructor(
     private ws: WebSocket,
@@ -30,7 +35,26 @@ export class BatchedPTYSession {
     rows: number = 24,
     batchingEnabled: boolean = true,
   ) {
-    // Create a proxy WebSocket that intercepts 'output' messages
+    // 1. Create AutoTrustDetector with deferred PTY write (PTYSession not yet created)
+    let ptyWrite: ((data: string) => void) | null = null;
+    this.autoTrust = new AutoTrustDetector({
+      onAccept: () => { ptyWrite?.('\r'); },
+      onEvent: (evt) => sendMsg(ws, { type: 'auto-trust-event', ...evt }),
+      enabled: false, // OFF by default — gated by autoTrust feature flag
+    });
+    const autoTrust = this.autoTrust;
+
+    // 2. Create batcher (referenced by proxy closure)
+    const batcher = new OutputBatcher({
+      onFlush: (data: string) => {
+        sendMsg(ws, { type: 'output', data });
+      },
+      enabled: batchingEnabled,
+    });
+    this.batcher = batcher;
+
+    // 3. Create proxy WebSocket that intercepts 'output' messages
+    //    Feed AutoTrustDetector before routing through batcher
     const proxyWs = new Proxy(ws, {
       get(target, prop, receiver) {
         if (prop === 'send') {
@@ -38,6 +62,8 @@ export class BatchedPTYSession {
             try {
               const parsed = JSON.parse(data) as ServerMessage;
               if (parsed.type === 'output') {
+                // Feed raw output to autoTrust detector before batching
+                autoTrust.feed(parsed.data);
                 // Route through batcher instead of sending directly
                 batcher.push(parsed.data);
                 return;
@@ -53,17 +79,11 @@ export class BatchedPTYSession {
       }
     });
 
-    // Create batcher first (referenced by proxy closure)
-    const batcher = new OutputBatcher({
-      onFlush: (data: string) => {
-        sendMsg(ws, { type: 'output', data });
-      },
-      enabled: batchingEnabled,
-    });
-    this.batcher = batcher;
-
-    // Create PTYSession with proxy — it thinks it's sending to the real ws
+    // 4. Create PTYSession with proxy — it thinks it's sending to the real ws
     this.ptySession = new PTYSession(proxyWs as WebSocket, shellExe, cols, rows);
+
+    // 5. Wire deferred PTY write now that ptySession exists
+    ptyWrite = (data: string) => this.ptySession.write(data);
   }
 
   write(data: string): void {
@@ -86,6 +106,14 @@ export class BatchedPTYSession {
     return this.batcher.enabled;
   }
 
+  set autoTrustEnabled(v: boolean) {
+    this.autoTrust.enabled = v;
+  }
+
+  get autoTrustEnabled(): boolean {
+    return this.autoTrust.enabled;
+  }
+
   getScrollback(): string {
     return this.batcher.getScrollback();
   }
@@ -99,6 +127,7 @@ export class BatchedPTYSession {
   }
 
   destroy(): void {
+    this.autoTrust.destroy();
     this.batcher.destroy();
     this.ptySession.destroy();
   }

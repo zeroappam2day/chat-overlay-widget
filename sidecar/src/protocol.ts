@@ -50,4 +50,5 @@ export type ServerMessage =
   | { type: 'save-image-result'; path: string }
   | { type: 'window-thumbnails'; windows: WindowThumbnail[] }
   | { type: 'capture-result-with-metadata'; path: string; title: string; hwnd: number; pid: number; bounds: { x: number; y: number; w: number; h: number }; captureSize: { w: number; h: number }; dpiScale: number }
-  | { type: 'agent-event'; event: AgentEvent };
+  | { type: 'agent-event'; event: AgentEvent }
+  | { type: 'auto-trust-event'; action: 'accepted' | 'blocked'; pattern: string; timestamp: string };
