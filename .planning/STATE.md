@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 Phase: 28 (adapter-layer-sidebar) — EXECUTING
 Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-03 - Completed quick task 260403-g0f: Implement Phase 0 Feature Flag Store foundation
+Last activity: 2026-04-03 - Completed quick task 260403-gkx: Implement Phase 2 Auto-Trust Dialog Detection
 
 Progress: [░░░░░░░░░░] 0% (v1.6 milestone — 0/4 phases complete)
 
@@ -66,6 +66,8 @@ None.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260403-g0f | Implement Phase 0 Feature Flag Store foundation | 2026-04-03 | ff7dc13 | [260403-g0f-implement-phase-0-feature-flag-store-fou](./quick/260403-g0f-implement-phase-0-feature-flag-store-fou/) |
+| 260403-gkx | Implement Phase 2 Auto-Trust Dialog Detection | 2026-04-03 | 83b05c4 | [260403-gkx-implement-phase-2-auto-trust-dialog-dete](./quick/260403-gkx-implement-phase-2-auto-trust-dialog-dete/) |
 
 ### Untested Assumptions (validate via spike or during early phases)
 

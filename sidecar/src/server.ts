@@ -291,6 +291,7 @@ const activeSessions = new Map<WebSocket, PTYSession | BatchedPTYSession>();
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
 const sidecarFlags: Record<string, boolean> = {
   outputBatching: true,
+  autoTrust: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -464,6 +465,14 @@ wss.on('connection', (ws: WebSocket) => {
             for (const session of activeSessions.values()) {
               if (session instanceof BatchedPTYSession) {
                 session.batchingEnabled = flags.outputBatching;
+              }
+            }
+          }
+          // Live-update autoTrust on active sessions
+          if ('autoTrust' in flags) {
+            for (const session of activeSessions.values()) {
+              if (session instanceof BatchedPTYSession) {
+                session.autoTrustEnabled = flags.autoTrust;
               }
             }
           }

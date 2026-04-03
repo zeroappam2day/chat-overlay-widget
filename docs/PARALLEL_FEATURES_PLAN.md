@@ -44,7 +44,7 @@ Begin by reading the plan file now.
 |---|-------|--------|------|----------------|
 | 0 | Feature Flag Store | DONE | 2026-04-03 | ff7dc13 — featureFlagStore.ts + FeatureFlagPanel.tsx + AppHeader wired |
 | 1 | Terminal Output Batching | DONE | 2026-04-03 | ringBuffer + outputBatcher + batchedPtySession + set-flags protocol + useFlagSync hook |
-| 2 | Auto-Trust Dialog Detection | PENDING | — | — |
+| 2 | Auto-Trust Dialog Detection | DONE | 2026-04-03 | bf48136/83b05c4 — autoTrust.ts + batchedPtySession integration + protocol + server wiring |
 | 3 | Plan File Watcher | PENDING | — | — |
 | 4 | Unified Diff Viewer | PENDING | — | — |
 | 5 | Terminal Bookmarks | PENDING | — | — |
@@ -1259,7 +1259,14 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** The Proxy approach means PTYSession's internal `send(ws, msg)` helper function calls `ws.send()` which gets intercepted. This works because `send()` stringifies to JSON first, and the proxy parses it back. Slight overhead but negligible for this use case.
 
 ### Phase 2 Handover
-*(pending)*
+- **Commits:** bf48136 (AutoTrustDetector class), 83b05c4 (integration + wiring)
+- **Files created:** `sidecar/src/autoTrust.ts`
+- **Files modified (additive only):** `sidecar/src/batchedPtySession.ts`, `sidecar/src/protocol.ts`, `src/protocol.ts`, `sidecar/src/server.ts`
+- **Default:** `autoTrust: false` in both `sidecarFlags` and `featureFlagStore` — safety-critical, user must opt in
+- **Deferred write pattern:** `ptyWrite` closure variable set after `PTYSession` construction; `onAccept` calls `ptyWrite?.('\r')`
+- **Proxy intercept order:** `autoTrust.feed()` → `batcher.push()` — raw output seen by detector before batching
+- **Frontend event:** `auto-trust-event` message sent on `accepted` or `blocked` — no frontend handler yet (future phase)
+- **Gotcha:** `AutoTrustDetector.destroy()` is called in `BatchedPTYSession.destroy()` before batcher — ensure timer cleanup on session teardown
 
 ### Phase 3 Handover
 *(pending)*
