@@ -13,6 +13,7 @@ import type { ServerMessage, WindowThumbnail } from '../protocol';
 import { formatCaptureBlock } from '../utils/formatCaptureBlock';
 import { useAgentEventStore } from '../store/agentEventStore';
 import { useFlagSync } from '../hooks/useFlagSync';
+import { usePlanStore } from '../store/planStore';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -120,6 +121,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       }
       case 'agent-event':
         useAgentEventStore.getState().pushEvent(msg.event);
+        break;
+      case 'plan-update':
+        usePlanStore.getState().setContent(msg.content, msg.fileName);
         break;
       default:
         // Delegate history-sessions, history-chunk, history-end, session-start
