@@ -18,6 +18,7 @@ import { useDiffStore } from '../store/diffStore';
 import { useFeatureFlagStore } from '../store/featureFlagStore';
 import { parseUnifiedDiff } from '../lib/diffParser';
 import { DiffPanel } from './DiffPanel';
+import { BookmarkBar } from './BookmarkBar';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -38,6 +39,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   // Pending capture block from window selection (sidecar capture-result-with-metadata response)
   const [pendingInjection, setPendingInjection] = useState<string | null>(null);
   const [inputBarHeight, setInputBarHeight] = useState(144); // INBAR-01: ~144px default
+  const [lastSentCommand, setLastSentCommand] = useState('');
   const isDraggingRef = useRef(false);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(144);
@@ -263,6 +265,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   // Route input box text to PTY as real keystrokes (shadow typing, D-04)
   const handleSendInput = useCallback((text: string) => {
     sendMessage({ type: 'input', data: text });
+    // Track last sent command for bookmark bar (Phase 5)
+    const clean = text.replace(/\r$/, '').trim();
+    if (clean) setLastSentCommand(clean);
   }, [sendMessage]);
 
   const handleShellChange = useCallback((newShell: string) => {
@@ -395,6 +400,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         className="shrink-0 h-1 bg-[#404040] hover:bg-[#007acc] transition-colors cursor-row-resize"
         onMouseDown={handleDragStart}
       />
+
+      {/* Bookmark bar (Phase 5) — rendered above input, gated by terminalBookmarks flag */}
+      <BookmarkBar onSendCommand={handleSendInput} currentInput={lastSentCommand} />
 
       <ChatInputBar
         onSend={handleSendInput}

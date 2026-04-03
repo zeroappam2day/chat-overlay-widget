@@ -47,8 +47,8 @@ Begin by reading the plan file now.
 | 1 | Terminal Output Batching | DONE | 2026-04-03 | ringBuffer + outputBatcher + batchedPtySession + set-flags protocol + useFlagSync hook |
 | 2 | Auto-Trust Dialog Detection | DONE | 2026-04-03 | bf48136/83b05c4 — autoTrust.ts + batchedPtySession integration + protocol + server wiring |
 | 3 | Plan File Watcher | DONE | 2026-04-03 | 2ef9018/a6ab2f0 — PlanWatcher(fs.watch+poll+debounce) + plan-update/plan-read protocol + planStore + PlanPanel(portal+regex-md) |
-| 4 | Unified Diff Viewer | PENDING | — | — |
-| 5 | Terminal Bookmarks | PENDING | — | — |
+| 4 | Unified Diff Viewer | DONE | 2026-04-03 | PR #9, 1dab019 — diffParser + DiffPanel(portal) + diffHandler(execSync) + request-diff/diff-result protocol |
+| 5 | Terminal Bookmarks | DONE | 2026-04-03 | bookmarkStore + BookmarkBar + TerminalPane wiring |
 | 6 | Prompt History & Notes | PENDING | — | — |
 | 7 | Agent Exit Notifications | PENDING | — | — |
 | 8 | Keyboard Navigation System | PENDING | — | — |
@@ -339,6 +339,7 @@ After squash-merge, update the Progress Tracker row with:
 | 1 | #6 | cc75c70 | squash-merge |
 | 2 | #7 | 83b05c4 | squash-merge |
 | 3 | #8 | 161c5be | squash-merge |
+| 4 | #9 | 1dab019 | squash-merge |
 
 ---
 
@@ -1391,10 +1392,27 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** PlanPanel is rendered via `createPortal(document.body)` from FeatureFlagPanel — avoids touching App.tsx or PaneContainer.tsx (DO NOT MODIFY files)
 
 ### Phase 4 Handover
-*(pending)*
+- **PR:** #9, **Squash commit:** 1dab019
+- **Files created:** `src/lib/diffParser.ts`, `src/store/diffStore.ts`, `src/components/DiffPanel.tsx`, `sidecar/src/diffHandler.ts`
+- **Files modified (additive only):** `sidecar/src/protocol.ts`, `src/protocol.ts`, `sidecar/src/server.ts`, `src/components/TerminalPane.tsx`, `src/components/TerminalHeader.tsx`
+- **Diff parser:** Ported from `parallel-code/src/lib/unified-diff-parser.ts`. Types: `FileDiff`, `Hunk`, `DiffLine`. Handles multi-file, add/modify/delete, binary, multiple hunks, "no newline" marker.
+- **DiffPanel:** Portal-based 420px fixed right-side panel (z-index 1001, above PlanPanel's 1000). Green `#1e3a1e` additions, red `#3a1e1e` deletions. Collapsible per-file with M/A/D badges. Dual-column line numbers.
+- **diffHandler:** `execGitDiff(cwd)` — `git diff HEAD` via `execSync`, falls back to `git diff` if no HEAD. 500KB cap, 10s timeout, `windowsHide: true`.
+- **Protocol:** `request-diff` (client→server: optional cwd), `diff-result` (server→client: raw, cwd, optional error)
+- **Server wiring:** Import `execGitDiff` + `case 'request-diff'` in switch — calls execGitDiff, sends diff-result response
+- **TerminalPane integration:** `diff-result` case calls `parseUnifiedDiff` → `useDiffStore.setDiffs`. `handleRequestDiff` callback gated by `diffViewer` flag. `<DiffPanel />` rendered (portal, so position independent).
+- **TerminalHeader:** `onRequestDiff` optional prop + diff button with green/red SVG icon. Button hidden when `diffViewer` flag OFF via `useFeatureFlagStore.getState().diffViewer`.
+- **Feature flag:** `diffViewer` — already existed from Phase 0, defaults to `true`
+- **Gotcha:** TerminalHeader reads flag via `getState()` (non-reactive) which means the button visibility won't update live when the flag toggles unless the component re-renders for another reason. Acceptable for settings-panel toggle use case — user changes flag then returns to terminal.
 
 ### Phase 5 Handover
-*(pending)*
+- **Files created:** `src/store/bookmarkStore.ts`, `src/components/BookmarkBar.tsx`
+- **Files modified (additive only):** `src/components/TerminalPane.tsx` (import BookmarkBar, lastSentCommand state, render above ChatInputBar)
+- **bookmarkStore:** Zustand store with localStorage persistence under `chat-overlay-bookmarks`. Operations: addBookmark (dedup by command), removeBookmark, reorderBookmarks, updateLabel. Label auto-extracted from command (right-to-left word walk, skip flags, strip paths/extensions, 20-char truncate).
+- **BookmarkBar:** 32px horizontal strip of pill buttons. Click sends command + `\r` to PTY. Right-click opens context menu (Rename, Delete). `+` button bookmarks the last sent command. Inline rename via input field. Horizontally scrollable on overflow.
+- **Feature flag:** `terminalBookmarks` — already existed from Phase 0, defaults to `true`. When OFF, BookmarkBar returns null (not rendered).
+- **Integration pattern:** `lastSentCommand` state in TerminalPane tracks the most recent command sent via ChatInputBar (stripped of trailing `\r`). BookmarkBar reads this as `currentInput` for the `+` add button. Commands sent via bookmark click go through the same `handleSendInput` path.
+- **Gotcha:** `currentInput` reflects the last *sent* command, not live textarea value — ChatInputBar is a DO NOT MODIFY file so we can't add an onChange callback. This means the `+` button bookmarks what was last sent, not what's currently typed. Acceptable UX tradeoff.
 
 ### Phase 6 Handover
 *(pending)*
