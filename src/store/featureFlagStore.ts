@@ -11,6 +11,7 @@ export interface FeatureFlags {
   keyboardNavigation: boolean;   // Phase 8
   inactivePaneDimming: boolean;  // Phase 9
   enhancedPersistence: boolean;  // Phase 10
+  annotationOverlay: boolean;    // Phase 11
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -35,6 +36,7 @@ const defaults: FeatureFlags = {
   keyboardNavigation: true,
   inactivePaneDimming: false, // OFF by default — visual preference
   enhancedPersistence: true,
+  annotationOverlay: false,  // OFF by default — feature incomplete
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -60,6 +62,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         keyboardNavigation: next.keyboardNavigation,
         inactivePaneDimming: next.inactivePaneDimming,
         enhancedPersistence: next.enhancedPersistence,
+        annotationOverlay: next.annotationOverlay,
       }));
       return { [key]: value };
     }),

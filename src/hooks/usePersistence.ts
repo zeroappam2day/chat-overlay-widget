@@ -31,6 +31,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       keyboardNavigation: flags.keyboardNavigation,
       inactivePaneDimming: flags.inactivePaneDimming,
       enhancedPersistence: flags.enhancedPersistence,
+      annotationOverlay: flags.annotationOverlay,
     },
     windowState,
   };

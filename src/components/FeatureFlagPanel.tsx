@@ -13,6 +13,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   keyboardNavigation: 'Keyboard Navigation',
   inactivePaneDimming: 'Inactive Pane Dimming',
   enhancedPersistence: 'Enhanced Persistence',
+  annotationOverlay: 'Annotation Overlay',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
