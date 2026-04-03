@@ -52,7 +52,7 @@ Begin by reading the plan file now.
 | 5 | Terminal Bookmarks | DONE | 2026-04-03 | PR #10, 74f3537 — bookmarkStore + BookmarkBar + TerminalPane wiring |
 | 6 | Prompt History & Notes | DONE | 2026-04-03 | PR #11, 9ab5b49 — promptHistoryStore + PromptHistoryPanel(portal/tabs/search) + TerminalHeader button + TerminalPane recording |
 | 7 | Agent Exit Notifications | DONE | 2026-04-03 | PR #12, e868924 — ExitNotifier + Tauri notification allowlist + TerminalPane wiring |
-| 8 | Keyboard Navigation System | PENDING | — | — |
+| 8 | Keyboard Navigation System | DONE | 2026-04-03 | PR #13, 528bd31 — shortcuts.ts + useShortcuts + PaneContainer/TerminalPane wiring |
 | 9 | Inactive Pane Dimming | PENDING | — | — |
 | 10 | Enhanced Session Persistence | PENDING | — | — |
 
@@ -375,6 +375,7 @@ After squash-merge, update the Progress Tracker row with:
 | 5 | #10 | 74f3537 | squash-merge |
 | 6 | #11 | 9ab5b49 | squash-merge |
 | 7 | #12 | e868924 | squash-merge |
+| 8 | #13 | 528bd31 | squash-merge |
 
 ---
 
@@ -1479,7 +1480,17 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** Each TerminalPane creates its own ExitNotifier instance. Multiple panes exiting simultaneously won't batch across instances — each pane sends its own notification independently. In practice this is fine since the 3s debounce is per-pane and rapid multi-pane exit is rare.
 
 ### Phase 8 Handover
-*(pending)*
+- **PR:** #13, **Squash commit:** 528bd31
+- **Files created:** `src/lib/shortcuts.ts`, `src/hooks/useShortcuts.ts`
+- **Files modified (additive only):** `src/components/PaneContainer.tsx`, `src/components/TerminalPane.tsx`
+- **shortcuts.ts:** Shortcut registry with `registerShortcut()` → returns unregister fn. `initShortcutListener()` attaches single capture-phase keydown handler. Context-aware: suppresses in INPUT/TEXTAREA/SELECT unless `global: true`, suppresses when `.dialog-overlay` exists unless `dialogSafe: true`. Case-insensitive key match, exact modifier match. First-match-wins.
+- **useShortcuts.ts:** React hook called once in PaneContainer. Registers 9 shortcuts when `keyboardNavigation` flag is ON. Pane nav (Alt+arrows, Alt+1-4) marked `global: true`. Feature toggles (Ctrl+Shift+D, Ctrl+H, Ctrl+B, Ctrl+P) not global — suppressed in text inputs.
+- **PaneContainer integration:** Import + `useShortcuts()` call — 2 additive lines.
+- **TerminalPane integration:** `bookmarkBarVisible` state (default true) toggled by `toggle-bookmark-bar` DOM event. `handleRequestDiffRef` synced with `handleRequestDiff` callback for `keyboard-request-diff` DOM event. Both events gated by `isActiveRef.current` (only active pane responds). Conditional `{bookmarkBarVisible && <BookmarkBar />}` rendering.
+- **Communication patterns:** Ctrl+Shift+D dispatches `keyboard-request-diff` DOM event → TerminalPane listener → `handleRequestDiff()` (needs WebSocket context). Ctrl+B dispatches `toggle-bookmark-bar` DOM event → TerminalPane listener → local state toggle. Ctrl+H dispatches `toggle-prompt-history` (reuses Phase 6 pattern). Ctrl+P calls `usePlanStore.getState().toggleVisible()` directly (no DOM event needed — store call is sufficient).
+- **Feature flag:** `keyboardNavigation` — already existed from Phase 0, defaults to `true`. When OFF: `useShortcuts` cleanup removes all listeners and clears shortcut registry via `initShortcutListener` cleanup + individual unregister fns.
+- **No conflicts** with existing Ctrl+F (search), Ctrl+V (paste), Escape handlers — those are registered on `document` without capture; shortcut listener uses `capture: true` but only intercepts registered shortcut combos.
+- **Gotcha:** Shortcut listener uses a module-level `Set<Shortcut>` and `listenerAttached` boolean. If React StrictMode double-mounts, the first cleanup removes the listener and clears shortcuts, then the second mount re-attaches. This is safe because `initShortcutListener` is idempotent (checks `listenerAttached` flag).
 
 ### Phase 9 Handover
 *(pending)*
