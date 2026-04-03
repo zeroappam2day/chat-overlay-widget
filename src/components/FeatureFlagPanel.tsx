@@ -17,6 +17,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   annotationOverlay: 'Annotation Overlay',
   themePresets: 'Theme Presets',
   ctrlWheelZoom: 'Ctrl+Wheel Zoom',
+  diffSearch: 'Diff Search',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
