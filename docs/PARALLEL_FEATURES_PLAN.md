@@ -32,7 +32,8 @@ Rules:
 6. This project uses Tauri v1.8 (NOT v2, NOT Electron), React 18, Zustand, xterm.js 5.5, node-pty 1.1, WebSocket (ws 8.18).
 7. The sidecar is a Node.js process at sidecar/src/. The frontend is at src/. They communicate via WebSocket JSON messages defined in sidecar/src/protocol.ts.
 8. Start work through a GSD command: /gsd:quick for the phase, or /gsd:execute-phase if phase is already planned.
-9. After implementation, you MUST run the Phase Delivery Protocol (see section below): create feature branch, reset main, push, create PR with exhaustive description, squash-merge, pull, clean up branch. Every phase ships as a single revertible squash commit on main via PR. No exceptions.
+9. After implementation, you MUST run the Phase Delivery Protocol (see section below): create feature branch, reset main, push, create PR, squash-merge, pull, clean up branch. Every phase ships as a single revertible squash commit on main via PR. No exceptions.
+10. PR descriptions MUST be written for a non-technical reader first. Lead with what changed from the user's perspective (what they see, what they can do, how it behaves). Put file-level technical details in a collapsed `<details>` section at the bottom. See the PR Body Template for the exact format.
 
 Begin by reading the plan file now.
 ```
@@ -288,41 +289,72 @@ git log --oneline -3   # squash commit should be HEAD
 
 ### PR Body Template
 
-Every PR body MUST include these sections:
+Every PR body MUST follow this structure. The primary audience is a non-technical reader who wants to understand what changed, why, and how to use or test it. Technical details go in a collapsed section at the bottom.
 
 ```markdown
-## Summary
+## What this does
 
-- Bullet list of what was built (component names, file names, behavior)
-- Protocol messages added (if any)
-- Integration points touched (server.ts, TerminalPane.tsx, etc.)
-- Feature flag name and default value
+Plain-language summary of the feature in 1-3 sentences. No file names, no code references.
+Describe it the way you'd explain it to someone using the app for the first time.
 
-### Files changed
+## What's new for the user
 
-| File | Change |
-|------|--------|
-| `path/to/new-file.ts` | **NEW** — description (N lines) |
-| `path/to/modified-file.ts` | description of additive change |
+### Feature Name
+- Bullet points describing visible behavior, UI elements, and interactions
+- Written as "you can now..." or "a new X appears when..."
+- Include where to find it (which button, which panel, which shortcut)
 
-### Architecture
+### Smart behavior
+- Non-obvious behavior the user should know about (dedup, caps, auto-cleanup, persistence)
+- Edge cases handled automatically
 
-- How it follows the composition/wrapper pattern
-- Which DO-NOT-MODIFY files were NOT touched
-- Cleanup behavior (timer/watcher destruction on teardown)
+### Feature flag
+- Which toggle in the settings panel controls this
+- What the default is (ON or OFF)
+- What happens when toggled OFF (the feature disappears, nothing breaks)
+- What happens when toggled back ON
 
-### Rollback
+## How to roll back
 
-`git revert <merge-commit>` or toggle `featureFlagName` flag OFF at runtime.
+One sentence: revert the commit OR toggle the flag OFF. Include the commit hash.
 
 ## Test plan
 
-- [ ] Test case 1 — what to do, what to expect
-- [ ] Test case 2 — edge case
-- [ ] Test case N — flag OFF behavior (zero behavior change)
+- [ ] Step-by-step user actions with expected results
+- [ ] Written as "do X — verify Y happens"
+- [ ] Include flag-OFF test: toggle flag off, verify feature disappears cleanly
+- [ ] Include persistence test if applicable: close app, reopen, verify state survived
+
+<details>
+<summary>Technical details (files, architecture, integration)</summary>
+
+### Files changed
+
+| File | What changed |
+|------|-------------|
+| `path/to/new-file.ts` | **New** — one-line description of purpose |
+| `path/to/modified-file.ts` | What was added (additive only) |
+
+### Architecture notes
+
+- How it follows the composition/wrapper pattern
+- Which DO-NOT-MODIFY files were NOT touched
+- Integration points (server.ts, TerminalPane.tsx) — what was added
+- Cleanup behavior (timer/watcher destruction on teardown)
+- Protocol messages added (if any)
+
+</details>
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
+
+### Commit Message Convention
+
+The squash-merge subject follows the pattern: `feat: Phase N — Human-Readable Title (#PR)`
+
+The squash-merge body should be a single plain-language sentence summarizing what the user gets, not a list of files. Example:
+- Good: `Adds prompt history panel with search, click-to-resend, and session notes`
+- Bad: `promptHistoryStore + PromptHistoryPanel + TerminalHeader button + TerminalPane recording`
 
 ### Progress Tracker Update
 
@@ -1315,6 +1347,12 @@ Add to `tauri.conf.json` under `tauri.allowlist`:
 > "How do we know existing features still work?"
 
 **Mitigation:** Existing files are not modified. New components wrap existing ones via composition. Feature flags gate all new behavior. When all flags are OFF, the app behaves identically to before this plan was executed. Existing tests continue to pass because existing code is unchanged.
+
+### View G: "The Jargon PR"
+
+> "The PR reads like an internal code review. Nobody outside the team can tell what changed."
+
+**Mitigation:** PR Body Template (Rule 10) now mandates non-technical language first. The template leads with "What this does" and "What's new for the user" before any file names. Technical details are collapsed in a `<details>` block. Commit messages use plain-language summaries, not file lists. The test plan is written as user actions ("click X, verify Y"), not developer assertions. Every PR should be readable by someone who has never seen the codebase.
 
 ---
 
