@@ -10,7 +10,8 @@ export type ClientMessage =
   | { type: 'history-replay'; sessionId: number }
   | { type: 'save-image'; base64: string }
   | { type: 'list-windows-with-thumbnails' }
-  | { type: 'capture-window-with-metadata'; hwnd: number; pid: number; title: string };
+  | { type: 'capture-window-with-metadata'; hwnd: number; pid: number; title: string }
+  | { type: 'set-flags'; flags: Record<string, boolean> };
 
 export interface SessionMeta {
   id: number;
