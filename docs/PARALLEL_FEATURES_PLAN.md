@@ -54,7 +54,7 @@ Begin by reading the plan file now.
 | 7 | Agent Exit Notifications | DONE | 2026-04-03 | PR #12, e868924 — ExitNotifier + Tauri notification allowlist + TerminalPane wiring |
 | 8 | Keyboard Navigation System | DONE | 2026-04-03 | PR #13, 528bd31 — shortcuts.ts + useShortcuts + PaneContainer/TerminalPane wiring |
 | 9 | Inactive Pane Dimming | DONE | 2026-04-03 | PR #14, 0addabc — usePaneDimming hook + paneDimming.css + PaneContainer wiring |
-| 10 | Enhanced Session Persistence | PENDING | — | — |
+| 10 | Enhanced Session Persistence | DONE | 2026-04-03 | PR #15, 0a1a5b0 — atomic file persistence via Tauri FS API |
 
 ---
 
@@ -377,6 +377,7 @@ After squash-merge, update the Progress Tracker row with:
 | 7 | #12 | e868924 | squash-merge |
 | 8 | #13 | 528bd31 | squash-merge |
 | 9 | #14 | 0addabc | squash-merge |
+| 10 | #15 | 0a1a5b0 | squash-merge |
 
 ---
 
@@ -1504,4 +1505,14 @@ Phase 0 (Feature Flags) ← required by ALL subsequent phases
 - **Gotcha:** The hook uses `document.querySelectorAll('.pane-wrapper')` DOM query on each re-render triggered by `activePaneId` or `enabled` change. This is lightweight (typically 1-4 elements) and avoids needing to pass refs through the component tree. The `data-pane-id` attribute on each wrapper div is the link between React state and DOM manipulation.
 
 ### Phase 10 Handover
-*(pending)*
+- **PR:** #15, **Squash commit:** 0a1a5b0
+- **Files created:** `src/lib/persistence.ts`, `src/hooks/usePersistence.ts`
+- **Files modified (additive only):** `src-tauri/tauri.conf.json`, `src/components/PaneContainer.tsx`
+- **persistence.ts:** Atomic write pattern (temp → backup → rename) via Tauri FS API. `saveState()`, `loadState()` (with `.bak` fallback), `debouncedSave()` (30s), `flushSave()` (immediate). State file: `%APPDATA%/com.chatoverlay.widget/chat-overlay-state.json`.
+- **PersistedState shape:** `{ version: 1, layout, activePaneId, bookmarks, notes, promptHistory, featureFlags, windowState: { width, height, x, y, maximized } | null }`
+- **usePersistence:** React hook called once in PaneContainer. On mount: loads state, hydrates all 4 stores (paneStore, bookmarkStore, promptHistoryStore, featureFlagStore), restores window geometry. Subscribes to all stores for debounced autosave. Flushes on beforeunload and React unmount.
+- **Tauri config:** Added `fs` allowlist (readFile, writeFile, exists, copyFile, createDir, renameFile, scope `$APPDATA/**`) and `path` allowlist (`all: true`).
+- **Feature flag:** `enhancedPersistence` — already existed from Phase 0, defaults to `true`. When OFF: no Tauri FS operations, falls back to existing localStorage in individual stores.
+- **Window geometry:** Uses `appWindow.innerSize()` / `outerPosition()` / `isMaximized()` with scaleFactor adjustment for logical pixels. Restores via `setSize` / `setPosition` / `maximize`.
+- **No new protocol messages** — purely frontend + Tauri FS.
+- **Gotcha:** `restoredRef` prevents double-restore in React StrictMode. The `gatherState()` function reads all stores via `getState()` (non-reactive snapshot) — this is intentional since it's called from subscription callbacks, not from render.
