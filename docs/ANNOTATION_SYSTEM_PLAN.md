@@ -22,11 +22,36 @@ with status "PENDING" and implement it. Follow the phase instructions exactly.
 Do NOT modify any existing files unless the phase explicitly says to.
 Do NOT implement phases marked "DONE".
 
-When finished:
-1. Run all tests: npx vitest run
-2. Update the phase status to "DONE" in this plan file
-3. Fill in the "Handover Notes" section for the completed phase
-4. Report what was done and any issues encountered
+When finished, complete ALL of the following steps IN ORDER. Do NOT skip any step.
+
+STEP 1 — VERIFY
+  1a. Run ALL tests: npx vitest run (every single test must pass)
+  1b. Run TypeScript compile check: npx tsc --noEmit (in sidecar/ if sidecar files changed, in root if frontend files changed, or both)
+
+STEP 2 — UPDATE DOCUMENTS
+  2a. Update the phase status from "PENDING" to "DONE" in this plan file
+  2b. Fill in the "Handover Notes" section for the completed phase — list EVERY file created and modified, test counts, and any issues encountered. Be precise and complete; do not omit files.
+  2c. Add a row to the Changelog table at the bottom of this plan file
+
+STEP 3 — CREATE A SAFE ROLLBACKABLE COMMIT
+  3a. Create a NEW feature branch: git checkout -b feat/annotation-phase-N (where N is the phase number)
+  3b. Stage ONLY the files relevant to this phase (git add <specific files>). Never use "git add -A" or "git add ."
+  3c. Commit with a descriptive message that explains WHAT was added and WHY, notes that it is additive/rollbackable, and ends with the Co-Authored-By line
+  3d. The commit MUST be fully revertable — reverting it must not break any existing functionality
+
+STEP 4 — PUSH AND CREATE PR
+  4a. Push the feature branch: git push -u origin <branch-name>
+  4b. Create a detailed, comprehensive, NON-TECHNICAL pull request using gh pr create. The PR body MUST include:
+      - "What is this?" — plain-language summary a non-developer could understand
+      - "What does this add?" — bullet list of capabilities, described in user-facing terms
+      - "What does this NOT change?" — explicit confirmation that existing features are untouched
+      - "Why a separate PR?" — explain the phase-based rollback strategy
+      - "How was it tested?" — list test counts and verification steps
+      - "Test plan" — checklist with automated and manual verification items
+  4c. Return the PR URL to the user
+
+STEP 5 — REPORT
+  5a. Report to the user: what was done, files changed, test results, PR URL, and any issues encountered
 
 CRITICAL RULES:
 - This is a Tauri v1.8 app (NOT Electron). Do NOT use Electron APIs.
@@ -399,7 +424,7 @@ curl -X POST http://127.0.0.1:<PORT>/annotations \
 
 ## Phase 2: Frontend Annotation Bridge
 
-**Status:** PENDING
+**Status:** DONE
 **Estimated files to create:** 1 new
 **Estimated files to modify:** 2 existing (protocol.ts copies)
 
@@ -514,12 +539,11 @@ curl -X POST http://127.0.0.1:<PORT>/annotations \
 
 ### Handover Notes
 
-> *(To be filled after implementation)*
-> - Files created:
-> - Files modified:
-> - Tests passing:
-> - Visual confirmation of annotation rendering:
-> - Issues encountered:
+> - Files created: `src/store/annotationBridgeStore.ts`
+> - Files modified: `src/protocol.ts` (added Annotation + AnnotationPayload interfaces, added annotation-update to ServerMessage, added annotations to ClientMessage), `src/components/TerminalPane.tsx` (added import for annotationBridgeStore, added 'annotation-update' case in WebSocket message handler)
+> - Tests passing: 266/266 (all existing tests pass, no regressions)
+> - Visual confirmation of annotation rendering: Not tested (requires running app with start.bat)
+> - Issues encountered: None
 
 ---
 
@@ -1532,3 +1556,4 @@ TESTS:
 |------|-------|--------|-------|
 | 2026-04-04 | Plan created | — | 6 phases designed, stress-tested |
 | 2026-04-04 | Phase 1 | DONE | Annotation data layer: store, validation, HTTP endpoint, WebSocket broadcast |
+| 2026-04-04 | Phase 2 | DONE | Frontend annotation bridge: protocol sync, Zustand bridge store, TerminalPane handler |

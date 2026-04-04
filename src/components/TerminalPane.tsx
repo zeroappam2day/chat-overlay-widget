@@ -12,6 +12,7 @@ import { WindowPicker } from './WindowPicker';
 import type { ServerMessage, WindowThumbnail } from '../protocol';
 import { formatCaptureBlock } from '../utils/formatCaptureBlock';
 import { useAgentEventStore } from '../store/agentEventStore';
+import { useAnnotationBridgeStore } from '../store/annotationBridgeStore';
 import { useFlagSync } from '../hooks/useFlagSync';
 import { usePlanStore } from '../store/planStore';
 import { useDiffStore } from '../store/diffStore';
@@ -161,6 +162,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       }
       case 'agent-event':
         useAgentEventStore.getState().pushEvent(msg.event);
+        break;
+      case 'annotation-update':
+        useAnnotationBridgeStore.getState().setAnnotations(msg.annotations);
         break;
       case 'plan-update':
         usePlanStore.getState().setContent(msg.content, msg.fileName);
