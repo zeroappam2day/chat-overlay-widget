@@ -4,7 +4,7 @@
 > **Created:** 2026-04-04
 > **Repository:** C:/Users/anujd/Documents/01_AI/214_Chat_overlay_widget
 > **Branch:** main
-> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 pending
+> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 DONE — Phase 5 pending (after Phase 6)
 
 ---
 
@@ -979,12 +979,29 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - Sidecar dist build: PASS (multiPtyManager.js generated)
 
 ### Phase 4 — UI Accessibility Tree Discovery
-- **Status:** NEXT
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/uiAutomation.ts` — PowerShell-based Win32 UI Automation tree discovery using [System.Windows.Automation]. Exports `getUiElements(hwnd, opts)` with 3s TTL cache, maxDepth (1-5), roleFilter support, 15s timeout.
+- **Files modified:**
+  - `sidecar/src/server.ts` — Imported `getUiElements`, added `uiAccessibility: false` to sidecarFlags, added `GET /ui-elements` HTTP route (flag-gated, supports hwnd/title/maxDepth/roleFilter query params, title lookup via existing `listWindows()`)
+  - `sidecar/src/mcp-server.ts` — Added `get_ui_elements` MCP tool (Tool 9) with hwnd/title/maxDepth/roleFilter params, routes to `/ui-elements` sidecar endpoint
+  - `src/store/featureFlagStore.ts` — Added `uiAccessibility` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `uiAccessibility` label ('UI Accessibility Tree')
+  - `src/hooks/useFlagSync.ts` — Added `uiAccessibility` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `uiAccessibility` to persistence snapshot
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - The `get_ui_elements` MCP tool GETs `/ui-elements` on the sidecar HTTP server, which spawns PowerShell with `[System.Windows.Automation.AutomationElement]::FromHandle(hwnd)`.
+  - Window can be targeted by hwnd directly or by title substring match (uses existing `listWindows()`).
+  - Role filtering is applied during tree walk — filtered-out containers are still traversed so matching children are returned.
+  - PowerShell script uses `TreeWalker.ControlViewWalker` (not RawView) to avoid noise from internal framework elements.
+  - Cache key includes hwnd + maxDepth + roleFilter to avoid returning stale results for different queries.
+  - 15-second timeout prevents hangs on very large accessibility trees.
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (uiAutomation.js generated)
 
 ### Phase 5 — OS-Level Input Simulation
 - **Status:** PENDING (after Phase 6 — consent gate must be built first)
@@ -995,7 +1012,7 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
 - **Test results:** —
 
 ### Phase 6 — Consent Gate & Action Verification Loop
-- **Status:** PENDING (after Phase 4)
+- **Status:** NEXT
 - **Date:** —
 - **Files created:** —
 - **Files modified:** —

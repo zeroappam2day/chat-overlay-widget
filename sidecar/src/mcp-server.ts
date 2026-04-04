@@ -478,6 +478,83 @@ server.tool(
   }
 );
 
+// ─── Tool 9: get_ui_elements (Agent Runtime Phase 4) ────────────────────────
+
+server.tool(
+  'get_ui_elements',
+  `Discover UI elements in a target window using Win32 UI Automation.
+Returns the accessibility tree with element names, roles (Button, Edit, MenuItem, Tab, etc.),
+bounding rectangles (screen coordinates), and automation IDs.
+
+Use this to find clickable targets before using send_input (Phase 5).
+Prefer targeting elements by name/role over raw pixel coordinates.
+
+Gated behind the uiAccessibility feature flag.
+
+Example — find all buttons in Notepad:
+  { "title": "Notepad", "maxDepth": 2, "roleFilter": ["Button"] }
+
+Example — get full tree of a window by handle:
+  { "hwnd": 12345, "maxDepth": 3 }`,
+  {
+    hwnd: z
+      .number()
+      .int()
+      .optional()
+      .describe('Window handle (hwnd). If omitted, use title to find the window.'),
+    title: z
+      .string()
+      .optional()
+      .describe('Find window by title substring match (case-insensitive). Ignored if hwnd is provided.'),
+    maxDepth: z
+      .number()
+      .int()
+      .min(1)
+      .max(5)
+      .default(3)
+      .describe('Tree traversal depth (1-5, default 3). Higher = more elements but slower.'),
+    roleFilter: z
+      .array(z.string())
+      .optional()
+      .describe('Only return elements matching these control types (e.g., ["Button", "Edit", "MenuItem"]). Omit for all types.'),
+  },
+  async ({ hwnd, title, maxDepth, roleFilter }) => {
+    try {
+      let qs = `maxDepth=${maxDepth}`;
+      if (hwnd !== undefined) {
+        qs += `&hwnd=${hwnd}`;
+      } else if (title) {
+        qs += `&title=${encodeURIComponent(title)}`;
+      } else {
+        return {
+          content: [{ type: 'text' as const, text: 'Either hwnd or title is required.' }],
+          isError: true,
+        };
+      }
+      if (roleFilter && roleFilter.length > 0) {
+        qs += `&roleFilter=${encodeURIComponent(roleFilter.join(','))}`;
+      }
+
+      const resp = await callSidecar(`/ui-elements?${qs}`);
+      if (resp.status === 403) {
+        return {
+          content: [{ type: 'text' as const, text: 'UI accessibility tool is disabled. Enable the uiAccessibility feature flag.' }],
+          isError: true,
+        };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const parsed: unknown = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: JSON.stringify(parsed, null, 2) }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

@@ -46,6 +46,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       terminalWriteMcp: flags.terminalWriteMcp,
       conditionalAdvance: flags.conditionalAdvance,
       multiPty: flags.multiPty,
+      uiAccessibility: flags.uiAccessibility,
     },
     windowState,
   };

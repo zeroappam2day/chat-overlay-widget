@@ -39,6 +39,7 @@ import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
 import { MultiPtyManager } from './multiPtyManager.js';
+import { getUiElements } from './uiAutomation.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -361,6 +362,55 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // Agent Runtime Phase 4: UI Accessibility Tree endpoint (flag-gated)
+  if (req.method === 'GET' && url.pathname === '/ui-elements') {
+    if (!sidecarFlags.uiAccessibility) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'UI accessibility tool is disabled. Enable the uiAccessibility feature flag.' }));
+      return;
+    }
+    try {
+      const hwndParam = url.searchParams.get('hwnd');
+      const titleParam = url.searchParams.get('title');
+      const maxDepth = Math.min(5, Math.max(1, parseInt(url.searchParams.get('maxDepth') ?? '3', 10) || 3));
+      const roleFilterParam = url.searchParams.get('roleFilter');
+      const roleFilter = roleFilterParam ? roleFilterParam.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+
+      let hwnd: number;
+      if (hwndParam) {
+        hwnd = parseInt(hwndParam, 10);
+        if (isNaN(hwnd) || hwnd <= 0) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid hwnd parameter' }));
+          return;
+        }
+      } else if (titleParam) {
+        // Find window by title match
+        const windows = listWindows();
+        const match = windows.find(w => w.title.toLowerCase().includes(titleParam.toLowerCase()));
+        if (!match) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `No window found matching title: ${titleParam}` }));
+          return;
+        }
+        hwnd = match.hwnd;
+      } else {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Either hwnd or title parameter is required' }));
+        return;
+      }
+
+      const elements = getUiElements(hwnd, { maxDepth, roleFilter });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(elements));
+    } catch (err) {
+      console.error('[sidecar] ui-elements error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+    }
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -416,6 +466,7 @@ const sidecarFlags: Record<string, boolean> = {
   terminalWriteMcp: false,
   conditionalAdvance: false,
   multiPty: false,
+  uiAccessibility: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
