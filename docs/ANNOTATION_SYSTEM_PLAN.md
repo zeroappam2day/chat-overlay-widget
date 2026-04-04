@@ -549,7 +549,7 @@ curl -X POST http://127.0.0.1:<PORT>/annotations \
 
 ## Phase 3: MCP Annotation Tool
 
-**Status:** PENDING
+**Status:** DONE
 **Estimated files to create:** 0
 **Estimated files to modify:** 1 existing (mcp-server.ts)
 
@@ -688,11 +688,12 @@ After implementing:
 
 ### Handover Notes
 
-> *(To be filled after implementation)*
-> - Files modified:
-> - MCP tool registration confirmed:
-> - End-to-end test (MCP -> overlay render) passed:
-> - Issues encountered:
+> - Files modified: `sidecar/src/mcp-server.ts` (added `sidecarPost` helper function, added `send_annotation` MCP tool registration with full Zod schema)
+> - MCP tool registration confirmed: Yes — `send_annotation` is Tool 4, registered after `capture_screenshot`
+> - End-to-end test (MCP -> overlay render) passed: Not tested (requires running app with start.bat)
+> - Tests passing: 266/266 (all existing tests pass, no regressions)
+> - TypeScript compile: Clean (no errors)
+> - Issues encountered: None
 
 ---
 
@@ -1557,3 +1558,4 @@ TESTS:
 | 2026-04-04 | Plan created | — | 6 phases designed, stress-tested |
 | 2026-04-04 | Phase 1 | DONE | Annotation data layer: store, validation, HTTP endpoint, WebSocket broadcast |
 | 2026-04-04 | Phase 2 | DONE | Frontend annotation bridge: protocol sync, Zustand bridge store, TerminalPane handler |
+| 2026-04-04 | Phase 3 | DONE | MCP annotation tool: sidecarPost helper, send_annotation tool with full Zod schema |

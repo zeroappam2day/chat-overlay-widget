@@ -49,6 +49,43 @@ function sidecarGet(
   });
 }
 
+// ─── HTTP helper — makes POST requests to sidecar ──────────────────────────
+
+function sidecarPost(
+  endpoint: string,
+  token: string,
+  port: number,
+  body: string
+): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: Buffer }> {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      `http://127.0.0.1:${port}${endpoint}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () =>
+          resolve({ status: res.statusCode ?? 500, headers: res.headers, body: Buffer.concat(chunks) })
+        );
+      }
+    );
+    req.on('error', reject);
+    req.setTimeout(10000, () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+    req.write(body);
+    req.end();
+  });
+}
+
 // ─── Error wrapper — reads discovery + calls sidecar (per D-18) ──────────────
 
 async function callSidecar(
@@ -158,6 +195,73 @@ server.tool(
       }
       const base64 = resp.body.toString('base64');
       return { content: [{ type: 'image' as const, data: base64, mimeType: 'image/png' }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 4: send_annotation ────────────────────────────────────────────────
+
+server.tool(
+  'send_annotation',
+  `Draw visual annotations on the Chat Overlay Widget's transparent overlay window.
+Use this to highlight areas on screen, point to UI elements, or display step-by-step guidance.
+
+Actions:
+- "set": Replace all current annotations with the provided list.
+- "merge": Add or update annotations by id (existing ids are updated, new ids are added).
+- "clear": Remove specific annotations by their ids.
+- "clear-group": Remove all annotations sharing the same group name.
+- "clear-all": Remove every annotation from the overlay.
+
+Each annotation has: id (unique string), type (box/arrow/text/highlight), x, y coordinates,
+optional width/height, optional label text, optional color (#RRGGBB), optional ttl (seconds),
+optional group (for batch clearing).
+
+Example — draw a red box around a button:
+  { "action": "set", "annotations": [{ "id": "step1", "type": "box", "x": 100, "y": 200, "width": 150, "height": 40, "label": "Click here" }] }
+
+Example — clear all annotations:
+  { "action": "clear-all" }`,
+  {
+    action: z.enum(['set', 'merge', 'clear', 'clear-group', 'clear-all'])
+      .describe('What to do with the annotations'),
+    annotations: z.array(z.object({
+      id: z.string().min(1).max(200).describe('Unique identifier for this annotation'),
+      type: z.enum(['box', 'arrow', 'text', 'highlight']).describe('Visual type'),
+      x: z.number().int().min(0).max(10000).describe('X coordinate in pixels from left'),
+      y: z.number().int().min(0).max(10000).describe('Y coordinate in pixels from top'),
+      width: z.number().int().min(0).max(10000).optional().describe('Width in pixels (for box/highlight)'),
+      height: z.number().int().min(0).max(10000).optional().describe('Height in pixels (for box/highlight)'),
+      label: z.string().max(500).optional().describe('Text label to display'),
+      color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().describe('Color as hex (#RRGGBB), default #ff3e00'),
+      ttl: z.number().int().min(0).max(3600).optional().describe('Auto-expire after N seconds (0 = never)'),
+      group: z.string().max(100).optional().describe('Group name for batch clearing'),
+    })).max(200).optional().describe('Array of annotations (required for set/merge)'),
+    ids: z.array(z.string().min(1).max(200)).max(200).optional()
+      .describe('Array of annotation ids to remove (required for clear action)'),
+    group: z.string().min(1).max(100).optional()
+      .describe('Group name to clear (required for clear-group action)'),
+  },
+  async ({ action, annotations, ids, group }) => {
+    try {
+      const payload: Record<string, unknown> = { action };
+      if (annotations) payload.annotations = annotations;
+      if (ids) payload.ids = ids;
+      if (group) payload.group = group;
+
+      const bodyStr = JSON.stringify(payload);
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/annotations', discovery.token, discovery.port, bodyStr);
+
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const parsed = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: `Annotations updated. ${parsed.count} active.` }] };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { content: [{ type: 'text' as const, text: msg }], isError: true };
