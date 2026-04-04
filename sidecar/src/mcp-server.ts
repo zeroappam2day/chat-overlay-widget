@@ -473,6 +473,88 @@ server.tool(
   }
 );
 
+
+// ─── Tool 17: manage_tasks (EAC-6) ───────────────────────────────────────────────
+
+server.tool(
+  'manage_tasks',
+  `Manage agent tasks in the Chat Overlay Widget. Tasks are shell commands submitted to PTY sessions with lifecycle tracking (pending, running, completed, failed, timeout).
+
+Actions:
+- "submit": Submit a new task. Requires name, command, paneId. Optional: exitPattern (regex for completion), failPattern (regex for failure), timeoutMs (default 300000).
+- "list": List all tasks.
+- "get": Get a specific task by taskId.
+- "cancel": Cancel a running task (sends Ctrl+C).
+
+Requires agentTaskOrchestrator, multiPty, and terminalWriteMcp feature flags enabled.`,
+  {
+    action: z.enum(['submit', 'list', 'get', 'cancel']).describe('Action to perform'),
+    taskId: z.string().optional().describe('Task ID (required for get/cancel)'),
+    name: z.string().max(200).optional().describe('Human-readable task name (required for submit)'),
+    command: z.string().max(10000).optional().describe('Shell command to execute (required for submit)'),
+    paneId: z.string().optional().describe('Target PTY pane ID (default: "default")'),
+    exitPattern: z.string().max(500).optional().describe('Regex to detect task completion in output'),
+    failPattern: z.string().max(500).optional().describe('Regex to detect task failure in output'),
+    timeoutMs: z.number().int().min(1000).max(3600000).optional().describe('Task timeout in ms (default 300000)'),
+  },
+  async ({ action, taskId, name, command, paneId, exitPattern, failPattern, timeoutMs }) => {
+    try {
+      const discovery = readDiscovery();
+
+      if (action === 'submit') {
+        if (!name || !command) {
+          return { content: [{ type: 'text' as const, text: 'Error: name and command are required for submit' }], isError: true };
+        }
+        const body = JSON.stringify({ name, command, paneId: paneId ?? 'default', exitPattern, failPattern, timeoutMs });
+        const resp = await sidecarPost('/tasks/submit', discovery.token, discovery.port, body);
+        if (resp.status !== 200) {
+          const msg = JSON.parse(resp.body.toString()).error ?? resp.body.toString();
+          return { content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (action === 'list') {
+        const resp = await sidecarGet('/tasks', discovery.token, discovery.port);
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (action === 'get') {
+        if (!taskId) {
+          return { content: [{ type: 'text' as const, text: 'Error: taskId is required for get' }], isError: true };
+        }
+        const resp = await sidecarGet(`/tasks/${taskId}`, discovery.token, discovery.port);
+        if (resp.status !== 200) {
+          const msg = JSON.parse(resp.body.toString()).error ?? resp.body.toString();
+          return { content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (action === 'cancel') {
+        if (!taskId) {
+          return { content: [{ type: 'text' as const, text: 'Error: taskId is required for cancel' }], isError: true };
+        }
+        const resp = await sidecarPost(`/tasks/${taskId}/cancel`, discovery.token, discovery.port, '{}');
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        return { content: [{ type: 'text' as const, text: 'Task cancelled.' }] };
+      }
+
+      return { content: [{ type: 'text' as const, text: `Unknown action: ${action}` }], isError: true };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

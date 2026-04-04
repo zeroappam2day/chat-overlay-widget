@@ -38,6 +38,8 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { TaskOrchestrator } from './taskOrchestrator.js';
+import type { AgentTask } from './taskOrchestrator.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -359,6 +361,92 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // EAC-6: Task Orchestrator endpoints
+  if (req.method === 'POST' && url.pathname === '/tasks/submit') {
+    if (!sidecarFlags.agentTaskOrchestrator) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Agent Task Orchestrator is disabled' }));
+      return;
+    }
+    if (!sidecarFlags.multiPty || !sidecarFlags.terminalWriteMcp) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Requires multiPty and terminalWriteMcp flags' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        const result = taskOrchestrator.submitTask({
+          name: parsed.name,
+          command: parsed.command,
+          paneId: parsed.paneId ?? 'default',
+          exitPattern: parsed.exitPattern,
+          failPattern: parsed.failPattern,
+          timeoutMs: parsed.timeoutMs,
+        });
+        if ('error' in result) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: result.error }));
+        } else {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        }
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid request: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/tasks') {
+    if (!sidecarFlags.agentTaskOrchestrator) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Agent Task Orchestrator is disabled' }));
+      return;
+    }
+    const tasks = taskOrchestrator.getAllTasks();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ tasks }));
+    return;
+  }
+
+  if (url.pathname.startsWith('/tasks/') && url.pathname !== '/tasks/submit') {
+    if (!sidecarFlags.agentTaskOrchestrator) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Agent Task Orchestrator is disabled' }));
+      return;
+    }
+    const parts = url.pathname.split('/');
+    // /tasks/:taskId or /tasks/:taskId/cancel
+    const taskId = parts[2];
+
+    if (req.method === 'GET' && parts.length === 3 && taskId) {
+      const task = taskOrchestrator.getTask(taskId);
+      if (!task) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Task not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(task));
+      return;
+    }
+
+    if (req.method === 'POST' && parts.length === 4 && parts[3] === 'cancel' && taskId) {
+      taskOrchestrator.cancelTask(taskId).then(() => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      }).catch((err) => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err) }));
+      });
+      return;
+    }
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -405,6 +493,22 @@ httpServer.listen(0, '127.0.0.1', () => {
 const activeSessions = new Map<WebSocket, PTYSession | BatchedPTYSession>();
 const planWatchers = new Map<WebSocket, PlanWatcher>();
 
+// EAC-6: Task Orchestrator
+const taskOrchestrator = new TaskOrchestrator({
+  getSession: (_paneId: string) => {
+    // Currently single-pane: return first active session
+    return [...activeSessions.values()][0];
+  },
+  writeToSession: (_paneId: string, data: string) => {
+    const session = [...activeSessions.values()][0];
+    if (!session) return false;
+    session.write(data);
+    return true;
+  },
+});
+
+taskOrchestrator.onTaskStateChange = (task) => broadcastTaskStateChange(task);
+
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
 const sidecarFlags: Record<string, boolean> = {
   outputBatching: true,
@@ -412,6 +516,7 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  agentTaskOrchestrator: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -429,6 +534,21 @@ function broadcastAgentEvent(event: AgentEvent): void {
 function broadcastAnnotations(annotations: Annotation[]): void {
   for (const client of wss.clients) {
     sendMsg(client, { type: 'annotation-update', annotations });
+  }
+}
+
+function broadcastTaskStateChange(task: AgentTask): void {
+  for (const client of wss.clients) {
+    sendMsg(client, {
+      type: 'task-state-change',
+      task: {
+        taskId: task.taskId,
+        name: task.name,
+        status: task.status,
+        paneId: task.paneId,
+        lastOutput: task.lastOutput,
+      },
+    });
   }
 }
 
