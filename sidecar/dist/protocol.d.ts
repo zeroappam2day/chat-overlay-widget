@@ -53,6 +53,10 @@ export type ClientMessage = {
 } | {
     type: 'annotations';
     payload: AnnotationPayload;
+} | {
+    type: 'consent-response';
+    requestId: string;
+    approved: boolean;
 };
 export interface SessionMeta {
     id: number;
@@ -166,4 +170,16 @@ export type ServerMessage = {
         currentStep: number;
         totalSteps: number;
     } | null;
+} | {
+    type: 'consent-request';
+    requestId: string;
+    action: {
+        type: string;
+        description: string;
+        coordinates?: {
+            x: number;
+            y: number;
+        };
+        target?: string;
+    };
 };
