@@ -68,6 +68,11 @@ const askCodeHandler_js_1 = require("./askCodeHandler.js");
 const annotationStore_js_1 = require("./annotationStore.js");
 const walkthroughEngine_js_1 = require("./walkthroughEngine.js");
 const terminalWrite_js_1 = require("./terminalWrite.js");
+const multiPtyManager_js_1 = require("./multiPtyManager.js");
+const uiAutomation_js_1 = require("./uiAutomation.js");
+const consentManager_js_1 = require("./consentManager.js");
+const inputSimulator_js_1 = require("./inputSimulator.js");
+const elementTracker_js_1 = require("./elementTracker.js");
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
@@ -168,6 +173,55 @@ function handleHttpRequest(req, res) {
                 const msg = err instanceof Error ? err.message : String(err);
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: msg }));
+            }
+        });
+        return;
+    }
+    // EAC-1: Bind annotation to UI element
+    if (req.method === 'POST' && url.pathname === '/annotations/bind') {
+        if (!sidecarFlags.elementBoundAnnotations) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Element-bound annotations are disabled. Enable the elementBoundAnnotations feature flag.' }));
+            return;
+        }
+        if (!sidecarFlags.uiAccessibility) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'UI accessibility is required for element binding. Enable the uiAccessibility feature flag.' }));
+            return;
+        }
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const parsed = JSON.parse(body);
+                if (!parsed.annotationId || !parsed.binding || !parsed.binding.strategy) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'annotationId and binding.strategy are required' }));
+                    return;
+                }
+                const validStrategies = ['automationId', 'nameRole', 'coordinates'];
+                if (!validStrategies.includes(parsed.binding.strategy)) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `Invalid strategy. Must be one of: ${validStrategies.join(', ')}` }));
+                    return;
+                }
+                const binding = {
+                    strategy: parsed.binding.strategy,
+                    automationId: parsed.binding.automationId,
+                    name: parsed.binding.name,
+                    role: parsed.binding.role,
+                    hwnd: parsed.binding.hwnd,
+                    offsetX: parsed.binding.offsetX,
+                    offsetY: parsed.binding.offsetY,
+                };
+                annotationStore_js_1.annotationState.setElementBinding(parsed.annotationId, binding);
+                elementTracker.bindAnnotation(parsed.annotationId, binding);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, annotationId: parsed.annotationId, strategy: binding.strategy }));
+            }
+            catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
             }
         });
         return;
@@ -283,7 +337,8 @@ function handleHttpRequest(req, res) {
         return;
     }
     if (req.method === 'GET' && url.pathname === '/terminal-state') {
-        const session = [...activeSessions.values()][0];
+        const paneIdParam = url.searchParams.get('paneId') ?? undefined;
+        const session = getSessionByPaneId(paneIdParam);
         if (!session) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'No active session' }));
@@ -332,7 +387,7 @@ function handleHttpRequest(req, res) {
         return;
     }
     if (req.method === 'GET' && url.pathname === '/screenshot') {
-        const session = [...activeSessions.values()][0];
+        const session = getAnySession();
         if (!session) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'No active session' }));
@@ -378,7 +433,228 @@ function handleHttpRequest(req, res) {
     }
     // Agent Runtime Phase 1: Terminal write endpoint (flag-gated)
     if (req.method === 'POST' && url.pathname === '/terminal-write') {
-        (0, terminalWrite_js_1.handleTerminalWrite)(req, res, activeSessions, sidecarFlags);
+        (0, terminalWrite_js_1.handleTerminalWrite)(req, res, activeSessions, sidecarFlags, multiPtyManager);
+        return;
+    }
+    // Agent Runtime Phase 4: UI Accessibility Tree endpoint (flag-gated)
+    if (req.method === 'GET' && url.pathname === '/ui-elements') {
+        if (!sidecarFlags.uiAccessibility) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'UI accessibility tool is disabled. Enable the uiAccessibility feature flag.' }));
+            return;
+        }
+        try {
+            const hwndParam = url.searchParams.get('hwnd');
+            const titleParam = url.searchParams.get('title');
+            const maxDepth = Math.min(5, Math.max(1, parseInt(url.searchParams.get('maxDepth') ?? '3', 10) || 3));
+            const roleFilterParam = url.searchParams.get('roleFilter');
+            const roleFilter = roleFilterParam ? roleFilterParam.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+            let hwnd;
+            if (hwndParam) {
+                hwnd = parseInt(hwndParam, 10);
+                if (isNaN(hwnd) || hwnd <= 0) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Invalid hwnd parameter' }));
+                    return;
+                }
+            }
+            else if (titleParam) {
+                // Find window by title match
+                const windows = (0, windowEnumerator_js_1.listWindows)();
+                const match = windows.find(w => w.title.toLowerCase().includes(titleParam.toLowerCase()));
+                if (!match) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `No window found matching title: ${titleParam}` }));
+                    return;
+                }
+                hwnd = match.hwnd;
+            }
+            else {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Either hwnd or title parameter is required' }));
+                return;
+            }
+            const elements = (0, uiAutomation_js_1.getUiElements)(hwnd, { maxDepth, roleFilter });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(elements));
+        }
+        catch (err) {
+            console.error('[sidecar] ui-elements error:', err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+        }
+        return;
+    }
+    // Agent Runtime Phase 6: Consent request endpoint (flag-gated)
+    if (req.method === 'POST' && url.pathname === '/consent/request') {
+        if (!sidecarFlags.consentGate) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Consent gate is disabled. Enable the consentGate feature flag.' }));
+            return;
+        }
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const parsed = JSON.parse(body);
+                if (!parsed.action || !parsed.action.type || !parsed.action.description) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'action.type and action.description are required' }));
+                    return;
+                }
+                consentManager.requestConsent(parsed.action)
+                    .then((approved) => {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ approved }));
+                })
+                    .catch((err) => {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(err) }));
+                });
+            }
+            catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+            }
+        });
+        return;
+    }
+    // Agent Runtime Phase 5: OS-level input simulation endpoint (triple flag-gated)
+    if (req.method === 'POST' && url.pathname === '/send-input') {
+        // Triple guard: osInputSimulation + uiAccessibility + consentGate must all be ON
+        if (!sidecarFlags.osInputSimulation) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'OS input simulation is disabled. Enable the osInputSimulation feature flag.' }));
+            return;
+        }
+        if (!sidecarFlags.uiAccessibility) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'UI accessibility is required for input simulation. Enable the uiAccessibility feature flag.' }));
+            return;
+        }
+        if (!sidecarFlags.consentGate) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Consent gate is required for input simulation. Enable the consentGate feature flag.' }));
+            return;
+        }
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const parsed = JSON.parse(body);
+                if (!parsed.action || !parsed.description) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'action and description are required' }));
+                    return;
+                }
+                const validActions = ['click', 'type', 'keyCombo', 'drag'];
+                if (!validActions.includes(parsed.action)) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` }));
+                    return;
+                }
+                // Build consent action description
+                const consentAction = {
+                    type: parsed.action,
+                    description: parsed.description,
+                    coordinates: (parsed.x !== undefined && parsed.y !== undefined) ? { x: parsed.x, y: parsed.y } : undefined,
+                    target: parsed.target,
+                };
+                // Request user consent before executing
+                consentManager.requestConsent(consentAction)
+                    .then(async (approved) => {
+                    if (!approved) {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ ok: false, error: 'User denied the action' }));
+                        return;
+                    }
+                    // Execute the action
+                    let result;
+                    switch (parsed.action) {
+                        case 'click':
+                            if (parsed.x === undefined || parsed.y === undefined) {
+                                res.writeHead(400, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'x and y are required for click action' }));
+                                return;
+                            }
+                            result = (0, inputSimulator_js_1.simulateClick)(parsed.x, parsed.y, parsed.button ?? 'left');
+                            break;
+                        case 'type':
+                            if (!parsed.text) {
+                                res.writeHead(400, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'text is required for type action' }));
+                                return;
+                            }
+                            result = (0, inputSimulator_js_1.simulateType)(parsed.text);
+                            break;
+                        case 'keyCombo':
+                            if (!parsed.keys || !Array.isArray(parsed.keys)) {
+                                res.writeHead(400, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'keys array is required for keyCombo action' }));
+                                return;
+                            }
+                            result = (0, inputSimulator_js_1.simulateKeyCombo)(parsed.keys);
+                            break;
+                        case 'drag':
+                            if (parsed.x === undefined || parsed.y === undefined || parsed.toX === undefined || parsed.toY === undefined) {
+                                res.writeHead(400, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'x, y, toX, toY are required for drag action' }));
+                                return;
+                            }
+                            result = (0, inputSimulator_js_1.simulateDrag)(parsed.x, parsed.y, parsed.toX, parsed.toY);
+                            break;
+                        default:
+                            result = { ok: false, error: 'Unknown action' };
+                    }
+                    if (!result.ok) {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify(result));
+                        return;
+                    }
+                    // Verification loop: wait 500ms for UI to settle, then capture screenshot
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    try {
+                        const screenshotResp = await (0, screenshotSelf_js_1.captureSelfScreenshot)(getAnySession()?.terminalBuffer ?? null, false // no blur for verification
+                        );
+                        if (screenshotResp.ok) {
+                            const base64 = screenshotResp.buffer.toString('base64');
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({
+                                ok: true,
+                                verificationScreenshot: base64,
+                                verificationFormat: 'png',
+                            }));
+                        }
+                        else {
+                            // Action succeeded but verification screenshot failed — still report success
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({
+                                ok: true,
+                                verificationScreenshot: null,
+                                verificationError: screenshotResp.error,
+                            }));
+                        }
+                    }
+                    catch {
+                        // Action succeeded but screenshot threw — report success without screenshot
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            ok: true,
+                            verificationScreenshot: null,
+                            verificationError: 'Screenshot capture failed',
+                        }));
+                    }
+                })
+                    .catch((err) => {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: String(err) }));
+                });
+            }
+            catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+            }
+        });
         return;
     }
     res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -417,6 +693,18 @@ httpServer.listen(0, '127.0.0.1', () => {
     portFilePath = (0, discoveryFile_js_1.writeDiscoveryFile)(addr.port, authToken);
 });
 const activeSessions = new Map();
+const multiPtyManager = new multiPtyManager_js_1.MultiPtyManager({ maxSessionsPerClient: 4 });
+const consentManager = new consentManager_js_1.ConsentManager();
+const elementTracker = new elementTracker_js_1.ElementTracker({
+    pollIntervalMs: 500,
+    getAnnotations: () => annotationStore_js_1.annotationState.getAll(),
+    updateAnnotation: (id, rect) => annotationStore_js_1.annotationState.updatePosition(id, rect),
+    markStale: (id, stale) => annotationStore_js_1.annotationState.setStale(id, stale),
+    getUiElements: uiAutomation_js_1.getUiElements,
+});
+elementTracker.onPositionsUpdated = (annotations) => {
+    broadcastAnnotations(annotations);
+};
 const planWatchers = new Map();
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
 const sidecarFlags = {
@@ -425,6 +713,11 @@ const sidecarFlags = {
     planWatcher: true,
     terminalWriteMcp: false,
     conditionalAdvance: false,
+    multiPty: false,
+    uiAccessibility: false,
+    osInputSimulation: false,
+    consentGate: false,
+    elementBoundAnnotations: false,
 };
 function sendMsg(ws, msg) {
     if (ws.readyState === ws.OPEN) {
@@ -446,14 +739,37 @@ function broadcastWalkthroughStep(step) {
         sendMsg(client, { type: 'walkthrough-step', step });
     }
 }
+// Agent Runtime Phase 6: Wire consent manager broadcast to WebSocket clients
+consentManager.broadcastConsentRequest = (request) => {
+    for (const client of wss.clients) {
+        sendMsg(client, { type: 'consent-request', requestId: request.requestId, action: request.action });
+    }
+};
 /** Agent Runtime Phase 2: Update watcher pattern on all active sessions */
 function updateWalkthroughWatcherPattern() {
     const pattern = walkthroughEngine_js_1.walkthroughEngine.getCurrentAdvancePattern();
-    for (const session of activeSessions.values()) {
+    const sessions = sidecarFlags.multiPty
+        ? multiPtyManager.allSessions()
+        : activeSessions.values();
+    for (const session of sessions) {
         if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
             session.walkthroughWatcherInstance.setPattern(pattern);
         }
     }
+}
+/** Get any first session across connection modes (for HTTP endpoints that don't specify paneId). */
+function getAnySession() {
+    if (sidecarFlags.multiPty) {
+        return multiPtyManager.allSessions().next().value;
+    }
+    return [...activeSessions.values()][0];
+}
+/** Get a session by paneId (multiPty) or fall back to first session. */
+function getSessionByPaneId(paneId) {
+    if (sidecarFlags.multiPty && paneId) {
+        return multiPtyManager.findSessionByPaneId(paneId);
+    }
+    return getAnySession();
 }
 async function sweepScreenshotTempFiles() {
     try {
@@ -489,24 +805,46 @@ wss.on('connection', (ws) => {
         console.log(`[sidecar] received message: ${JSON.stringify(msg)}`);
         switch (msg.type) {
             case 'spawn': {
-                console.log(`[sidecar] spawn requested: shell=${msg.shell}, cols=${msg.cols}, rows=${msg.rows}`);
-                // Destroy existing session if any
-                const existing = activeSessions.get(ws);
-                if (existing) {
-                    console.log('[sidecar] destroying existing session');
-                    existing.destroy();
-                    activeSessions.delete(ws);
+                const spawnPaneId = msg.paneId;
+                console.log(`[sidecar] spawn requested: shell=${msg.shell}, cols=${msg.cols}, rows=${msg.rows}, paneId=${spawnPaneId ?? '(none)'}`);
+                if (sidecarFlags.multiPty && spawnPaneId) {
+                    // Agent Runtime Phase 3: Multi-PTY mode — destroy only the session for this paneId
+                    const existingMulti = multiPtyManager.getSession(ws, spawnPaneId);
+                    if (existingMulti) {
+                        console.log(`[sidecar] multiPty: destroying existing session for pane ${spawnPaneId}`);
+                        existingMulti.destroy();
+                        multiPtyManager.removeSession(ws, spawnPaneId);
+                    }
+                }
+                else {
+                    // Legacy mode: destroy existing session if any
+                    const existing = activeSessions.get(ws);
+                    if (existing) {
+                        console.log('[sidecar] destroying existing session');
+                        existing.destroy();
+                        activeSessions.delete(ws);
+                    }
                 }
                 // Find shell executable from detected shells
                 const shellInfo = shells.find(s => s.name === msg.shell);
                 const shellExe = shellInfo?.exe ?? msg.shell;
                 console.log(`[sidecar] resolved shell exe: ${shellExe}`);
                 try {
-                    const session = new batchedPtySession_js_1.BatchedPTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24, sidecarFlags.outputBatching ?? true);
-                    activeSessions.set(ws, session);
+                    const session = new batchedPtySession_js_1.BatchedPTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24, sidecarFlags.outputBatching ?? true, sidecarFlags.multiPty ? spawnPaneId : undefined);
+                    if (sidecarFlags.multiPty && spawnPaneId) {
+                        const ok = multiPtyManager.setSession(ws, spawnPaneId, session);
+                        if (!ok) {
+                            session.destroy();
+                            sendMsg(ws, { type: 'error', message: 'Maximum PTY sessions reached (4)' });
+                            break;
+                        }
+                    }
+                    else {
+                        activeSessions.set(ws, session);
+                    }
                     console.log(`[sidecar] PTY session created successfully (batching=${sidecarFlags.outputBatching ?? true})`);
                     console.log(`[sidecar] session started: id=${session.sessionId}`);
-                    sendMsg(ws, { type: 'session-start', sessionId: session.sessionId });
+                    sendMsg(ws, { type: 'session-start', sessionId: session.sessionId, ...(spawnPaneId ? { paneId: spawnPaneId } : {}) });
                     // Agent Runtime Phase 2: Wire walkthrough watcher to auto-advance
                     session.walkthroughWatcherInstance.onAdvance = () => {
                         try {
@@ -550,20 +888,43 @@ wss.on('connection', (ws) => {
                 break;
             }
             case 'input': {
-                const session = activeSessions.get(ws);
-                session?.write(msg.data);
+                const inputPaneId = msg.paneId;
+                if (sidecarFlags.multiPty && inputPaneId) {
+                    const session = multiPtyManager.getSession(ws, inputPaneId);
+                    session?.write(msg.data);
+                }
+                else {
+                    const session = activeSessions.get(ws);
+                    session?.write(msg.data);
+                }
                 break;
             }
             case 'resize': {
-                const session = activeSessions.get(ws);
-                session?.resize(msg.cols, msg.rows);
+                const resizePaneId = msg.paneId;
+                if (sidecarFlags.multiPty && resizePaneId) {
+                    const session = multiPtyManager.getSession(ws, resizePaneId);
+                    session?.resize(msg.cols, msg.rows);
+                }
+                else {
+                    const session = activeSessions.get(ws);
+                    session?.resize(msg.cols, msg.rows);
+                }
                 break;
             }
             case 'kill': {
-                const session = activeSessions.get(ws);
-                if (session) {
-                    session.destroy();
-                    activeSessions.delete(ws);
+                const killPaneId = msg.paneId;
+                if (sidecarFlags.multiPty && killPaneId) {
+                    const session = multiPtyManager.removeSession(ws, killPaneId);
+                    if (session) {
+                        session.destroy();
+                    }
+                }
+                else {
+                    const session = activeSessions.get(ws);
+                    if (session) {
+                        session.destroy();
+                        activeSessions.delete(ws);
+                    }
                 }
                 planWatchers.get(ws)?.stop();
                 planWatchers.delete(ws);
@@ -643,9 +1004,14 @@ wss.on('connection', (ws) => {
                 if (flags && typeof flags === 'object') {
                     Object.assign(sidecarFlags, flags);
                     console.log(`[sidecar] feature flags updated: ${JSON.stringify(sidecarFlags)}`);
+                    // Helper: iterate all active sessions (legacy + multiPty)
+                    const iterAllSessions = function* () {
+                        yield* activeSessions.values();
+                        yield* multiPtyManager.allSessions();
+                    };
                     // Live-update batching on active sessions
                     if ('outputBatching' in flags) {
-                        for (const session of activeSessions.values()) {
+                        for (const session of iterAllSessions()) {
                             if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
                                 session.batchingEnabled = flags.outputBatching;
                             }
@@ -653,7 +1019,7 @@ wss.on('connection', (ws) => {
                     }
                     // Live-update autoTrust on active sessions
                     if ('autoTrust' in flags) {
-                        for (const session of activeSessions.values()) {
+                        for (const session of iterAllSessions()) {
                             if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
                                 session.autoTrustEnabled = flags.autoTrust;
                             }
@@ -661,7 +1027,7 @@ wss.on('connection', (ws) => {
                     }
                     // Agent Runtime Phase 2: Live-update conditionalAdvance on active sessions
                     if ('conditionalAdvance' in flags) {
-                        for (const session of activeSessions.values()) {
+                        for (const session of iterAllSessions()) {
                             if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
                                 session.walkthroughWatcherEnabled = flags.conditionalAdvance;
                                 if (flags.conditionalAdvance) {
@@ -672,6 +1038,15 @@ wss.on('connection', (ws) => {
                                     session.walkthroughWatcherInstance.setPattern(null);
                                 }
                             }
+                        }
+                    }
+                    // EAC-1: Live-update element tracker when flag changes
+                    if ('elementBoundAnnotations' in flags) {
+                        if (flags.elementBoundAnnotations && elementTracker.getBindings().size > 0) {
+                            elementTracker.start();
+                        }
+                        else if (!flags.elementBoundAnnotations) {
+                            elementTracker.stop();
                         }
                     }
                     // Live-update planWatcher (Phase 3)
@@ -737,15 +1112,26 @@ wss.on('connection', (ws) => {
                 (0, askCodeHandler_js_1.cancelAskCode)(cancelMsg.requestId);
                 break;
             }
+            // Agent Runtime Phase 6: Handle consent response from frontend
+            case 'consent-response': {
+                const consentMsg = msg;
+                consentManager.handleResponse(consentMsg.requestId, consentMsg.approved);
+                break;
+            }
         }
     });
     ws.on('close', () => {
         console.log('[sidecar] client disconnected');
+        // Cleanup legacy single-session
         const session = activeSessions.get(ws);
         if (session) {
             session.destroy();
             activeSessions.delete(ws);
         }
+        // Agent Runtime Phase 3: Cleanup multiPty sessions
+        multiPtyManager.destroyAll(ws);
+        // Agent Runtime Phase 6: Auto-deny pending consent requests on disconnect
+        consentManager.denyAll();
         planWatchers.get(ws)?.stop();
         planWatchers.delete(ws);
     });
@@ -756,6 +1142,10 @@ wss.on('connection', (ws) => {
 process.on('exit', () => {
     for (const session of activeSessions.values()) {
         session.destroy();
+    }
+    // Agent Runtime Phase 3: Cleanup multiPty sessions on exit
+    for (const client of wss.clients) {
+        multiPtyManager.destroyAll(client);
     }
     if (portFilePath) {
         (0, discoveryFile_js_1.deleteDiscoveryFile)(portFilePath);

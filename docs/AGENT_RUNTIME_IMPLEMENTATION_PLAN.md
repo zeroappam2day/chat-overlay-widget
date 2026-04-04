@@ -4,7 +4,7 @@
 > **Created:** 2026-04-04
 > **Repository:** C:/Users/anujd/Documents/01_AI/214_Chat_overlay_widget
 > **Branch:** main
-> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 pending
+> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 DONE — Phase 5 DONE — Phase 6 DONE — Phase 7 DONE
 
 ---
 
@@ -947,44 +947,147 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - Sidecar dist build: PASS (walkthroughWatcher.js generated)
 
 ### Phase 3 — Multi-PTY Pane Multiplexing
-- **Status:** NEXT
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/multiPtyManager.ts` — MultiPtyManager class: manages per-WebSocket Map<paneId, Session>, max 4 sessions, findSessionByPaneId(), allSessions() iterator, destroyAll() cleanup
+- **Files modified:**
+  - `sidecar/src/protocol.ts` — Added optional `paneId?: string` to ClientMessage types (input, resize, spawn, kill) and ServerMessage types (output, pty-ready, pty-exit, session-start)
+  - `src/protocol.ts` — Mirrored same paneId additions (frontend copy)
+  - `sidecar/src/ptySession.ts` — Added optional `paneId` constructor param; output, pty-ready, and pty-exit messages now include paneId when provided
+  - `sidecar/src/batchedPtySession.ts` — Added optional `paneId` constructor param, passes it to PTYSession, batcher onFlush includes paneId in output messages
+  - `sidecar/src/server.ts` — Imported MultiPtyManager, created instance, added `multiPty: false` to sidecarFlags, added `getAnySession()` and `getSessionByPaneId()` helpers, modified spawn/input/resize/kill handlers with `if (multiPty)` branching, passes paneId to BatchedPTYSession constructor, updated /terminal-state to accept paneId query param, updated /screenshot to use getAnySession(), updated set-flags live-update to iterate both legacy and multiPty sessions, updated disconnect and exit cleanup to call multiPtyManager.destroyAll()
+  - `sidecar/src/terminalWrite.ts` — Added MultiPtyManager parameter, routes by paneId via findSessionByPaneId() when multiPty enabled, falls back to first session
+  - `sidecar/src/mcp-server.ts` — Added optional `paneId` parameter to `read_terminal_output` tool, passes through as query param to /terminal-state
+  - `src/store/featureFlagStore.ts` — Added `multiPty` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `multiPty` label ('Multi-PTY Panes')
+  - `src/hooks/useFlagSync.ts` — Added `multiPty` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `multiPty` to persistence snapshot
+  - `src/components/TerminalPane.tsx` — Added paneId filtering on incoming ServerMessages when multiPty ON, included paneId in spawn/input/resize/kill messages, updated auto-spawn, auto-respawn, shell change, and handleSendInput
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - When multiPty is OFF, behavior is identical to before — single PTY per WebSocket, spawn replaces existing session.
+  - When multiPty is ON, each pane sends its paneId in spawn/input/resize/kill messages. The sidecar routes to the correct session via MultiPtyManager.
+  - The `activeSessions` legacy Map is kept for backward compatibility when flag is OFF. MultiPtyManager is a parallel data structure used only when flag is ON.
+  - Output routing on the frontend uses paneId filtering in handleServerMessage — messages with a paneId for a different pane are silently dropped.
+  - PTYSession and BatchedPTYSession both accept optional paneId. When provided, all outgoing messages (output, pty-ready, pty-exit) include paneId, enabling server-side output isolation. The batcher's onFlush also includes paneId so batched output is correctly tagged.
+  - write_terminal MCP tool now routes by paneId when multiPty is enabled.
+  - read_terminal_output MCP tool now accepts optional paneId parameter.
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (multiPtyManager.js generated)
 
 ### Phase 4 — UI Accessibility Tree Discovery
-- **Status:** PENDING (after Phase 3)
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/uiAutomation.ts` — PowerShell-based Win32 UI Automation tree discovery using [System.Windows.Automation]. Exports `getUiElements(hwnd, opts)` with 3s TTL cache, maxDepth (1-5), roleFilter support, 15s timeout.
+- **Files modified:**
+  - `sidecar/src/server.ts` — Imported `getUiElements`, added `uiAccessibility: false` to sidecarFlags, added `GET /ui-elements` HTTP route (flag-gated, supports hwnd/title/maxDepth/roleFilter query params, title lookup via existing `listWindows()`)
+  - `sidecar/src/mcp-server.ts` — Added `get_ui_elements` MCP tool (Tool 9) with hwnd/title/maxDepth/roleFilter params, routes to `/ui-elements` sidecar endpoint
+  - `src/store/featureFlagStore.ts` — Added `uiAccessibility` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `uiAccessibility` label ('UI Accessibility Tree')
+  - `src/hooks/useFlagSync.ts` — Added `uiAccessibility` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `uiAccessibility` to persistence snapshot
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - The `get_ui_elements` MCP tool GETs `/ui-elements` on the sidecar HTTP server, which spawns PowerShell with `[System.Windows.Automation.AutomationElement]::FromHandle(hwnd)`.
+  - Window can be targeted by hwnd directly or by title substring match (uses existing `listWindows()`).
+  - Role filtering is applied during tree walk — filtered-out containers are still traversed so matching children are returned.
+  - PowerShell script uses `TreeWalker.ControlViewWalker` (not RawView) to avoid noise from internal framework elements.
+  - Cache key includes hwnd + maxDepth + roleFilter to avoid returning stale results for different queries.
+  - 15-second timeout prevents hangs on very large accessibility trees.
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (uiAutomation.js generated)
 
 ### Phase 5 — OS-Level Input Simulation
-- **Status:** PENDING (after Phase 6 — consent gate must be built first)
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/inputSimulator.ts` — Win32 SendInput wrapper via PowerShell P/Invoke. Exports simulateClick, simulateType, simulateKeyCombo, simulateDrag. Each action is an isolated PowerShell invocation with 5s timeout. Click uses DPI-aware absolute coordinates via GetSystemMetrics. Type uses KEYEVENTF_UNICODE for full Unicode support. KeyCombo maps key names to VK codes (ctrl, alt, shift, win, a-z, 0-9, f1-f12, arrows, nav keys). Drag uses move+down, delay, move+up sequence.
+- **Files modified:**
+  - `sidecar/src/server.ts` — Imported inputSimulator functions, added `osInputSimulation: false` to sidecarFlags, added `POST /send-input` HTTP route with triple flag guard (osInputSimulation + uiAccessibility + consentGate), integrates ConsentManager for user approval before execution, captures verification screenshot via captureSelfScreenshot after approved actions (500ms settle delay)
+  - `sidecar/src/mcp-server.ts` — Added `send_input` MCP tool (Tool 10) with action/x/y/toX/toY/button/text/keys/description/target params, POSTs to /send-input, returns optimized verification screenshot via optimizeForVision
+  - `src/store/featureFlagStore.ts` — Added `osInputSimulation` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `osInputSimulation` label ('OS Input Simulation')
+  - `src/hooks/useFlagSync.ts` — Added `osInputSimulation` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `osInputSimulation` to persistence snapshot
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - Triple safety gate enforced: `osInputSimulation` + `uiAccessibility` + `consentGate` must all be ON. Each missing flag returns a specific 403 error message.
+  - Consent flow: POST /send-input → consentManager.requestConsent() → WebSocket consent-request to frontend → user approves/denies → action executes or returns error.
+  - Verification screenshot: after each approved action, waits 500ms for UI to settle, then captures via captureSelfScreenshot (no blur). Screenshot is base64-encoded in the response. MCP tool optimizes it to WebP via optimizeForVision before returning to the LLM.
+  - If verification screenshot fails, the action result still reports success (ok: true) with verificationScreenshot: null and an error message.
+  - VK_MAP covers: modifiers (ctrl, alt, shift, win), navigation (enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown), arrows (up, down, left, right), function keys (f1-f12), letters (a-z), and numbers (0-9).
+  - simulateType uses KEYEVENTF_UNICODE (wScan = char code) for direct Unicode input — no VK code translation needed.
+  - simulateDrag includes 50ms delays between move-down, move-to, and release phases for reliable drag recognition.
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (inputSimulator.js generated)
 
 ### Phase 6 — Consent Gate & Action Verification Loop
-- **Status:** PENDING (after Phase 4)
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/consentManager.ts` — ConsentManager class: pending request Map with 30s timeout, broadcastConsentRequest callback, handleResponse, denyAll for cleanup
+  - `src/components/ConsentDialog.tsx` — Modal consent UI with 30s countdown, Enter=Allow, Escape=Deny, action details display, timeout progress bar
+- **Files modified:**
+  - `sidecar/src/protocol.ts` — Added `consent-response` ClientMessage type, `consent-request` ServerMessage type
+  - `src/protocol.ts` — Mirrored same consent message types (frontend copy)
+  - `sidecar/src/server.ts` — Imported ConsentManager, created instance, added `consentGate: false` to sidecarFlags, wired broadcastConsentRequest to WebSocket clients, added `consent-response` case in WS handler, added `POST /consent/request` HTTP route (flag-gated), added consentManager.denyAll() on disconnect
+  - `src/store/featureFlagStore.ts` — Added `consentGate` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `consentGate` label ('Action Consent Gate')
+  - `src/hooks/useFlagSync.ts` — Added `consentGate` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `consentGate` to persistence snapshot
+  - `src/components/TerminalPane.tsx` — Imported ConsentDialog, added consentRequest state, handles `consent-request` ServerMessage, renders ConsentDialog when active, sends `consent-response` on approve/deny
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - The consent flow works via HTTP (MCP → sidecar POST /consent/request) + WebSocket (sidecar → frontend consent-request, frontend → sidecar consent-response).
+  - POST /consent/request blocks until user responds or 30s timeout (auto-deny).
+  - ConsentManager.denyAll() is called on WebSocket disconnect and sidecar exit for safety.
+  - Verification screenshot logic is NOT yet wired — Phase 5 (send_input) will use the consent manager and add screenshot capture after approved actions.
+  - The ConsentDialog only renders in the active TerminalPane (since consent-request is broadcast, all panes receive it — but only the first to display and respond matters since the ConsentManager resolves the promise on first handleResponse).
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (consentManager.js generated)
 
 ### Phase 7 — Integration Testing & Hardening
-- **Status:** PENDING (after all above)
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/terminalWrite.test.ts` — Unit tests for Phase 1 terminal write handler (flag gating, input validation, session routing, pressEnter)
+  - `sidecar/src/walkthroughWatcher.test.ts` — Unit tests for Phase 2 watcher (pattern matching, ANSI stripping, timing, cooldown, destroy cleanup)
+  - `sidecar/src/multiPtyManager.test.ts` — Unit tests for Phase 3 multi-PTY manager (CRUD, max sessions, destroyAll, cross-connection lookup, iterator)
+  - `sidecar/src/consentManager.test.ts` — Unit tests for Phase 6 consent manager (request/response flow, timeout auto-deny, denyAll, no-broadcast safety)
+  - `sidecar/src/inputSimulator.test.ts` — Validation tests for Phase 5 input simulator (text length limit, key combo validation, unknown key rejection)
+  - `sidecar/src/uiAutomation.test.ts` — Validation tests for Phase 4 UI automation (cache reset, module exports)
+  - `sidecar/src/agentRuntimeIntegration.test.ts` — Cross-phase integration tests (flag defaults, flag isolation, triple-gate dependency enforcement, cross-phase state isolation, module export verification, combined consent+watcher flow)
+  - `src/components/__tests__/ConsentDialog.test.tsx` — React component tests for Phase 6 consent dialog (rendering, approve/deny, keyboard shortcuts, double-click guard, accessibility)
+- **Files modified:**
+  - `package.json` — Added `test` and `test:watch` scripts
+  - `sidecar/tsconfig.json` — Added `exclude` for `*.test.ts` to prevent test files from being included in production build
+- **Handover notes:**
+  - All 8 new test files follow existing codebase patterns (Vitest, @testing-library/react for components).
+  - Tests cover all Phase 7 acceptance criteria: flag defaults, flag independence, flag dependency enforcement (osInputSimulation triple-gate), cross-phase state isolation, and module export verification.
+  - PowerShell-dependent code (uiAutomation.getUiElements, inputSimulator.simulateClick/simulateDrag) is NOT tested at runtime since it requires Windows desktop + active windows. Only validation logic and module exports are tested.
+  - Sidecar tsconfig.json now excludes `*.test.ts` from compilation. Tests are run by vitest (which uses its own TypeScript transform) not the sidecar build.
+  - Frontend (tsc --noEmit) and sidecar (tsc) both compile cleanly.
+  - Hardening checklist items verified:
+    - [x] All flags OFF: zero behavioral change (flag defaults all false)
+    - [x] Each flag independently toggleable (isolation test)
+    - [x] Flag dependency enforcement (triple-gate test)
+    - [x] Memory cleanup: destroyAll, denyAll, watcher.destroy all tested
+    - [x] All existing tests still pass (353 total, 0 failures)
+    - [x] No regressions in existing functionality
+- **Test results:**
+  - Vitest run: 25 test files, 353 tests, 0 failures
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - New tests added: 8 files with ~80 test cases covering all 6 phases + integration
 
 ---
 

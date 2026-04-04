@@ -11,6 +11,11 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
   const outputBatching = useFeatureFlagStore(s => s.outputBatching);
   const terminalWriteMcp = useFeatureFlagStore(s => s.terminalWriteMcp);
   const conditionalAdvance = useFeatureFlagStore(s => s.conditionalAdvance);
+  const multiPty = useFeatureFlagStore(s => s.multiPty);
+  const uiAccessibility = useFeatureFlagStore(s => s.uiAccessibility);
+  const osInputSimulation = useFeatureFlagStore(s => s.osInputSimulation);
+  const consentGate = useFeatureFlagStore(s => s.consentGate);
+  const elementBoundAnnotations = useFeatureFlagStore(s => s.elementBoundAnnotations);
   const sentRef = useRef(false);
 
   useEffect(() => {
@@ -18,7 +23,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
       sentRef.current = false;
       return;
     }
-    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance } });
+    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, osInputSimulation, consentGate, elementBoundAnnotations } });
     sentRef.current = true;
-  }, [outputBatching, terminalWriteMcp, conditionalAdvance, connected, sendMessage]);
+  }, [outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, osInputSimulation, consentGate, elementBoundAnnotations, connected, sendMessage]);
 }

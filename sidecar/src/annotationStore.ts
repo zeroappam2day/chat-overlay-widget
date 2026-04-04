@@ -19,7 +19,22 @@ export const AnnotationSchema = z.object({
   group: z.string().max(100).optional(),
 });
 
-export type Annotation = z.infer<typeof AnnotationSchema>;
+/** Raw annotation from Zod parsing */
+export type AnnotationBase = z.infer<typeof AnnotationSchema>;
+
+/** Runtime annotation with optional element binding (EAC-1) */
+export type Annotation = AnnotationBase & {
+  elementBinding?: {
+    strategy: 'automationId' | 'nameRole' | 'coordinates';
+    automationId?: string;
+    name?: string;
+    role?: string;
+    hwnd?: number;
+    offsetX?: number;
+    offsetY?: number;
+  };
+  stale?: boolean;
+};
 
 /**
  * Batch annotation payload from an agent.
@@ -99,7 +114,14 @@ class AnnotationState {
   }
 
   getAll(): Annotation[] {
-    return [...this.annotations.values()].map(({ expiresAt, ...rest }) => rest);
+    return [...this.annotations.values()].map(({ expiresAt, ...rest }) => {
+      const ann: Annotation = rest;
+      // Include elementBinding and stale if present
+      const full = rest as Annotation & { elementBinding?: Annotation['elementBinding']; stale?: boolean };
+      if (full.elementBinding) ann.elementBinding = full.elementBinding;
+      if (full.stale !== undefined) ann.stale = full.stale;
+      return ann;
+    });
   }
 
   private upsert(ann: Annotation): void {
@@ -130,6 +152,30 @@ class AnnotationState {
     for (const timer of this.timers.values()) clearTimeout(timer);
     this.annotations.clear();
     this.timers.clear();
+  }
+
+  /** EAC-1: Update annotation position (called by ElementTracker) */
+  updatePosition(id: string, rect: { x: number; y: number; w: number; h: number }): void {
+    const entry = this.annotations.get(id);
+    if (!entry) return;
+    entry.x = rect.x;
+    entry.y = rect.y;
+    if (rect.w > 0) entry.width = rect.w;
+    if (rect.h > 0) entry.height = rect.h;
+  }
+
+  /** EAC-1: Mark an annotation as stale or not */
+  setStale(id: string, stale: boolean): void {
+    const entry = this.annotations.get(id);
+    if (!entry) return;
+    (entry as Annotation & { stale?: boolean }).stale = stale;
+  }
+
+  /** EAC-1: Set element binding on an annotation */
+  setElementBinding(id: string, binding: Annotation['elementBinding']): void {
+    const entry = this.annotations.get(id);
+    if (!entry) return;
+    (entry as Annotation & { elementBinding?: Annotation['elementBinding'] }).elementBinding = binding;
   }
 
   /** Callback invoked when a TTL expires. Set by server.ts to broadcast updates. */

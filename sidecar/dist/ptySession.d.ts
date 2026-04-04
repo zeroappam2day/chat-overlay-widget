@@ -3,6 +3,7 @@ import { TerminalBuffer } from './terminalBuffer.js';
 export declare const SCREENSHOT_DIR: string;
 export declare class PTYSession {
     private ws;
+    private paneId?;
     private ptyProcess;
     private dataDisposable;
     private bufferDisposable;
@@ -10,7 +11,7 @@ export declare class PTYSession {
     private recorder;
     private tempFiles;
     readonly terminalBuffer: TerminalBuffer;
-    constructor(ws: WebSocket, shellExe: string, cols?: number, rows?: number);
+    constructor(ws: WebSocket, shellExe: string, cols?: number, rows?: number, paneId?: string | undefined);
     write(data: string): void;
     resize(cols: number, rows: number): void;
     saveImage(base64: string): Promise<string>;

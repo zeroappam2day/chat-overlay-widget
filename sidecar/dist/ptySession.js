@@ -48,8 +48,9 @@ function send(ws, msg) {
     }
 }
 class PTYSession {
-    constructor(ws, shellExe, cols = 80, rows = 24) {
+    constructor(ws, shellExe, cols = 80, rows = 24, paneId) {
         this.ws = ws;
+        this.paneId = paneId;
         this.tempFiles = [];
         this.ptyProcess = pty.spawn(shellExe, [], {
             name: 'xterm-color',
@@ -61,7 +62,7 @@ class PTYSession {
         });
         this.recorder = new sessionRecorder_js_1.SessionRecorder(shellExe, process.env['USERPROFILE'] || 'C:\\');
         this.dataDisposable = this.ptyProcess.onData((data) => {
-            send(ws, { type: 'output', data });
+            send(ws, { type: 'output', data, ...(this.paneId ? { paneId: this.paneId } : {}) });
             this.recorder.append(data);
         });
         this.terminalBuffer = new terminalBuffer_js_1.TerminalBuffer();
@@ -70,9 +71,9 @@ class PTYSession {
         });
         this.exitDisposable = this.ptyProcess.onExit(({ exitCode }) => {
             this.recorder.end();
-            send(ws, { type: 'pty-exit', exitCode });
+            send(ws, { type: 'pty-exit', exitCode, ...(this.paneId ? { paneId: this.paneId } : {}) });
         });
-        send(ws, { type: 'pty-ready', pid: this.ptyProcess.pid, shell: shellExe });
+        send(ws, { type: 'pty-ready', pid: this.ptyProcess.pid, shell: shellExe, ...(this.paneId ? { paneId: this.paneId } : {}) });
     }
     write(data) {
         this.ptyProcess.write(data);

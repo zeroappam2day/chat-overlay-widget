@@ -25,6 +25,11 @@ export interface FeatureFlags {
   guidedWalkthrough: boolean;    // Phase 6 (Annotation) — Guided walkthrough panel
   terminalWriteMcp: boolean;     // Agent Runtime Phase 1 — Terminal write MCP tool
   conditionalAdvance: boolean;   // Agent Runtime Phase 2 — Conditional walkthrough advancement
+  multiPty: boolean;             // Agent Runtime Phase 3 — Multi-PTY pane multiplexing
+  uiAccessibility: boolean;      // Agent Runtime Phase 4 — UI Accessibility Tree Discovery
+  osInputSimulation: boolean;    // Agent Runtime Phase 5 — OS-Level Input Simulation
+  consentGate: boolean;           // Agent Runtime Phase 6 — Consent Gate & Action Verification
+  elementBoundAnnotations: boolean; // EAC-1 — Element-Bound Annotations
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -63,6 +68,11 @@ const defaults: FeatureFlags = {
   guidedWalkthrough: false,  // OFF by default
   terminalWriteMcp: false,   // OFF by default — agent runtime
   conditionalAdvance: false, // OFF by default — agent runtime
+  multiPty: false,           // OFF by default — agent runtime
+  uiAccessibility: false,    // OFF by default — agent runtime
+  osInputSimulation: false,  // OFF by default — agent runtime
+  consentGate: false,         // OFF by default — agent runtime
+  elementBoundAnnotations: false, // OFF by default — EAC-1
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -102,6 +112,11 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         guidedWalkthrough: next.guidedWalkthrough,
         terminalWriteMcp: next.terminalWriteMcp,
         conditionalAdvance: next.conditionalAdvance,
+        multiPty: next.multiPty,
+        uiAccessibility: next.uiAccessibility,
+        osInputSimulation: next.osInputSimulation,
+        consentGate: next.consentGate,
+        elementBoundAnnotations: next.elementBoundAnnotations,
       }));
       return { [key]: value };
     }),

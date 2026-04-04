@@ -183,10 +183,15 @@ server.tool(
       .int()
       .optional()
       .describe('Cursor from previous call — returns only lines after this point'),
+    paneId: z
+      .string()
+      .optional()
+      .describe('Target pane ID (for multi-PTY support). If omitted, reads from the first active session.'),
   },
-  async ({ lines, since }) => {
+  async ({ lines, since, paneId }) => {
     try {
-      const qs = since !== undefined ? `lines=${lines}&since=${since}&scrub=true` : `lines=${lines}&scrub=true`;
+      let qs = since !== undefined ? `lines=${lines}&since=${since}&scrub=true` : `lines=${lines}&scrub=true`;
+      if (paneId) qs += `&paneId=${encodeURIComponent(paneId)}`;
       const resp = await callSidecar(`/terminal-state?${qs}`);
       if (resp.status !== 200) {
         const errText = resp.body.toString('utf-8');
@@ -469,6 +474,304 @@ server.tool(
       return { content: [{ type: 'text' as const, text: `Sent ${result.bytesWritten} bytes to terminal.` }] };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 9: get_ui_elements (Agent Runtime Phase 4) ────────────────────────
+
+server.tool(
+  'get_ui_elements',
+  `Discover UI elements in a target window using Win32 UI Automation.
+Returns the accessibility tree with element names, roles (Button, Edit, MenuItem, Tab, etc.),
+bounding rectangles (screen coordinates), and automation IDs.
+
+Use this to find clickable targets before using send_input (Phase 5).
+Prefer targeting elements by name/role over raw pixel coordinates.
+
+Gated behind the uiAccessibility feature flag.
+
+Example — find all buttons in Notepad:
+  { "title": "Notepad", "maxDepth": 2, "roleFilter": ["Button"] }
+
+Example — get full tree of a window by handle:
+  { "hwnd": 12345, "maxDepth": 3 }`,
+  {
+    hwnd: z
+      .number()
+      .int()
+      .optional()
+      .describe('Window handle (hwnd). If omitted, use title to find the window.'),
+    title: z
+      .string()
+      .optional()
+      .describe('Find window by title substring match (case-insensitive). Ignored if hwnd is provided.'),
+    maxDepth: z
+      .number()
+      .int()
+      .min(1)
+      .max(5)
+      .default(3)
+      .describe('Tree traversal depth (1-5, default 3). Higher = more elements but slower.'),
+    roleFilter: z
+      .array(z.string())
+      .optional()
+      .describe('Only return elements matching these control types (e.g., ["Button", "Edit", "MenuItem"]). Omit for all types.'),
+  },
+  async ({ hwnd, title, maxDepth, roleFilter }) => {
+    try {
+      let qs = `maxDepth=${maxDepth}`;
+      if (hwnd !== undefined) {
+        qs += `&hwnd=${hwnd}`;
+      } else if (title) {
+        qs += `&title=${encodeURIComponent(title)}`;
+      } else {
+        return {
+          content: [{ type: 'text' as const, text: 'Either hwnd or title is required.' }],
+          isError: true,
+        };
+      }
+      if (roleFilter && roleFilter.length > 0) {
+        qs += `&roleFilter=${encodeURIComponent(roleFilter.join(','))}`;
+      }
+
+      const resp = await callSidecar(`/ui-elements?${qs}`);
+      if (resp.status === 403) {
+        return {
+          content: [{ type: 'text' as const, text: 'UI accessibility tool is disabled. Enable the uiAccessibility feature flag.' }],
+          isError: true,
+        };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const parsed: unknown = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: JSON.stringify(parsed, null, 2) }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 10: send_input (Agent Runtime Phase 5) ───────────────────────────
+
+server.tool(
+  'send_input',
+  `CRITICAL: This tool simulates real mouse/keyboard input at the OS level. Every action requires user approval via the consent dialog. The uiAccessibility, osInputSimulation, and consentGate feature flags must ALL be enabled.
+
+Simulates mouse clicks, keyboard typing, key combinations, and drag operations on any Windows application.
+
+Actions:
+- "click": Click at screen coordinates (x, y). Use get_ui_elements first to find precise element positions.
+- "type": Type text at the current cursor/focus position using Unicode input.
+- "keyCombo": Press a keyboard shortcut (e.g., ["ctrl", "s"] for Ctrl+S).
+- "drag": Drag from (x, y) to (toX, toY).
+
+Supported keys for keyCombo: ctrl, alt, shift, win, enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9.
+
+Always use get_ui_elements first to discover element positions. Prefer element-based targeting over guessing from screenshots.
+After each action, a verification screenshot is returned so you can confirm the result.`,
+  {
+    action: z
+      .enum(['click', 'type', 'keyCombo', 'drag'])
+      .describe('The type of input action to simulate'),
+    x: z
+      .number()
+      .int()
+      .min(0)
+      .max(65535)
+      .optional()
+      .describe('X screen coordinate (for click/drag)'),
+    y: z
+      .number()
+      .int()
+      .min(0)
+      .max(65535)
+      .optional()
+      .describe('Y screen coordinate (for click/drag)'),
+    toX: z
+      .number()
+      .int()
+      .min(0)
+      .max(65535)
+      .optional()
+      .describe('Destination X coordinate (for drag)'),
+    toY: z
+      .number()
+      .int()
+      .min(0)
+      .max(65535)
+      .optional()
+      .describe('Destination Y coordinate (for drag)'),
+    button: z
+      .enum(['left', 'right'])
+      .optional()
+      .default('left')
+      .describe('Mouse button (for click, default "left")'),
+    text: z
+      .string()
+      .min(1)
+      .max(10000)
+      .optional()
+      .describe('Text to type (for type action)'),
+    keys: z
+      .array(z.string())
+      .max(10)
+      .optional()
+      .describe('Key names for keyboard shortcut (for keyCombo, e.g., ["ctrl", "s"])'),
+    description: z
+      .string()
+      .min(1)
+      .max(500)
+      .describe('Human-readable description of this action. Shown in the consent dialog. e.g., "Click the Save button in Notepad"'),
+    target: z
+      .string()
+      .max(200)
+      .optional()
+      .describe('Optional target element name (for consent dialog context)'),
+  },
+  async ({ action, x, y, toX, toY, button, text, keys, description, target }) => {
+    try {
+      const body: Record<string, unknown> = { action, description };
+      if (x !== undefined) body.x = x;
+      if (y !== undefined) body.y = y;
+      if (toX !== undefined) body.toX = toX;
+      if (toY !== undefined) body.toY = toY;
+      if (button) body.button = button;
+      if (text) body.text = text;
+      if (keys) body.keys = keys;
+      if (target) body.target = target;
+
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/send-input', discovery.token, discovery.port, JSON.stringify(body));
+
+      if (resp.status === 403) {
+        const errBody = JSON.parse(resp.body.toString('utf-8'));
+        return {
+          content: [{ type: 'text' as const, text: `Feature flag error: ${errBody.error}` }],
+          isError: true,
+        };
+      }
+
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+
+      const result = JSON.parse(resp.body.toString('utf-8')) as {
+        ok: boolean;
+        error?: string;
+        verificationScreenshot?: string | null;
+        verificationFormat?: string;
+        verificationError?: string;
+      };
+
+      if (!result.ok) {
+        return {
+          content: [{ type: 'text' as const, text: `Action failed: ${result.error}` }],
+          isError: true,
+        };
+      }
+
+      // Build response with optional verification screenshot
+      const content: Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }> = [];
+
+      if (result.verificationScreenshot) {
+        // Optimize screenshot for vision model
+        const pngBuffer = Buffer.from(result.verificationScreenshot, 'base64');
+        try {
+          const optimized = await optimizeForVision(pngBuffer);
+          content.push({
+            type: 'image' as const,
+            data: optimized.buffer.toString('base64'),
+            mimeType: 'image/webp',
+          });
+          content.push({
+            type: 'text' as const,
+            text: `Action "${action}" executed successfully. Verification screenshot: ${optimized.width}x${optimized.height} webp (${(optimized.buffer.length / 1024).toFixed(0)}KB)`,
+          });
+        } catch {
+          content.push({
+            type: 'text' as const,
+            text: `Action "${action}" executed successfully. Verification screenshot optimization failed — raw PNG attached.`,
+          });
+          content.push({
+            type: 'image' as const,
+            data: result.verificationScreenshot,
+            mimeType: 'image/png',
+          });
+        }
+      } else {
+        content.push({
+          type: 'text' as const,
+          text: `Action "${action}" executed successfully.${result.verificationError ? ` (Verification screenshot unavailable: ${result.verificationError})` : ''}`,
+        });
+      }
+
+      return { content };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 11: bind_annotation_to_element (EAC-1) ──────────────────────────────
+
+server.tool(
+  'bind_annotation_to_element',
+  `Bind an annotation to a UI element so it automatically tracks the element's position when the window moves, scrolls, or resizes.
+
+Requires both elementBoundAnnotations and uiAccessibility feature flags to be enabled.
+
+Strategies:
+- "automationId": Match element by its unique UI Automation ID (most reliable).
+- "nameRole": Match element by name and/or control type role (e.g., name="Save", role="Button").
+- "coordinates": Bind to the window itself — annotation follows the window position.
+
+The annotation must already exist (created via send_annotation). Once bound, the tracker
+polls the UI Automation tree every 500ms to update the annotation's coordinates.
+If the element is not found, the annotation is marked as stale (not deleted).
+
+Example — bind to a button by automation ID:
+  { "annotationId": "step1", "strategy": "automationId", "automationId": "btnSave", "hwnd": 12345 }
+
+Example — bind to a menu item by name and role:
+  { "annotationId": "step2", "strategy": "nameRole", "name": "File", "role": "MenuItem", "hwnd": 12345 }`,
+  {
+    annotationId: z.string().min(1).max(200).describe('ID of an existing annotation to bind'),
+    strategy: z.enum(['automationId', 'nameRole', 'coordinates']).describe('How to find the target element'),
+    automationId: z.string().optional().describe('UI Automation ID (for automationId strategy)'),
+    name: z.string().optional().describe('Element name (for nameRole strategy)'),
+    role: z.string().optional().describe('Control type role like Button, Edit, MenuItem (for nameRole strategy)'),
+    hwnd: z.number().int().describe('Window handle of the target window'),
+    offsetX: z.number().int().optional().describe('Pixel offset from element top-left X'),
+    offsetY: z.number().int().optional().describe('Pixel offset from element top-left Y'),
+  },
+  async ({ annotationId, strategy, automationId, name, role, hwnd, offsetX, offsetY }) => {
+    try {
+      const body: Record<string, unknown> = {
+        annotationId,
+        binding: { strategy, automationId, name, role, hwnd, offsetX, offsetY },
+      };
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/annotations/bind', discovery.token, discovery.port, JSON.stringify(body));
+
+      if (resp.status === 403) {
+        const errBody = JSON.parse(resp.body.toString('utf-8'));
+        return { content: [{ type: 'text' as const, text: `Feature flag error: ${errBody.error}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: `Annotation "${result.annotationId}" bound to element via ${result.strategy} strategy.` }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
     }
   }
 );

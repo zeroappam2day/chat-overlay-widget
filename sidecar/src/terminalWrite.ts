@@ -8,6 +8,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { PTYSession } from './ptySession';
 import type { BatchedPTYSession } from './batchedPtySession';
 import type { WebSocket } from 'ws';
+import type { MultiPtyManager } from './multiPtyManager';
 
 const MAX_TEXT_LENGTH = 10000;
 
@@ -20,7 +21,8 @@ export function handleTerminalWrite(
   req: IncomingMessage,
   res: ServerResponse,
   activeSessions: Map<WebSocket, PTYSession | BatchedPTYSession>,
-  sidecarFlags: Record<string, boolean>
+  sidecarFlags: Record<string, boolean>,
+  multiPtyManager?: MultiPtyManager
 ): void {
   if (!sidecarFlags.terminalWriteMcp) {
     respond(res, 403, { error: 'Terminal write MCP tool is disabled' });
@@ -38,7 +40,7 @@ export function handleTerminalWrite(
       return;
     }
 
-    const { text, pressEnter } = body;
+    const { text, paneId, pressEnter } = body;
 
     if (typeof text !== 'string') {
       respond(res, 400, { error: 'Missing or invalid "text" field (must be a string)' });
@@ -50,7 +52,20 @@ export function handleTerminalWrite(
       return;
     }
 
-    const session = [...activeSessions.values()][0];
+    // Agent Runtime Phase 3: Route by paneId when multiPty is enabled
+    let session: PTYSession | BatchedPTYSession | undefined;
+    if (sidecarFlags.multiPty && multiPtyManager && typeof paneId === 'string') {
+      session = multiPtyManager.findSessionByPaneId(paneId);
+    }
+    if (!session) {
+      // Fallback: first session from legacy map or multiPtyManager
+      if (sidecarFlags.multiPty && multiPtyManager) {
+        session = multiPtyManager.allSessions().next().value;
+      } else {
+        session = [...activeSessions.values()][0];
+      }
+    }
+
     if (!session) {
       respond(res, 404, { error: 'No active terminal session' });
       return;

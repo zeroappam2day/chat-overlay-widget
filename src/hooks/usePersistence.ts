@@ -45,6 +45,11 @@ function gatherState(windowState: WindowState | null): PersistedState {
       guidedWalkthrough: flags.guidedWalkthrough,
       terminalWriteMcp: flags.terminalWriteMcp,
       conditionalAdvance: flags.conditionalAdvance,
+      multiPty: flags.multiPty,
+      uiAccessibility: flags.uiAccessibility,
+      osInputSimulation: flags.osInputSimulation,
+      consentGate: flags.consentGate,
+      elementBoundAnnotations: flags.elementBoundAnnotations,
     },
     windowState,
   };

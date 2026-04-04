@@ -30,6 +30,11 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   guidedWalkthrough: 'Guided Walkthrough Panel',
   terminalWriteMcp: 'Terminal Write (MCP)',
   conditionalAdvance: 'Conditional Walkthrough Advance',
+  multiPty: 'Multi-PTY Panes',
+  uiAccessibility: 'UI Accessibility Tree',
+  osInputSimulation: 'OS Input Simulation',
+  consentGate: 'Action Consent Gate',
+  elementBoundAnnotations: 'Element-Bound Annotations',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];

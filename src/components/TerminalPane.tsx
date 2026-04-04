@@ -25,6 +25,7 @@ import { PromptHistoryPanel } from './PromptHistoryPanel';
 import { usePromptHistoryStore } from '../store/promptHistoryStore';
 import { ExitNotifier } from '../lib/exitNotifier';
 import { GitHubUrlBadge } from './GitHubUrlBadge';
+import { ConsentDialog, type ConsentAction } from './ConsentDialog';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -45,6 +46,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   // Pending capture block from window selection (sidecar capture-result-with-metadata response)
   const [pendingInjection, setPendingInjection] = useState<string | null>(null);
   const [inputBarHeight, setInputBarHeight] = useState(144); // INBAR-01: ~144px default
+  // Agent Runtime Phase 6: Consent dialog state
+  const [consentRequest, setConsentRequest] = useState<{ requestId: string; action: ConsentAction } | null>(null);
   const [lastSentCommand, setLastSentCommand] = useState('');
   const [bookmarkBarVisible, setBookmarkBarVisible] = useState(true); // Phase 8: toggled via Ctrl+B
   const handleRequestDiffRef = useRef<(() => void) | null>(null); // Phase 8: ref for keyboard shortcut
@@ -98,6 +101,13 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   const handleHistoryMessageRef = useRef<(msg: ServerMessage) => boolean>(() => false);
 
   const handleServerMessage = useCallback((msg: ServerMessage) => {
+    // Agent Runtime Phase 3: When multiPty is ON, ignore messages for other panes
+    const multiPtyEnabled = useFeatureFlagStore.getState().multiPty;
+    const msgPaneId = 'paneId' in msg ? (msg as { paneId?: string }).paneId : undefined;
+    if (multiPtyEnabled && msgPaneId && msgPaneId !== paneId) {
+      return; // message is for a different pane
+    }
+
     switch (msg.type) {
       case 'output':
         writeRef.current(msg.data);
@@ -129,7 +139,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         setTimeout(() => {
           if (shells.length > 0) {
             const dims = getDimensionsRef.current();
-            sendMessageRef.current({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows });
+            const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+            sendMessageRef.current({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows, ...(multiPtyOn ? { paneId } : {}) });
           }
         }, 1000);
         break;
@@ -168,6 +179,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         break;
       case 'walkthrough-step':
         useAnnotationBridgeStore.getState().setWalkthroughStep(msg.step);
+        break;
+      // Agent Runtime Phase 6: Show consent dialog
+      case 'consent-request':
+        if (useFeatureFlagStore.getState().consentGate) {
+          setConsentRequest({ requestId: msg.requestId, action: msg.action });
+        }
         break;
       case 'plan-update':
         usePlanStore.getState().setContent(msg.content, msg.fileName);
@@ -210,12 +227,14 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   handleHistoryMessageRef.current = handleHistoryMessage;
 
   const handleTerminalData = useCallback((data: string) => {
-    sendMessage({ type: 'input', data });
-  }, [sendMessage]);
+    const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+    sendMessage({ type: 'input', data, ...(multiPtyOn ? { paneId } : {}) });
+  }, [sendMessage, paneId]);
 
   const handleTerminalResize = useCallback((cols: number, rows: number) => {
-    sendMessage({ type: 'resize', cols, rows });
-  }, [sendMessage]);
+    const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+    sendMessage({ type: 'resize', cols, rows, ...(multiPtyOn ? { paneId } : {}) });
+  }, [sendMessage, paneId]);
 
   const { containerRef, writeToTerminal, getTerminalDimensions, searchAddonRef } = useTerminal({
     onData: handleTerminalData,
@@ -238,8 +257,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       // Small delay to ensure xterm.js has measured dimensions
       requestAnimationFrame(() => {
         const dims = getTerminalDimensions();
-        console.log(`[terminal:${paneId}] auto-spawning: shell=${shells[0]}, cols=${dims.cols}, rows=${dims.rows}`);
-        sendMessage({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows });
+        const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+        console.log(`[terminal:${paneId}] auto-spawning: shell=${shells[0]}, cols=${dims.cols}, rows=${dims.rows}, multiPty=${multiPtyOn}`);
+        sendMessage({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows, ...(multiPtyOn ? { paneId } : {}) });
       });
     }
   }, [state, shells, sendMessage, getTerminalDimensions, paneId]);
@@ -336,7 +356,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
   // Route input box text to PTY as real keystrokes (shadow typing, D-04)
   const handleSendInput = useCallback((text: string) => {
-    sendMessage({ type: 'input', data: text });
+    const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+    sendMessage({ type: 'input', data: text, ...(multiPtyOn ? { paneId } : {}) });
     // Track last sent command for bookmark bar (Phase 5)
     const clean = text.replace(/\r$/, '').trim();
     if (clean) {
@@ -352,9 +373,10 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     if (newShell && newShell !== currentShell) {
       spawnedRef.current = true;
       const dims = getTerminalDimensions();
-      sendMessage({ type: 'spawn', shell: newShell, cols: dims.cols, rows: dims.rows });
+      const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+      sendMessage({ type: 'spawn', shell: newShell, cols: dims.cols, rows: dims.rows, ...(multiPtyOn ? { paneId } : {}) });
     }
-  }, [currentShell, sendMessage, getTerminalDimensions]);
+  }, [currentShell, sendMessage, getTerminalDimensions, paneId]);
 
   const handleOpenPicker = useCallback(() => {
     setPickerOpen(true);
@@ -504,6 +526,22 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
       {/* Prompt history panel (Phase 6) — portal-rendered, gated by promptHistory flag */}
       <PromptHistoryPanel onInsertCommand={handleSendInput} />
+
+      {/* Agent Runtime Phase 6: Consent dialog for OS-level actions */}
+      {consentRequest && (
+        <ConsentDialog
+          requestId={consentRequest.requestId}
+          action={consentRequest.action}
+          onApprove={(id) => {
+            sendMessageRef.current({ type: 'consent-response', requestId: id, approved: true });
+            setConsentRequest(null);
+          }}
+          onDeny={(id) => {
+            sendMessageRef.current({ type: 'consent-response', requestId: id, approved: false });
+            setConsentRequest(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "bash scripts/tauri-dev.sh",
-    "tauri:build": "bash scripts/cargo-build.sh build --release --manifest-path src-tauri/Cargo.toml && npx tauri build"
+    "tauri:build": "bash scripts/cargo-build.sh build --release --manifest-path src-tauri/Cargo.toml && npx tauri build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.5.0",
