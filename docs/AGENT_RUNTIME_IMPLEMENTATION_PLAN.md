@@ -4,7 +4,7 @@
 > **Created:** 2026-04-04
 > **Repository:** C:/Users/anujd/Documents/01_AI/214_Chat_overlay_widget
 > **Branch:** main
-> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 DONE — Phase 5 pending (after Phase 6)
+> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 DONE — Phase 6 DONE — Phase 5 NEXT — Phase 7 pending
 
 ---
 
@@ -1004,7 +1004,7 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - Sidecar dist build: PASS (uiAutomation.js generated)
 
 ### Phase 5 — OS-Level Input Simulation
-- **Status:** PENDING (after Phase 6 — consent gate must be built first)
+- **Status:** NEXT
 - **Date:** —
 - **Files created:** —
 - **Files modified:** —
@@ -1012,12 +1012,31 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
 - **Test results:** —
 
 ### Phase 6 — Consent Gate & Action Verification Loop
-- **Status:** NEXT
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/consentManager.ts` — ConsentManager class: pending request Map with 30s timeout, broadcastConsentRequest callback, handleResponse, denyAll for cleanup
+  - `src/components/ConsentDialog.tsx` — Modal consent UI with 30s countdown, Enter=Allow, Escape=Deny, action details display, timeout progress bar
+- **Files modified:**
+  - `sidecar/src/protocol.ts` — Added `consent-response` ClientMessage type, `consent-request` ServerMessage type
+  - `src/protocol.ts` — Mirrored same consent message types (frontend copy)
+  - `sidecar/src/server.ts` — Imported ConsentManager, created instance, added `consentGate: false` to sidecarFlags, wired broadcastConsentRequest to WebSocket clients, added `consent-response` case in WS handler, added `POST /consent/request` HTTP route (flag-gated), added consentManager.denyAll() on disconnect
+  - `src/store/featureFlagStore.ts` — Added `consentGate` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `consentGate` label ('Action Consent Gate')
+  - `src/hooks/useFlagSync.ts` — Added `consentGate` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `consentGate` to persistence snapshot
+  - `src/components/TerminalPane.tsx` — Imported ConsentDialog, added consentRequest state, handles `consent-request` ServerMessage, renders ConsentDialog when active, sends `consent-response` on approve/deny
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - The consent flow works via HTTP (MCP → sidecar POST /consent/request) + WebSocket (sidecar → frontend consent-request, frontend → sidecar consent-response).
+  - POST /consent/request blocks until user responds or 30s timeout (auto-deny).
+  - ConsentManager.denyAll() is called on WebSocket disconnect and sidecar exit for safety.
+  - Verification screenshot logic is NOT yet wired — Phase 5 (send_input) will use the consent manager and add screenshot capture after approved actions.
+  - The ConsentDialog only renders in the active TerminalPane (since consent-request is broadcast, all panes receive it — but only the first to display and respond matters since the ConsentManager resolves the promise on first handleResponse).
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (consentManager.js generated)
 
 ### Phase 7 — Integration Testing & Hardening
 - **Status:** PENDING (after all above)

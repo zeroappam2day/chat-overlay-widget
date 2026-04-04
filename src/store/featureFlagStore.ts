@@ -27,6 +27,7 @@ export interface FeatureFlags {
   conditionalAdvance: boolean;   // Agent Runtime Phase 2 — Conditional walkthrough advancement
   multiPty: boolean;             // Agent Runtime Phase 3 — Multi-PTY pane multiplexing
   uiAccessibility: boolean;      // Agent Runtime Phase 4 — UI Accessibility Tree Discovery
+  consentGate: boolean;           // Agent Runtime Phase 6 — Consent Gate & Action Verification
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -67,6 +68,7 @@ const defaults: FeatureFlags = {
   conditionalAdvance: false, // OFF by default — agent runtime
   multiPty: false,           // OFF by default — agent runtime
   uiAccessibility: false,    // OFF by default — agent runtime
+  consentGate: false,         // OFF by default — agent runtime
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -108,6 +110,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         conditionalAdvance: next.conditionalAdvance,
         multiPty: next.multiPty,
         uiAccessibility: next.uiAccessibility,
+        consentGate: next.consentGate,
       }));
       return { [key]: value };
     }),

@@ -13,6 +13,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
   const conditionalAdvance = useFeatureFlagStore(s => s.conditionalAdvance);
   const multiPty = useFeatureFlagStore(s => s.multiPty);
   const uiAccessibility = useFeatureFlagStore(s => s.uiAccessibility);
+  const consentGate = useFeatureFlagStore(s => s.consentGate);
   const sentRef = useRef(false);
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
       sentRef.current = false;
       return;
     }
-    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility } });
+    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, consentGate } });
     sentRef.current = true;
-  }, [outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, connected, sendMessage]);
+  }, [outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, consentGate, connected, sendMessage]);
 }

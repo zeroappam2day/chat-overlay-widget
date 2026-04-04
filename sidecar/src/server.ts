@@ -40,6 +40,7 @@ import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
 import { MultiPtyManager } from './multiPtyManager.js';
 import { getUiElements } from './uiAutomation.js';
+import { ConsentManager } from './consentManager.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -411,6 +412,40 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // Agent Runtime Phase 6: Consent request endpoint (flag-gated)
+  if (req.method === 'POST' && url.pathname === '/consent/request') {
+    if (!sidecarFlags.consentGate) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Consent gate is disabled. Enable the consentGate feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { action?: { type?: string; description?: string; coordinates?: { x: number; y: number }; target?: string } };
+        if (!parsed.action || !parsed.action.type || !parsed.action.description) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'action.type and action.description are required' }));
+          return;
+        }
+        consentManager.requestConsent(parsed.action as { type: string; description: string; coordinates?: { x: number; y: number }; target?: string })
+          .then((approved) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ approved }));
+          })
+          .catch((err) => {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: String(err) }));
+          });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -456,6 +491,7 @@ httpServer.listen(0, '127.0.0.1', () => {
 
 const activeSessions = new Map<WebSocket, PTYSession | BatchedPTYSession>();
 const multiPtyManager = new MultiPtyManager({ maxSessionsPerClient: 4 });
+const consentManager = new ConsentManager();
 const planWatchers = new Map<WebSocket, PlanWatcher>();
 
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
@@ -467,6 +503,7 @@ const sidecarFlags: Record<string, boolean> = {
   conditionalAdvance: false,
   multiPty: false,
   uiAccessibility: false,
+  consentGate: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -492,6 +529,13 @@ function broadcastWalkthroughStep(step: { stepId: string; title: string; instruc
     sendMsg(client, { type: 'walkthrough-step', step });
   }
 }
+
+// Agent Runtime Phase 6: Wire consent manager broadcast to WebSocket clients
+consentManager.broadcastConsentRequest = (request) => {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'consent-request', requestId: request.requestId, action: request.action });
+  }
+};
 
 /** Agent Runtime Phase 2: Update watcher pattern on all active sessions */
 function updateWalkthroughWatcherPattern(): void {
@@ -852,6 +896,12 @@ wss.on('connection', (ws: WebSocket) => {
         cancelAskCode(cancelMsg.requestId);
         break;
       }
+      // Agent Runtime Phase 6: Handle consent response from frontend
+      case 'consent-response': {
+        const consentMsg = msg as { type: 'consent-response'; requestId: string; approved: boolean };
+        consentManager.handleResponse(consentMsg.requestId, consentMsg.approved);
+        break;
+      }
     }
   });
 
@@ -865,6 +915,8 @@ wss.on('connection', (ws: WebSocket) => {
     }
     // Agent Runtime Phase 3: Cleanup multiPty sessions
     multiPtyManager.destroyAll(ws);
+    // Agent Runtime Phase 6: Auto-deny pending consent requests on disconnect
+    consentManager.denyAll();
     planWatchers.get(ws)?.stop();
     planWatchers.delete(ws);
   });

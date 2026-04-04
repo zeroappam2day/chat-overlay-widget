@@ -25,6 +25,7 @@ import { PromptHistoryPanel } from './PromptHistoryPanel';
 import { usePromptHistoryStore } from '../store/promptHistoryStore';
 import { ExitNotifier } from '../lib/exitNotifier';
 import { GitHubUrlBadge } from './GitHubUrlBadge';
+import { ConsentDialog, type ConsentAction } from './ConsentDialog';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -45,6 +46,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   // Pending capture block from window selection (sidecar capture-result-with-metadata response)
   const [pendingInjection, setPendingInjection] = useState<string | null>(null);
   const [inputBarHeight, setInputBarHeight] = useState(144); // INBAR-01: ~144px default
+  // Agent Runtime Phase 6: Consent dialog state
+  const [consentRequest, setConsentRequest] = useState<{ requestId: string; action: ConsentAction } | null>(null);
   const [lastSentCommand, setLastSentCommand] = useState('');
   const [bookmarkBarVisible, setBookmarkBarVisible] = useState(true); // Phase 8: toggled via Ctrl+B
   const handleRequestDiffRef = useRef<(() => void) | null>(null); // Phase 8: ref for keyboard shortcut
@@ -176,6 +179,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         break;
       case 'walkthrough-step':
         useAnnotationBridgeStore.getState().setWalkthroughStep(msg.step);
+        break;
+      // Agent Runtime Phase 6: Show consent dialog
+      case 'consent-request':
+        if (useFeatureFlagStore.getState().consentGate) {
+          setConsentRequest({ requestId: msg.requestId, action: msg.action });
+        }
         break;
       case 'plan-update':
         usePlanStore.getState().setContent(msg.content, msg.fileName);
@@ -517,6 +526,22 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
       {/* Prompt history panel (Phase 6) — portal-rendered, gated by promptHistory flag */}
       <PromptHistoryPanel onInsertCommand={handleSendInput} />
+
+      {/* Agent Runtime Phase 6: Consent dialog for OS-level actions */}
+      {consentRequest && (
+        <ConsentDialog
+          requestId={consentRequest.requestId}
+          action={consentRequest.action}
+          onApprove={(id) => {
+            sendMessageRef.current({ type: 'consent-response', requestId: id, approved: true });
+            setConsentRequest(null);
+          }}
+          onDeny={(id) => {
+            sendMessageRef.current({ type: 'consent-response', requestId: id, approved: false });
+            setConsentRequest(null);
+          }}
+        />
+      )}
     </div>
   );
 }

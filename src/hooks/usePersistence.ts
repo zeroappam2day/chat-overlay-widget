@@ -47,6 +47,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       conditionalAdvance: flags.conditionalAdvance,
       multiPty: flags.multiPty,
       uiAccessibility: flags.uiAccessibility,
+      consentGate: flags.consentGate,
     },
     windowState,
   };

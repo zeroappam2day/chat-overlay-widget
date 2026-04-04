@@ -32,6 +32,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   conditionalAdvance: 'Conditional Walkthrough Advance',
   multiPty: 'Multi-PTY Panes',
   uiAccessibility: 'UI Accessibility Tree',
+  consentGate: 'Action Consent Gate',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
