@@ -98,6 +98,13 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   const handleHistoryMessageRef = useRef<(msg: ServerMessage) => boolean>(() => false);
 
   const handleServerMessage = useCallback((msg: ServerMessage) => {
+    // Agent Runtime Phase 3: When multiPty is ON, ignore messages for other panes
+    const multiPtyEnabled = useFeatureFlagStore.getState().multiPty;
+    const msgPaneId = 'paneId' in msg ? (msg as { paneId?: string }).paneId : undefined;
+    if (multiPtyEnabled && msgPaneId && msgPaneId !== paneId) {
+      return; // message is for a different pane
+    }
+
     switch (msg.type) {
       case 'output':
         writeRef.current(msg.data);
@@ -129,7 +136,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         setTimeout(() => {
           if (shells.length > 0) {
             const dims = getDimensionsRef.current();
-            sendMessageRef.current({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows });
+            const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+            sendMessageRef.current({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows, ...(multiPtyOn ? { paneId } : {}) });
           }
         }, 1000);
         break;
@@ -210,12 +218,14 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   handleHistoryMessageRef.current = handleHistoryMessage;
 
   const handleTerminalData = useCallback((data: string) => {
-    sendMessage({ type: 'input', data });
-  }, [sendMessage]);
+    const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+    sendMessage({ type: 'input', data, ...(multiPtyOn ? { paneId } : {}) });
+  }, [sendMessage, paneId]);
 
   const handleTerminalResize = useCallback((cols: number, rows: number) => {
-    sendMessage({ type: 'resize', cols, rows });
-  }, [sendMessage]);
+    const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+    sendMessage({ type: 'resize', cols, rows, ...(multiPtyOn ? { paneId } : {}) });
+  }, [sendMessage, paneId]);
 
   const { containerRef, writeToTerminal, getTerminalDimensions, searchAddonRef } = useTerminal({
     onData: handleTerminalData,
@@ -238,8 +248,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       // Small delay to ensure xterm.js has measured dimensions
       requestAnimationFrame(() => {
         const dims = getTerminalDimensions();
-        console.log(`[terminal:${paneId}] auto-spawning: shell=${shells[0]}, cols=${dims.cols}, rows=${dims.rows}`);
-        sendMessage({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows });
+        const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+        console.log(`[terminal:${paneId}] auto-spawning: shell=${shells[0]}, cols=${dims.cols}, rows=${dims.rows}, multiPty=${multiPtyOn}`);
+        sendMessage({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows, ...(multiPtyOn ? { paneId } : {}) });
       });
     }
   }, [state, shells, sendMessage, getTerminalDimensions, paneId]);
@@ -336,7 +347,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
   // Route input box text to PTY as real keystrokes (shadow typing, D-04)
   const handleSendInput = useCallback((text: string) => {
-    sendMessage({ type: 'input', data: text });
+    const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+    sendMessage({ type: 'input', data: text, ...(multiPtyOn ? { paneId } : {}) });
     // Track last sent command for bookmark bar (Phase 5)
     const clean = text.replace(/\r$/, '').trim();
     if (clean) {
@@ -352,9 +364,10 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     if (newShell && newShell !== currentShell) {
       spawnedRef.current = true;
       const dims = getTerminalDimensions();
-      sendMessage({ type: 'spawn', shell: newShell, cols: dims.cols, rows: dims.rows });
+      const multiPtyOn = useFeatureFlagStore.getState().multiPty;
+      sendMessage({ type: 'spawn', shell: newShell, cols: dims.cols, rows: dims.rows, ...(multiPtyOn ? { paneId } : {}) });
     }
-  }, [currentShell, sendMessage, getTerminalDimensions]);
+  }, [currentShell, sendMessage, getTerminalDimensions, paneId]);
 
   const handleOpenPicker = useCallback(() => {
     setPickerOpen(true);

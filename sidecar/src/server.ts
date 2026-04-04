@@ -38,6 +38,7 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { MultiPtyManager } from './multiPtyManager.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -253,7 +254,8 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
   }
 
   if (req.method === 'GET' && url.pathname === '/terminal-state') {
-    const session = [...activeSessions.values()][0];
+    const paneIdParam = url.searchParams.get('paneId') ?? undefined;
+    const session = getSessionByPaneId(paneIdParam);
     if (!session) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'No active session' }));
@@ -302,7 +304,7 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
   }
 
   if (req.method === 'GET' && url.pathname === '/screenshot') {
-    const session = [...activeSessions.values()][0];
+    const session = getAnySession();
     if (!session) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'No active session' }));
@@ -355,7 +357,7 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
 
   // Agent Runtime Phase 1: Terminal write endpoint (flag-gated)
   if (req.method === 'POST' && url.pathname === '/terminal-write') {
-    handleTerminalWrite(req, res, activeSessions, sidecarFlags);
+    handleTerminalWrite(req, res, activeSessions, sidecarFlags, multiPtyManager);
     return;
   }
 
@@ -403,6 +405,7 @@ httpServer.listen(0, '127.0.0.1', () => {
 });
 
 const activeSessions = new Map<WebSocket, PTYSession | BatchedPTYSession>();
+const multiPtyManager = new MultiPtyManager({ maxSessionsPerClient: 4 });
 const planWatchers = new Map<WebSocket, PlanWatcher>();
 
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
@@ -412,6 +415,7 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  multiPty: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -441,11 +445,30 @@ function broadcastWalkthroughStep(step: { stepId: string; title: string; instruc
 /** Agent Runtime Phase 2: Update watcher pattern on all active sessions */
 function updateWalkthroughWatcherPattern(): void {
   const pattern = walkthroughEngine.getCurrentAdvancePattern();
-  for (const session of activeSessions.values()) {
+  const sessions = sidecarFlags.multiPty
+    ? multiPtyManager.allSessions()
+    : activeSessions.values();
+  for (const session of sessions) {
     if (session instanceof BatchedPTYSession) {
       session.walkthroughWatcherInstance.setPattern(pattern);
     }
   }
+}
+
+/** Get any first session across connection modes (for HTTP endpoints that don't specify paneId). */
+function getAnySession(): (PTYSession | BatchedPTYSession) | undefined {
+  if (sidecarFlags.multiPty) {
+    return multiPtyManager.allSessions().next().value;
+  }
+  return [...activeSessions.values()][0];
+}
+
+/** Get a session by paneId (multiPty) or fall back to first session. */
+function getSessionByPaneId(paneId?: string): (PTYSession | BatchedPTYSession) | undefined {
+  if (sidecarFlags.multiPty && paneId) {
+    return multiPtyManager.findSessionByPaneId(paneId);
+  }
+  return getAnySession();
 }
 
 async function sweepScreenshotTempFiles(): Promise<void> {
@@ -487,24 +510,48 @@ wss.on('connection', (ws: WebSocket) => {
 
     switch (msg.type) {
       case 'spawn': {
-        console.log(`[sidecar] spawn requested: shell=${msg.shell}, cols=${msg.cols}, rows=${msg.rows}`);
-        // Destroy existing session if any
-        const existing = activeSessions.get(ws);
-        if (existing) {
-          console.log('[sidecar] destroying existing session');
-          existing.destroy();
-          activeSessions.delete(ws);
+        const spawnPaneId = (msg as { paneId?: string }).paneId;
+        console.log(`[sidecar] spawn requested: shell=${msg.shell}, cols=${msg.cols}, rows=${msg.rows}, paneId=${spawnPaneId ?? '(none)'}`);
+
+        if (sidecarFlags.multiPty && spawnPaneId) {
+          // Agent Runtime Phase 3: Multi-PTY mode — destroy only the session for this paneId
+          const existingMulti = multiPtyManager.getSession(ws, spawnPaneId);
+          if (existingMulti) {
+            console.log(`[sidecar] multiPty: destroying existing session for pane ${spawnPaneId}`);
+            existingMulti.destroy();
+            multiPtyManager.removeSession(ws, spawnPaneId);
+          }
+        } else {
+          // Legacy mode: destroy existing session if any
+          const existing = activeSessions.get(ws);
+          if (existing) {
+            console.log('[sidecar] destroying existing session');
+            existing.destroy();
+            activeSessions.delete(ws);
+          }
         }
+
         // Find shell executable from detected shells
         const shellInfo = shells.find(s => s.name === msg.shell);
         const shellExe = shellInfo?.exe ?? msg.shell;
         console.log(`[sidecar] resolved shell exe: ${shellExe}`);
         try {
           const session = new BatchedPTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24, sidecarFlags.outputBatching ?? true);
-          activeSessions.set(ws, session);
+
+          if (sidecarFlags.multiPty && spawnPaneId) {
+            const ok = multiPtyManager.setSession(ws, spawnPaneId, session);
+            if (!ok) {
+              session.destroy();
+              sendMsg(ws, { type: 'error', message: 'Maximum PTY sessions reached (4)' });
+              break;
+            }
+          } else {
+            activeSessions.set(ws, session);
+          }
+
           console.log(`[sidecar] PTY session created successfully (batching=${sidecarFlags.outputBatching ?? true})`);
           console.log(`[sidecar] session started: id=${session.sessionId}`);
-          sendMsg(ws, { type: 'session-start', sessionId: session.sessionId });
+          sendMsg(ws, { type: 'session-start', sessionId: session.sessionId, ...(spawnPaneId ? { paneId: spawnPaneId } : {}) });
           // Agent Runtime Phase 2: Wire walkthrough watcher to auto-advance
           session.walkthroughWatcherInstance.onAdvance = () => {
             try {
@@ -545,20 +592,40 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       }
       case 'input': {
-        const session = activeSessions.get(ws);
-        session?.write(msg.data);
+        const inputPaneId = (msg as { paneId?: string }).paneId;
+        if (sidecarFlags.multiPty && inputPaneId) {
+          const session = multiPtyManager.getSession(ws, inputPaneId);
+          session?.write(msg.data);
+        } else {
+          const session = activeSessions.get(ws);
+          session?.write(msg.data);
+        }
         break;
       }
       case 'resize': {
-        const session = activeSessions.get(ws);
-        session?.resize(msg.cols, msg.rows);
+        const resizePaneId = (msg as { paneId?: string }).paneId;
+        if (sidecarFlags.multiPty && resizePaneId) {
+          const session = multiPtyManager.getSession(ws, resizePaneId);
+          session?.resize(msg.cols, msg.rows);
+        } else {
+          const session = activeSessions.get(ws);
+          session?.resize(msg.cols, msg.rows);
+        }
         break;
       }
       case 'kill': {
-        const session = activeSessions.get(ws);
-        if (session) {
-          session.destroy();
-          activeSessions.delete(ws);
+        const killPaneId = (msg as { paneId?: string }).paneId;
+        if (sidecarFlags.multiPty && killPaneId) {
+          const session = multiPtyManager.removeSession(ws, killPaneId);
+          if (session) {
+            session.destroy();
+          }
+        } else {
+          const session = activeSessions.get(ws);
+          if (session) {
+            session.destroy();
+            activeSessions.delete(ws);
+          }
         }
         planWatchers.get(ws)?.stop();
         planWatchers.delete(ws);
@@ -637,9 +704,14 @@ wss.on('connection', (ws: WebSocket) => {
         if (flags && typeof flags === 'object') {
           Object.assign(sidecarFlags, flags);
           console.log(`[sidecar] feature flags updated: ${JSON.stringify(sidecarFlags)}`);
+          // Helper: iterate all active sessions (legacy + multiPty)
+          const iterAllSessions = function* () {
+            yield* activeSessions.values();
+            yield* multiPtyManager.allSessions();
+          };
           // Live-update batching on active sessions
           if ('outputBatching' in flags) {
-            for (const session of activeSessions.values()) {
+            for (const session of iterAllSessions()) {
               if (session instanceof BatchedPTYSession) {
                 session.batchingEnabled = flags.outputBatching;
               }
@@ -647,7 +719,7 @@ wss.on('connection', (ws: WebSocket) => {
           }
           // Live-update autoTrust on active sessions
           if ('autoTrust' in flags) {
-            for (const session of activeSessions.values()) {
+            for (const session of iterAllSessions()) {
               if (session instanceof BatchedPTYSession) {
                 session.autoTrustEnabled = flags.autoTrust;
               }
@@ -655,7 +727,7 @@ wss.on('connection', (ws: WebSocket) => {
           }
           // Agent Runtime Phase 2: Live-update conditionalAdvance on active sessions
           if ('conditionalAdvance' in flags) {
-            for (const session of activeSessions.values()) {
+            for (const session of iterAllSessions()) {
               if (session instanceof BatchedPTYSession) {
                 session.walkthroughWatcherEnabled = flags.conditionalAdvance;
                 if (flags.conditionalAdvance) {
@@ -734,11 +806,14 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('close', () => {
     console.log('[sidecar] client disconnected');
+    // Cleanup legacy single-session
     const session = activeSessions.get(ws);
     if (session) {
       session.destroy();
       activeSessions.delete(ws);
     }
+    // Agent Runtime Phase 3: Cleanup multiPty sessions
+    multiPtyManager.destroyAll(ws);
     planWatchers.get(ws)?.stop();
     planWatchers.delete(ws);
   });
@@ -750,6 +825,10 @@ wss.on('connection', (ws: WebSocket) => {
 process.on('exit', () => {
   for (const session of activeSessions.values()) {
     session.destroy();
+  }
+  // Agent Runtime Phase 3: Cleanup multiPty sessions on exit
+  for (const client of wss.clients) {
+    multiPtyManager.destroyAll(client as WebSocket);
   }
   if (portFilePath) {
     deleteDiscoveryFile(portFilePath);

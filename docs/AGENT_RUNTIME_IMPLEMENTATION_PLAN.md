@@ -4,7 +4,7 @@
 > **Created:** 2026-04-04
 > **Repository:** C:/Users/anujd/Documents/01_AI/214_Chat_overlay_widget
 > **Branch:** main
-> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 pending
+> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 pending
 
 ---
 
@@ -947,15 +947,37 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - Sidecar dist build: PASS (walkthroughWatcher.js generated)
 
 ### Phase 3 — Multi-PTY Pane Multiplexing
-- **Status:** NEXT
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/multiPtyManager.ts` — MultiPtyManager class: manages per-WebSocket Map<paneId, Session>, max 4 sessions, findSessionByPaneId(), allSessions() iterator, destroyAll() cleanup
+- **Files modified:**
+  - `sidecar/src/protocol.ts` — Added optional `paneId?: string` to ClientMessage types (input, resize, spawn, kill) and ServerMessage types (output, pty-ready, pty-exit, session-start)
+  - `src/protocol.ts` — Mirrored same paneId additions (frontend copy)
+  - `sidecar/src/server.ts` — Imported MultiPtyManager, created instance, added `multiPty: false` to sidecarFlags, added `getAnySession()` and `getSessionByPaneId()` helpers, modified spawn/input/resize/kill handlers with `if (multiPty)` branching, updated /terminal-state to accept paneId query param, updated /screenshot to use getAnySession(), updated set-flags live-update to iterate both legacy and multiPty sessions, updated disconnect and exit cleanup to call multiPtyManager.destroyAll()
+  - `sidecar/src/terminalWrite.ts` — Added MultiPtyManager parameter, routes by paneId via findSessionByPaneId() when multiPty enabled, falls back to first session
+  - `sidecar/src/mcp-server.ts` — Added optional `paneId` parameter to `read_terminal_output` tool, passes through as query param to /terminal-state
+  - `src/store/featureFlagStore.ts` — Added `multiPty` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `multiPty` label ('Multi-PTY Panes')
+  - `src/hooks/useFlagSync.ts` — Added `multiPty` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `multiPty` to persistence snapshot
+  - `src/components/TerminalPane.tsx` — Added paneId filtering on incoming ServerMessages when multiPty ON, included paneId in spawn/input/resize/kill messages, updated auto-spawn, auto-respawn, shell change, and handleSendInput
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - When multiPty is OFF, behavior is identical to before — single PTY per WebSocket, spawn replaces existing session.
+  - When multiPty is ON, each pane sends its paneId in spawn/input/resize/kill messages. The sidecar routes to the correct session via MultiPtyManager.
+  - The `activeSessions` legacy Map is kept for backward compatibility when flag is OFF. MultiPtyManager is a parallel data structure used only when flag is ON.
+  - Output routing on the frontend uses paneId filtering in handleServerMessage — messages with a paneId for a different pane are silently dropped.
+  - Note: The BatchedPTYSession output currently goes through the proxy WebSocket's send(), which doesn't include paneId in the output message. For full multiPty output isolation, the proxy in batchedPtySession.ts would need to inject paneId into output messages. This is a known limitation — current implementation relies on frontend-side filtering only. The server-side output messages don't include paneId yet because the proxy intercept in BatchedPTYSession would need a paneId parameter. This can be addressed in Phase 7 (integration hardening) if needed.
+  - write_terminal MCP tool now routes by paneId when multiPty is enabled.
+  - read_terminal_output MCP tool now accepts optional paneId parameter.
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (multiPtyManager.js generated)
 
 ### Phase 4 — UI Accessibility Tree Discovery
-- **Status:** PENDING (after Phase 3)
+- **Status:** NEXT
 - **Date:** —
 - **Files created:** —
 - **Files modified:** —

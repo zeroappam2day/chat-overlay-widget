@@ -3,17 +3,21 @@ import type { Annotation, AnnotationPayload } from './annotationStore.js';
 export type ClientMessage = {
     type: 'input';
     data: string;
+    paneId?: string;
 } | {
     type: 'resize';
     cols: number;
     rows: number;
+    paneId?: string;
 } | {
     type: 'spawn';
     shell: string;
     cols?: number;
     rows?: number;
+    paneId?: string;
 } | {
     type: 'kill';
+    paneId?: string;
 } | {
     type: 'history-list';
 } | {
@@ -74,13 +78,16 @@ export interface WindowThumbnail {
 export type ServerMessage = {
     type: 'output';
     data: string;
+    paneId?: string;
 } | {
     type: 'pty-ready';
     pid: number;
     shell: string;
+    paneId?: string;
 } | {
     type: 'pty-exit';
     exitCode: number;
+    paneId?: string;
 } | {
     type: 'shell-list';
     shells: string[];
@@ -90,6 +97,7 @@ export type ServerMessage = {
 } | {
     type: 'session-start';
     sessionId: number;
+    paneId?: string;
 } | {
     type: 'history-sessions';
     sessions: SessionMeta[];

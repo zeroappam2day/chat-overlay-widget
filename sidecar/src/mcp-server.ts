@@ -183,10 +183,15 @@ server.tool(
       .int()
       .optional()
       .describe('Cursor from previous call — returns only lines after this point'),
+    paneId: z
+      .string()
+      .optional()
+      .describe('Target pane ID (for multi-PTY support). If omitted, reads from the first active session.'),
   },
-  async ({ lines, since }) => {
+  async ({ lines, since, paneId }) => {
     try {
-      const qs = since !== undefined ? `lines=${lines}&since=${since}&scrub=true` : `lines=${lines}&scrub=true`;
+      let qs = since !== undefined ? `lines=${lines}&since=${since}&scrub=true` : `lines=${lines}&scrub=true`;
+      if (paneId) qs += `&paneId=${encodeURIComponent(paneId)}`;
       const resp = await callSidecar(`/terminal-state?${qs}`);
       if (resp.status !== 200) {
         const errText = resp.body.toString('utf-8');
