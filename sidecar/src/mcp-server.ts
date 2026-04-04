@@ -473,6 +473,31 @@ server.tool(
   }
 );
 
+// ─── Tool 18: verify_walkthrough_step (EAC-7) ───────────────────────────────
+
+server.tool(
+  'verify_walkthrough_step',
+  'Verify the current walkthrough step using its configured advanceWhen strategy (pixel-sample, screenshot-diff, terminal-match, or manual). Requires both screenshotVerification and guidedWalkthrough feature flags to be enabled. Returns whether the step passed verification and strategy details.',
+  {},
+  async () => {
+    try {
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/walkthrough/verify-step', discovery.token, discovery.port, '{}');
+      if (resp.status === 403) {
+        const errBody = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: `Feature flag disabled: ${errBody.error}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module
