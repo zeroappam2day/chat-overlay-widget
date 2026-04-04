@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useFeatureFlagStore, type FeatureFlags } from '../store/featureFlagStore';
 import { PlanPanel } from './PlanPanel';
 import { ThemeSelector } from './ThemeSelector';
+import { CompletionBadge } from './CompletionBadge';
 
 const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   outputBatching: 'Output Batching',
@@ -20,6 +21,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   diffSearch: 'Diff Search',
   diffSyntaxHighlight: 'Diff Syntax Highlighting',
   askAboutCode: 'Ask About Code',
+  completionStats: 'Completion Stats',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
@@ -42,6 +44,7 @@ export function FeatureFlagPanel() {
 
   return (
     <div ref={ref} className="relative">
+      <CompletionBadge />
       <PlanPanel />
       <button
         onClick={() => setOpen((v) => !v)}
