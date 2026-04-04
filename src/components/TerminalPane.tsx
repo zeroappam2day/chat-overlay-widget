@@ -16,6 +16,7 @@ import { useFlagSync } from '../hooks/useFlagSync';
 import { usePlanStore } from '../store/planStore';
 import { useDiffStore } from '../store/diffStore';
 import { useFeatureFlagStore } from '../store/featureFlagStore';
+import { useCompletionStore } from '../store/completionStore';
 import { parseUnifiedDiff } from '../lib/diffParser';
 import { EnhancedDiffPanel as DiffPanel } from './EnhancedDiffPanel';
 import { BookmarkBar } from './BookmarkBar';
@@ -111,6 +112,10 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       }
       case 'pty-exit':
         writeRef.current(`\r\n[Process exited with code ${msg.exitCode}]\r\n`);
+        // Completion stats (Phase 17) — record successful session completions
+        if (useFeatureFlagStore.getState().completionStats && msg.exitCode === 0) {
+          useCompletionStore.getState().recordCompleted();
+        }
         // Desktop notification (Phase 7) — fires only when window not focused and flag ON
         exitNotifierRef.current.notify({
           exitCode: msg.exitCode,

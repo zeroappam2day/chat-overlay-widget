@@ -56,7 +56,7 @@ Begin by reading both plan files now.
 | 14 | Diff Search & Context Collapse | DONE | 2026-04-03 | Created diffSearch.ts (search utils + match positions), DiffSearchBar.tsx (32px bar with prev/next/close, Enter/Shift+Enter/Escape), CollapsibleContext.tsx (collapseContextRuns + CollapsedRow), EnhancedDiffPanel.tsx (portal panel with Ctrl+F toggle, search highlighting, context collapse). Added diffSearch flag to featureFlagStore. Added searchQuery/currentMatchIndex to diffStore. Swapped DiffPanel import in TerminalPane to EnhancedDiffPanel. When diffSearch OFF, falls through to original DiffPanel. |
 | 15 | Syntax Highlighting in Diffs | DONE | 2026-04-03 | Created syntaxHighlighter.ts (lazy Shiki singleton, detectLanguage 45+ extensions, highlightLines with fallback), useSyntaxHighlight.ts (React hook with content→HTML map, per-file caching). Added diffSyntaxHighlight flag to featureFlagStore. Modified EnhancedDiffPanel: EnhancedDiffLineRow accepts highlightedHtml prop, search highlighting takes precedence, useSyntaxHighlight called per file in EnhancedFileDiffView. Shiki code-split by Vite into lazy chunks. |
 | 16 | Ask About Code | DONE | 2026-04-04 | Created askCodeHandler.ts (sidecar child process spawner, 5 concurrent max, 2min timeout, 100K response cap, env cleaning), AskCodeCard.tsx (4-state inline card: input/loading/complete/error, Ctrl+Enter submit, streaming auto-scroll), diffSelection.ts (DOM selection extraction via data-diff-* attributes). Added ask-code/cancel-ask-code/ask-code-response to both protocol.ts files. Wired into server.ts switch. EnhancedDiffPanel extended with data-diff-* attrs on line rows, selection detection via onMouseUp, "Ask Claude" button bar, AskCodeCard inline render, custom event bridge. TerminalPane forwards ask-code-response via custom event + listens for ask-code-send. Added askAboutCode flag to featureFlagStore + FeatureFlagPanel + usePersistence gatherState. |
-| 17 | Completion Stats | PENDING | — | — |
+| 17 | Completion Stats | DONE | 2026-04-04 | Created completionStore.ts (Zustand + localStorage, total + daily tracking), CompletionBadge.tsx (green check + "N today" with total tooltip). Added completionStats flag to featureFlagStore. Wired into TerminalPane pty-exit handler (exitCode 0 + flag ON). Badge renders in FeatureFlagPanel header area. |
 | 18 | Focus Trap for Dialogs | PENDING | — | — |
 | 19 | GitHub URL Detection | PENDING | — | — |
 | 20 | Inline Editable Text | PENDING | — | — |
@@ -1910,6 +1910,13 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 - **Pattern:** askCodeHandler uses `shell: true` in spawn options for Windows PATH resolution of `claude` command.
 - **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`. EnhancedDiffPanel line rows now carry `data-diff-line-num`, `data-diff-file-path`, `data-diff-line-type` attributes — diffSelection.ts depends on these.
 - **Commits:** squash-merged via PR #22, commit `7f48a55`
+
+### Phase 17 (2026-04-04)
+- **Created:** `src/store/completionStore.ts`, `src/components/CompletionBadge.tsx`
+- **Modified:** `src/store/featureFlagStore.ts` (+completionStats flag), `src/components/FeatureFlagPanel.tsx` (+label, +CompletionBadge import/render), `src/hooks/usePersistence.ts` (+completionStats in gatherState), `src/components/TerminalPane.tsx` (+useCompletionStore import, +recordCompleted in pty-exit handler)
+- **Pattern:** CompletionBadge uses inline date comparison `s.todayDate === new Date().toISOString().slice(0, 10)` for reactive today-count derivation. Badge renders next to PlanPanel in the header area.
+- **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`. CompletionStore persists to separate localStorage key `chat-overlay-completion-stats` (not in feature flag storage).
+- **Commits:** squash-merged via PR
 
 ---
 

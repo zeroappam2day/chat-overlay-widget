@@ -17,6 +17,7 @@ export interface FeatureFlags {
   diffSearch: boolean;           // Phase 14
   diffSyntaxHighlight: boolean;  // Phase 15
   askAboutCode: boolean;         // Phase 16
+  completionStats: boolean;      // Phase 17
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -47,6 +48,7 @@ const defaults: FeatureFlags = {
   diffSearch: true,
   diffSyntaxHighlight: true,
   askAboutCode: true,
+  completionStats: true,
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -78,6 +80,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         diffSearch: next.diffSearch,
         diffSyntaxHighlight: next.diffSyntaxHighlight,
         askAboutCode: next.askAboutCode,
+        completionStats: next.completionStats,
       }));
       return { [key]: value };
     }),
