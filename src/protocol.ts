@@ -94,4 +94,5 @@ export type ServerMessage =
   | { type: 'diff-result'; raw: string; cwd: string; error?: string }
   | { type: 'ask-code-response'; requestId: string; messageType: 'chunk' | 'error' | 'done'; text?: string; exitCode?: number }
   | { type: 'annotation-update'; annotations: Annotation[] }
-  | { type: 'walkthrough-step'; step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null };
+  | { type: 'walkthrough-step'; step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null }
+  | { type: 'task-state-change'; task: { taskId: string; name: string; status: string; paneId: string; lastOutput?: string } };

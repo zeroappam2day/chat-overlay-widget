@@ -11,6 +11,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
   const outputBatching = useFeatureFlagStore(s => s.outputBatching);
   const terminalWriteMcp = useFeatureFlagStore(s => s.terminalWriteMcp);
   const conditionalAdvance = useFeatureFlagStore(s => s.conditionalAdvance);
+  const agentTaskOrchestrator = useFeatureFlagStore(s => s.agentTaskOrchestrator);
   const sentRef = useRef(false);
 
   useEffect(() => {
@@ -18,7 +19,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
       sentRef.current = false;
       return;
     }
-    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance } });
+    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance, agentTaskOrchestrator } });
     sentRef.current = true;
-  }, [outputBatching, terminalWriteMcp, conditionalAdvance, connected, sendMessage]);
+  }, [outputBatching, terminalWriteMcp, conditionalAdvance, agentTaskOrchestrator, connected, sendMessage]);
 }
