@@ -954,7 +954,9 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
 - **Files modified:**
   - `sidecar/src/protocol.ts` — Added optional `paneId?: string` to ClientMessage types (input, resize, spawn, kill) and ServerMessage types (output, pty-ready, pty-exit, session-start)
   - `src/protocol.ts` — Mirrored same paneId additions (frontend copy)
-  - `sidecar/src/server.ts` — Imported MultiPtyManager, created instance, added `multiPty: false` to sidecarFlags, added `getAnySession()` and `getSessionByPaneId()` helpers, modified spawn/input/resize/kill handlers with `if (multiPty)` branching, updated /terminal-state to accept paneId query param, updated /screenshot to use getAnySession(), updated set-flags live-update to iterate both legacy and multiPty sessions, updated disconnect and exit cleanup to call multiPtyManager.destroyAll()
+  - `sidecar/src/ptySession.ts` — Added optional `paneId` constructor param; output, pty-ready, and pty-exit messages now include paneId when provided
+  - `sidecar/src/batchedPtySession.ts` — Added optional `paneId` constructor param, passes it to PTYSession, batcher onFlush includes paneId in output messages
+  - `sidecar/src/server.ts` — Imported MultiPtyManager, created instance, added `multiPty: false` to sidecarFlags, added `getAnySession()` and `getSessionByPaneId()` helpers, modified spawn/input/resize/kill handlers with `if (multiPty)` branching, passes paneId to BatchedPTYSession constructor, updated /terminal-state to accept paneId query param, updated /screenshot to use getAnySession(), updated set-flags live-update to iterate both legacy and multiPty sessions, updated disconnect and exit cleanup to call multiPtyManager.destroyAll()
   - `sidecar/src/terminalWrite.ts` — Added MultiPtyManager parameter, routes by paneId via findSessionByPaneId() when multiPty enabled, falls back to first session
   - `sidecar/src/mcp-server.ts` — Added optional `paneId` parameter to `read_terminal_output` tool, passes through as query param to /terminal-state
   - `src/store/featureFlagStore.ts` — Added `multiPty` to FeatureFlags interface, defaults (false), and localStorage persistence
@@ -968,7 +970,7 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - When multiPty is ON, each pane sends its paneId in spawn/input/resize/kill messages. The sidecar routes to the correct session via MultiPtyManager.
   - The `activeSessions` legacy Map is kept for backward compatibility when flag is OFF. MultiPtyManager is a parallel data structure used only when flag is ON.
   - Output routing on the frontend uses paneId filtering in handleServerMessage — messages with a paneId for a different pane are silently dropped.
-  - Note: The BatchedPTYSession output currently goes through the proxy WebSocket's send(), which doesn't include paneId in the output message. For full multiPty output isolation, the proxy in batchedPtySession.ts would need to inject paneId into output messages. This is a known limitation — current implementation relies on frontend-side filtering only. The server-side output messages don't include paneId yet because the proxy intercept in BatchedPTYSession would need a paneId parameter. This can be addressed in Phase 7 (integration hardening) if needed.
+  - PTYSession and BatchedPTYSession both accept optional paneId. When provided, all outgoing messages (output, pty-ready, pty-exit) include paneId, enabling server-side output isolation. The batcher's onFlush also includes paneId so batched output is correctly tagged.
   - write_terminal MCP tool now routes by paneId when multiPty is enabled.
   - read_terminal_output MCP tool now accepts optional paneId parameter.
   - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.

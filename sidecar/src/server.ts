@@ -536,7 +536,7 @@ wss.on('connection', (ws: WebSocket) => {
         const shellExe = shellInfo?.exe ?? msg.shell;
         console.log(`[sidecar] resolved shell exe: ${shellExe}`);
         try {
-          const session = new BatchedPTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24, sidecarFlags.outputBatching ?? true);
+          const session = new BatchedPTYSession(ws, shellExe, msg.cols ?? 80, msg.rows ?? 24, sidecarFlags.outputBatching ?? true, sidecarFlags.multiPty ? spawnPaneId : undefined);
 
           if (sidecarFlags.multiPty && spawnPaneId) {
             const ok = multiPtyManager.setSession(ws, spawnPaneId, session);

@@ -36,6 +36,7 @@ export class BatchedPTYSession {
     cols: number = 80,
     rows: number = 24,
     batchingEnabled: boolean = true,
+    private paneId?: string,
   ) {
     // 1. Create AutoTrustDetector with deferred PTY write (PTYSession not yet created)
     let ptyWrite: ((data: string) => void) | null = null;
@@ -55,9 +56,10 @@ export class BatchedPTYSession {
     const walkthroughWatcher = this.walkthroughWatcher;
 
     // 2. Create batcher (referenced by proxy closure)
+    const pid = this.paneId;
     const batcher = new OutputBatcher({
       onFlush: (data: string) => {
-        sendMsg(ws, { type: 'output', data });
+        sendMsg(ws, { type: 'output', data, ...(pid ? { paneId: pid } : {}) });
       },
       enabled: batchingEnabled,
     });
@@ -92,7 +94,7 @@ export class BatchedPTYSession {
     });
 
     // 4. Create PTYSession with proxy — it thinks it's sending to the real ws
-    this.ptySession = new PTYSession(proxyWs as WebSocket, shellExe, cols, rows);
+    this.ptySession = new PTYSession(proxyWs as WebSocket, shellExe, cols, rows, this.paneId);
 
     // 5. Wire deferred PTY write now that ptySession exists
     ptyWrite = (data: string) => this.ptySession.write(data);

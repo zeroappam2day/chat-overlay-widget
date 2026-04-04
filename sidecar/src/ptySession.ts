@@ -29,7 +29,8 @@ export class PTYSession {
     private ws: WebSocket,
     shellExe: string,
     cols: number = 80,
-    rows: number = 24
+    rows: number = 24,
+    private paneId?: string,
   ) {
     this.ptyProcess = pty.spawn(shellExe, [], {
       name: 'xterm-color',
@@ -43,7 +44,7 @@ export class PTYSession {
     this.recorder = new SessionRecorder(shellExe, process.env['USERPROFILE'] || 'C:\\');
 
     this.dataDisposable = this.ptyProcess.onData((data: string) => {
-      send(ws, { type: 'output', data });
+      send(ws, { type: 'output', data, ...(this.paneId ? { paneId: this.paneId } : {}) });
       this.recorder.append(data);
     });
 
@@ -54,10 +55,10 @@ export class PTYSession {
 
     this.exitDisposable = this.ptyProcess.onExit(({ exitCode }) => {
       this.recorder.end();
-      send(ws, { type: 'pty-exit', exitCode });
+      send(ws, { type: 'pty-exit', exitCode, ...(this.paneId ? { paneId: this.paneId } : {}) });
     });
 
-    send(ws, { type: 'pty-ready', pid: this.ptyProcess.pid, shell: shellExe });
+    send(ws, { type: 'pty-ready', pid: this.ptyProcess.pid, shell: shellExe, ...(this.paneId ? { paneId: this.paneId } : {}) });
   }
 
   write(data: string): void {
