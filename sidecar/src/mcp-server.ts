@@ -473,6 +473,123 @@ server.tool(
   }
 );
 
+// ─── Tool 9: workflow (EAC-9) ────────────────────────────────────────────────
+
+server.tool(
+  'workflow',
+  `Manage workflow recordings in Chat Overlay Widget. Record sequences of tool calls as replayable workflows.
+
+Actions:
+- "startRecording": Begin recording a new workflow. Requires name and description.
+- "addStep": Add a step to the current recording. Requires tool, params, description.
+- "stopRecording": Stop recording and save the workflow.
+- "list": List all saved workflows.
+- "get": Get a workflow by ID. Requires workflowId.
+- "delete": Delete a workflow by ID. Requires workflowId.
+- "replay": Replay a workflow. Requires workflowId. Optional: startFromStep, dryRun, pauseBeforeEach.
+
+Gated behind the workflowRecording feature flag.`,
+  {
+    action: z.enum(['startRecording', 'addStep', 'stopRecording', 'list', 'get', 'delete', 'replay'])
+      .describe('Which workflow action to perform'),
+    workflowId: z.string().optional().describe('Workflow ID (for get, delete, replay)'),
+    name: z.string().optional().describe('Workflow name (for startRecording)'),
+    description: z.string().optional().describe('Workflow description (for startRecording)'),
+    tool: z.string().optional().describe('MCP tool name (for addStep)'),
+    params: z.record(z.unknown()).optional().describe('Tool parameters (for addStep)'),
+    delayAfterMs: z.number().optional().describe('Delay after step in ms (for addStep)'),
+    verification: z.object({
+      strategy: z.enum(['terminal-match', 'pixel-sample', 'manual']),
+      config: z.record(z.unknown()),
+    }).optional().describe('Verification config (for addStep)'),
+    startFromStep: z.number().optional().describe('Step index to start replay from'),
+    dryRun: z.boolean().optional().describe('Dry run mode for replay'),
+    pauseBeforeEach: z.boolean().optional().describe('Pause before each step during replay'),
+  },
+  async ({ action, workflowId, name, description: desc, tool: toolName, params: toolParams, delayAfterMs, verification, startFromStep, dryRun, pauseBeforeEach }) => {
+    try {
+      const discovery = readDiscovery();
+      let resp: { status: number; headers: http.IncomingHttpHeaders; body: Buffer };
+
+      switch (action) {
+        case 'startRecording': {
+          const body = JSON.stringify({ name: name ?? 'Untitled', description: desc ?? '' });
+          resp = await sidecarPost('/workflows/start-recording', discovery.token, discovery.port, body);
+          break;
+        }
+        case 'addStep': {
+          const stepBody: Record<string, unknown> = {
+            tool: toolName ?? 'unknown',
+            params: toolParams ?? {},
+            description: desc ?? '',
+          };
+          if (delayAfterMs !== undefined) stepBody.delayAfterMs = delayAfterMs;
+          if (verification) stepBody.verification = verification;
+          resp = await sidecarPost('/workflows/add-step', discovery.token, discovery.port, JSON.stringify(stepBody));
+          break;
+        }
+        case 'stopRecording': {
+          resp = await sidecarPost('/workflows/stop-recording', discovery.token, discovery.port, '{}');
+          break;
+        }
+        case 'list': {
+          resp = await sidecarGet('/workflows', discovery.token, discovery.port);
+          break;
+        }
+        case 'get': {
+          if (!workflowId) return { content: [{ type: 'text' as const, text: 'workflowId is required for get action' }], isError: true };
+          resp = await sidecarGet(`/workflows/${workflowId}`, discovery.token, discovery.port);
+          break;
+        }
+        case 'delete': {
+          if (!workflowId) return { content: [{ type: 'text' as const, text: 'workflowId is required for delete action' }], isError: true };
+          // Use a DELETE request via raw http
+          resp = await new Promise((resolve, reject) => {
+            const req = http.request(
+              `http://127.0.0.1:${discovery.port}/workflows/${workflowId}`,
+              {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${discovery.token}` },
+              },
+              (res) => {
+                const chunks: Buffer[] = [];
+                res.on('data', (chunk: Buffer) => chunks.push(chunk));
+                res.on('end', () => resolve({ status: res.statusCode ?? 500, headers: res.headers, body: Buffer.concat(chunks) }));
+              }
+            );
+            req.on('error', reject);
+            req.setTimeout(10000, () => { req.destroy(); reject(new Error('Request timeout')); });
+            req.end();
+          });
+          break;
+        }
+        case 'replay': {
+          if (!workflowId) return { content: [{ type: 'text' as const, text: 'workflowId is required for replay action' }], isError: true };
+          const replayBody: Record<string, unknown> = {};
+          if (startFromStep !== undefined) replayBody.startFromStep = startFromStep;
+          if (dryRun !== undefined) replayBody.dryRun = dryRun;
+          if (pauseBeforeEach !== undefined) replayBody.pauseBeforeEach = pauseBeforeEach;
+          resp = await sidecarPost(`/workflows/${workflowId}/replay`, discovery.token, discovery.port, JSON.stringify(replayBody));
+          break;
+        }
+        default:
+          return { content: [{ type: 'text' as const, text: `Unknown action: ${action}` }], isError: true };
+      }
+
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const parsed = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(parsed, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

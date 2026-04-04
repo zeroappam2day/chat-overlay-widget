@@ -38,6 +38,7 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { WorkflowRecorder } from './workflowRecorder.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -49,6 +50,11 @@ console.log('[sidecar] SQLite session database initialized');
 
 // Clean any stale discovery file from a previous force-killed session
 cleanStaleDiscoveryFile();
+
+// EAC-9: Workflow recorder instance
+import * as os from 'node:os';
+const workflowStorageDir = path.join(process.env.APPDATA || os.homedir(), 'chat-overlay-widget', 'workflows');
+const workflowRecorder = new WorkflowRecorder({ storageDir: workflowStorageDir });
 
 const authToken = crypto.randomBytes(32).toString('hex');
 let portFilePath: string | null = null;
@@ -359,6 +365,147 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // ─── EAC-9: Workflow Recording & Replay endpoints ────────────────────────────
+
+  if (req.method === 'POST' && url.pathname === '/workflows/start-recording') {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const { name, description } = JSON.parse(body) as { name: string; description: string };
+        const workflowId = workflowRecorder.startRecording(name, description);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ workflowId, recording: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/workflows/add-step') {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const step = JSON.parse(body);
+        workflowRecorder.addStep(step);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, stepCount: workflowRecorder.stepCount }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/workflows/stop-recording') {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const workflow = workflowRecorder.stopRecording();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(workflow));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/workflows') {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    const list = workflowRecorder.listWorkflows();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(list));
+    return;
+  }
+
+  // Workflow by ID routes: GET /workflows/:id, DELETE /workflows/:id, POST /workflows/:id/replay
+  if (url.pathname.startsWith('/workflows/')) {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    const parts = url.pathname.split('/').filter(Boolean); // ['workflows', id, maybe 'replay']
+    const workflowId = parts[1];
+
+    if (req.method === 'GET' && parts.length === 2 && workflowId) {
+      const workflow = workflowRecorder.getWorkflow(workflowId);
+      if (!workflow) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Workflow not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(workflow));
+      return;
+    }
+
+    if (req.method === 'DELETE' && parts.length === 2 && workflowId) {
+      const deleted = workflowRecorder.deleteWorkflow(workflowId);
+      if (!deleted) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Workflow not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (req.method === 'POST' && parts.length === 3 && parts[2] === 'replay' && workflowId) {
+      let body = '';
+      req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+      req.on('end', async () => {
+        try {
+          const opts = body ? JSON.parse(body) : {};
+          const results: Array<{ stepIndex: number; tool: string; status: string; error?: string }> = [];
+          for await (const y of workflowRecorder.replayWorkflow(workflowId, opts)) {
+            if (y.status === 'completed' || y.status === 'failed') {
+              results.push({
+                stepIndex: y.step.stepIndex,
+                tool: y.step.tool,
+                status: y.status,
+                ...(y.error ? { error: y.error } : {}),
+              });
+            }
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ workflowId, results }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+        }
+      });
+      return;
+    }
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -412,6 +559,7 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  workflowRecording: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
