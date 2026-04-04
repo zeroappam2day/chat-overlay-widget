@@ -38,6 +38,7 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { ScreenshotVerifier } from './screenshotVerifier.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -359,6 +360,89 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // EAC-7: Screenshot-based step verification endpoint
+  if (req.method === 'POST' && url.pathname === '/walkthrough/verify-step') {
+    if (!sidecarFlags.screenshotVerification) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'screenshotVerification flag is disabled' }));
+      return;
+    }
+    if (!sidecarFlags.guidedWalkthrough) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'guidedWalkthrough flag is disabled' }));
+      return;
+    }
+    const status = walkthroughEngine.getStatus();
+    if (!status.active) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No active walkthrough' }));
+      return;
+    }
+    // Get current step's advanceWhen
+    const currentStep = (walkthroughEngine as any).active?.walkthrough.steps[(walkthroughEngine as any).active.currentIndex];
+    if (!currentStep?.advanceWhen) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ passed: false, details: 'No advanceWhen defined for current step' }));
+      return;
+    }
+    const advanceWhen = currentStep.advanceWhen;
+    const session = [...activeSessions.values()][0];
+
+    if (advanceWhen.type === 'terminal-match') {
+      // Terminal match — check against terminal buffer
+      if (!session) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ passed: false, details: 'No active terminal session' }));
+        return;
+      }
+      try {
+        const pattern = new RegExp(advanceWhen.pattern);
+        const snapshot = session.terminalBuffer.getLines(100);
+        const matched = snapshot.lines.some((line: string) => pattern.test(line));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ passed: matched, strategy: 'terminal-match', details: { pattern: advanceWhen.pattern } }));
+      } catch (err) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ passed: false, strategy: 'terminal-match', details: { error: String(err) } }));
+      }
+      return;
+    }
+
+    if (advanceWhen.type === 'pixel-sample') {
+      const verifier = new ScreenshotVerifier({
+        screenshotFn: async () => {
+          const result = await captureSelfScreenshot(session!.terminalBuffer, false);
+          if (!result.ok) throw new Error(result.error);
+          return result.buffer;
+        },
+      });
+      verifier.verifyPixelSample({ regions: advanceWhen.regions }).then(result => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ passed: result.passed, strategy: 'pixel-sample', details: result }));
+      }).catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err) }));
+      });
+      return;
+    }
+
+    if (advanceWhen.type === 'screenshot-diff') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ passed: false, strategy: 'screenshot-diff', details: 'screenshot-diff requires a reference screenshot passed at runtime' }));
+      return;
+    }
+
+    if (advanceWhen.type === 'manual') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ passed: false, strategy: 'manual', details: 'Manual verification — advance manually' }));
+      return;
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ passed: false, details: `Unknown advanceWhen type: ${(advanceWhen as any).type}` }));
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -412,6 +496,7 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  screenshotVerification: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
