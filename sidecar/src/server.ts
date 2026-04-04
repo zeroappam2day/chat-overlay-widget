@@ -39,6 +39,15 @@ import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
 import { WebFetcher } from './webFetcher.js';
+import { BatchConsentManager } from './batchConsentManager.js';
+import type { ActionPlan } from './batchConsentManager.js';
+import { focusAndVerify } from './windowFocusManager.js';
+import { readClipboard, writeClipboard, pasteFromClipboard } from './clipboardManager.js';
+import { TaskOrchestrator } from './taskOrchestrator.js';
+import type { AgentTask } from './taskOrchestrator.js';
+import { ScreenshotVerifier } from './screenshotVerifier.js';
+import { searchElements, invokeElement, setElementValue, getElementPatterns } from './enhancedAccessibility.js';
+import { WorkflowRecorder } from './workflowRecorder.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -53,6 +62,11 @@ cleanStaleDiscoveryFile();
 
 // Web fetcher instance (EAC-5)
 const webFetcher = new WebFetcher();
+
+// EAC-9: Workflow recorder instance
+import * as os from 'node:os';
+const workflowStorageDir = path.join(process.env.APPDATA || os.homedir(), 'chat-overlay-widget', 'workflows');
+const workflowRecorder = new WorkflowRecorder({ storageDir: workflowStorageDir });
 
 const authToken = crypto.randomBytes(32).toString('hex');
 let portFilePath: string | null = null;
@@ -398,6 +412,633 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // EAC-2: Batch Consent — Submit action plan
+  if (req.method === 'POST' && url.pathname === '/consent/submit-plan') {
+    if (!sidecarFlags.batchConsent) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Batch consent is disabled. Enable the batchConsent feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', async () => {
+      try {
+        const plan = JSON.parse(body) as ActionPlan;
+        const result = await batchConsentMgr.submitPlan(plan);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  // EAC-2: Batch Consent — Grant time-limited trust
+  if (req.method === 'POST' && url.pathname === '/consent/grant-trust') {
+    if (!sidecarFlags.batchConsent) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Batch consent is disabled. Enable the batchConsent feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const opts = JSON.parse(body) as { targetTitle: string; durationSec: number; allowedActions: string[] };
+        const trustId = batchConsentMgr.grantTimeLimitedTrust(opts);
+        if (!trustId) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid duration. Must be 1-120 seconds.' }));
+          return;
+        }
+        const grant = batchConsentMgr.isTrusted(opts.targetTitle, opts.allowedActions[0]);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ approved: true, trustId, expiresAt: Date.now() + opts.durationSec * 1000 }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  // EAC-2: Batch Consent — Revoke trust or plan
+  if (req.method === 'POST' && url.pathname === '/consent/revoke') {
+    if (!sidecarFlags.batchConsent) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Batch consent is disabled. Enable the batchConsent feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { trustId?: string; all?: boolean };
+        if (parsed.all) {
+          batchConsentMgr.revokeAll();
+        } else if (parsed.trustId) {
+          batchConsentMgr.revokeTrust(parsed.trustId);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  // EAC-3: Window Focus Manager endpoint (flag-gated)
+  if (req.method === 'POST' && url.pathname === '/focus-window') {
+    if (!sidecarFlags.windowFocusManager) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Window focus manager is disabled. Enable the windowFocusManager feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { hwnd?: unknown; title?: unknown };
+        let targetHwnd: number | undefined;
+
+        if (typeof parsed.hwnd === 'number' && parsed.hwnd > 0) {
+          targetHwnd = parsed.hwnd;
+        } else if (typeof parsed.title === 'string' && parsed.title.trim()) {
+          // Look up hwnd by window title via windowEnumerator
+          const windows = listWindows();
+          const match = windows.find(w => w.title.toLowerCase().includes((parsed.title as string).toLowerCase()));
+          if (!match) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `No window found matching title: ${parsed.title}` }));
+            return;
+          }
+          targetHwnd = match.hwnd;
+        }
+
+        if (!targetHwnd) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'hwnd (number) or title (string) required' }));
+          return;
+        }
+
+        focusAndVerify(targetHwnd).then((result) => {
+          if (result.ok) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, hwnd: targetHwnd }));
+          } else {
+            res.writeHead(409, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: result.error, hwnd: targetHwnd }));
+          }
+        }).catch((err: unknown) => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  // EAC-4: Clipboard read endpoint (flag-gated)
+  if (req.method === 'GET' && url.pathname === '/clipboard') {
+    if (!sidecarFlags.clipboardAccess) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }));
+      return;
+    }
+    try {
+      const result = readClipboard();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (err) {
+      console.error('[sidecar] clipboard read error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Clipboard read failed' }));
+    }
+    return;
+  }
+
+  // EAC-4: Clipboard write endpoint (flag-gated)
+  if (req.method === 'POST' && url.pathname === '/clipboard') {
+    if (!sidecarFlags.clipboardAccess) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { text?: unknown };
+        const text = typeof parsed.text === 'string' ? parsed.text : '';
+        if (!text) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'text is required' }));
+          return;
+        }
+        const result = writeClipboard(text);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        console.error('[sidecar] clipboard write error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Clipboard write failed' }));
+      }
+    });
+    return;
+  }
+
+  // EAC-4: Clipboard paste endpoint (flag-gated: clipboardAccess + osInputSimulation + consentGate)
+  if (req.method === 'POST' && url.pathname === '/clipboard/paste') {
+    if (!sidecarFlags.clipboardAccess) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }));
+      return;
+    }
+    if (!sidecarFlags.osInputSimulation) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'OS input simulation is disabled. Enable the osInputSimulation feature flag.' }));
+      return;
+    }
+    if (!sidecarFlags.consentGate) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Consent gate is disabled. Enable the consentGate feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { text?: unknown; clearAfterPaste?: unknown };
+        const text = typeof parsed.text === 'string' ? parsed.text : '';
+        if (!text) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'text is required' }));
+          return;
+        }
+        const clearAfterPaste = parsed.clearAfterPaste === true;
+        pasteFromClipboard(text, clearAfterPaste).then(result => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        }).catch(err => {
+          console.error('[sidecar] clipboard paste error:', err);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'Clipboard paste failed' }));
+        });
+      } catch (err) {
+        console.error('[sidecar] clipboard paste error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Clipboard paste failed' }));
+      }
+    });
+    return;
+  }
+
+  // EAC-6: Task Orchestrator endpoints
+  if (req.method === 'POST' && url.pathname === '/tasks/submit') {
+    if (!sidecarFlags.agentTaskOrchestrator) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Agent Task Orchestrator is disabled' }));
+      return;
+    }
+    if (!sidecarFlags.multiPty || !sidecarFlags.terminalWriteMcp) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Requires multiPty and terminalWriteMcp flags' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        const result = taskOrchestrator.submitTask({
+          name: parsed.name,
+          command: parsed.command,
+          paneId: parsed.paneId ?? 'default',
+          exitPattern: parsed.exitPattern,
+          failPattern: parsed.failPattern,
+          timeoutMs: parsed.timeoutMs,
+        });
+        if ('error' in result) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: result.error }));
+        } else {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        }
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid request: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/tasks') {
+    if (!sidecarFlags.agentTaskOrchestrator) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Agent Task Orchestrator is disabled' }));
+      return;
+    }
+    const tasks = taskOrchestrator.getAllTasks();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ tasks }));
+    return;
+  }
+
+  if (url.pathname.startsWith('/tasks/') && url.pathname !== '/tasks/submit') {
+    if (!sidecarFlags.agentTaskOrchestrator) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Agent Task Orchestrator is disabled' }));
+      return;
+    }
+    const parts = url.pathname.split('/');
+    // /tasks/:taskId or /tasks/:taskId/cancel
+    const taskId = parts[2];
+
+    if (req.method === 'GET' && parts.length === 3 && taskId) {
+      const task = taskOrchestrator.getTask(taskId);
+      if (!task) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Task not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(task));
+      return;
+    }
+
+    if (req.method === 'POST' && parts.length === 4 && parts[3] === 'cancel' && taskId) {
+      taskOrchestrator.cancelTask(taskId).then(() => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      }).catch((err) => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err) }));
+      });
+      return;
+    }
+  }
+
+  // EAC-7: Screenshot-based step verification endpoint
+  if (req.method === 'POST' && url.pathname === '/walkthrough/verify-step') {
+    if (!sidecarFlags.screenshotVerification) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'screenshotVerification flag is disabled' }));
+      return;
+    }
+    if (!sidecarFlags.guidedWalkthrough) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'guidedWalkthrough flag is disabled' }));
+      return;
+    }
+    const status = walkthroughEngine.getStatus();
+    if (!status.active) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No active walkthrough' }));
+      return;
+    }
+    // Get current step's advanceWhen
+    const currentStep = (walkthroughEngine as any).active?.walkthrough.steps[(walkthroughEngine as any).active.currentIndex];
+    if (!currentStep?.advanceWhen) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ passed: false, details: 'No advanceWhen defined for current step' }));
+      return;
+    }
+    const advanceWhen = currentStep.advanceWhen;
+    const session = [...activeSessions.values()][0];
+
+    if (advanceWhen.type === 'terminal-match') {
+      // Terminal match — check against terminal buffer
+      if (!session) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ passed: false, details: 'No active terminal session' }));
+        return;
+      }
+      try {
+        const pattern = new RegExp(advanceWhen.pattern);
+        const snapshot = session.terminalBuffer.getLines(100);
+        const matched = snapshot.lines.some((line: string) => pattern.test(line));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ passed: matched, strategy: 'terminal-match', details: { pattern: advanceWhen.pattern } }));
+      } catch (err) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ passed: false, strategy: 'terminal-match', details: { error: String(err) } }));
+      }
+      return;
+    }
+
+    if (advanceWhen.type === 'pixel-sample') {
+      const verifier = new ScreenshotVerifier({
+        screenshotFn: async () => {
+          const result = await captureSelfScreenshot(session!.terminalBuffer, false);
+          if (!result.ok) throw new Error(result.error);
+          return result.buffer;
+        },
+      });
+      verifier.verifyPixelSample({ regions: advanceWhen.regions }).then(result => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ passed: result.passed, strategy: 'pixel-sample', details: result }));
+      }).catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(err) }));
+      });
+      return;
+    }
+
+    if (advanceWhen.type === 'screenshot-diff') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ passed: false, strategy: 'screenshot-diff', details: 'screenshot-diff requires a reference screenshot passed at runtime' }));
+      return;
+    }
+
+    if (advanceWhen.type === 'manual') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ passed: false, strategy: 'manual', details: 'Manual verification — advance manually' }));
+      return;
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ passed: false, details: `Unknown advanceWhen type: ${(advanceWhen as any).type}` }));
+    return;
+  }
+
+  // EAC-8: Enhanced Accessibility Bridge endpoints
+  if (req.method === 'POST' && url.pathname === '/ui-elements/search') {
+    if (!sidecarFlags.enhancedAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'enhancedAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.uiAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'uiAccessibility flag is disabled' })); return; }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        searchElements(parsed).then(elements => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ elements }));
+        }).catch(err => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/ui-elements/invoke') {
+    if (!sidecarFlags.enhancedAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'enhancedAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.uiAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'uiAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.consentGate) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'consentGate flag is disabled' })); return; }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        invokeElement(parsed).then(result => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        }).catch(err => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/ui-elements/set-value') {
+    if (!sidecarFlags.enhancedAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'enhancedAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.uiAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'uiAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.consentGate) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'consentGate flag is disabled' })); return; }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        setElementValue(parsed).then(result => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        }).catch(err => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/ui-elements/patterns') {
+    if (!sidecarFlags.enhancedAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'enhancedAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.uiAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'uiAccessibility flag is disabled' })); return; }
+    const hwnd = parseInt(url.searchParams.get('hwnd') ?? '0', 10);
+    const automationId = url.searchParams.get('automationId') ?? undefined;
+    const name = url.searchParams.get('name') ?? undefined;
+    if (!hwnd) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'hwnd is required' })); return; }
+    getElementPatterns({ hwnd, automationId, name }).then(result => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    }).catch(err => {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    });
+    return;
+  }
+
+  // ─── EAC-9: Workflow Recording & Replay endpoints ────────────────────────────
+
+  if (req.method === 'POST' && url.pathname === '/workflows/start-recording') {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const { name, description } = JSON.parse(body) as { name: string; description: string };
+        const workflowId = workflowRecorder.startRecording(name, description);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ workflowId, recording: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/workflows/add-step') {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const step = JSON.parse(body);
+        workflowRecorder.addStep(step);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, stepCount: workflowRecorder.stepCount }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/workflows/stop-recording') {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const workflow = workflowRecorder.stopRecording();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(workflow));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/workflows') {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    const list = workflowRecorder.listWorkflows();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(list));
+    return;
+  }
+
+  // Workflow by ID routes: GET /workflows/:id, DELETE /workflows/:id, POST /workflows/:id/replay
+  if (url.pathname.startsWith('/workflows/')) {
+    if (!sidecarFlags.workflowRecording) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }));
+      return;
+    }
+    const parts = url.pathname.split('/').filter(Boolean); // ['workflows', id, maybe 'replay']
+    const workflowId = parts[1];
+
+    if (req.method === 'GET' && parts.length === 2 && workflowId) {
+      const workflow = workflowRecorder.getWorkflow(workflowId);
+      if (!workflow) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Workflow not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(workflow));
+      return;
+    }
+
+    if (req.method === 'DELETE' && parts.length === 2 && workflowId) {
+      const deleted = workflowRecorder.deleteWorkflow(workflowId);
+      if (!deleted) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Workflow not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (req.method === 'POST' && parts.length === 3 && parts[2] === 'replay' && workflowId) {
+      let body = '';
+      req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+      req.on('end', async () => {
+        try {
+          const opts = body ? JSON.parse(body) : {};
+          const results: Array<{ stepIndex: number; tool: string; status: string; error?: string }> = [];
+          for await (const y of workflowRecorder.replayWorkflow(workflowId, opts)) {
+            if (y.status === 'completed' || y.status === 'failed') {
+              results.push({
+                stepIndex: y.step.stepIndex,
+                tool: y.step.tool,
+                status: y.status,
+                ...(y.error ? { error: y.error } : {}),
+              });
+            }
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ workflowId, results }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+        }
+      });
+      return;
+    }
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -444,6 +1085,25 @@ httpServer.listen(0, '127.0.0.1', () => {
 const activeSessions = new Map<WebSocket, PTYSession | BatchedPTYSession>();
 const planWatchers = new Map<WebSocket, PlanWatcher>();
 
+// EAC-6: Task Orchestrator
+const taskOrchestrator = new TaskOrchestrator({
+  getSession: (_paneId: string) => {
+    // Currently single-pane: return first active session
+    return [...activeSessions.values()][0];
+  },
+  writeToSession: (_paneId: string, data: string) => {
+    const session = [...activeSessions.values()][0];
+    if (!session) return false;
+    session.write(data);
+    return true;
+  },
+});
+
+taskOrchestrator.onTaskStateChange = (task) => broadcastTaskStateChange(task);
+
+// EAC-2: Batch Consent Manager instance
+const batchConsentMgr = new BatchConsentManager();
+
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
 const sidecarFlags: Record<string, boolean> = {
   outputBatching: true,
@@ -452,6 +1112,13 @@ const sidecarFlags: Record<string, boolean> = {
   terminalWriteMcp: false,
   conditionalAdvance: false,
   webFetchTool: false,
+  batchConsent: false,
+  windowFocusManager: false,
+  clipboardAccess: false,
+  agentTaskOrchestrator: false,
+  screenshotVerification: false,
+  enhancedAccessibility: false,
+  workflowRecording: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -469,6 +1136,21 @@ function broadcastAgentEvent(event: AgentEvent): void {
 function broadcastAnnotations(annotations: Annotation[]): void {
   for (const client of wss.clients) {
     sendMsg(client, { type: 'annotation-update', annotations });
+  }
+}
+
+function broadcastTaskStateChange(task: AgentTask): void {
+  for (const client of wss.clients) {
+    sendMsg(client, {
+      type: 'task-state-change',
+      task: {
+        taskId: task.taskId,
+        name: task.name,
+        status: task.status,
+        paneId: task.paneId,
+        lastOutput: task.lastOutput,
+      },
+    });
   }
 }
 
@@ -781,6 +1463,8 @@ wss.on('connection', (ws: WebSocket) => {
     }
     planWatchers.get(ws)?.stop();
     planWatchers.delete(ws);
+    // EAC-2: Revoke all batch consent grants on disconnect
+    batchConsentMgr.revokeAll();
   });
 });
 

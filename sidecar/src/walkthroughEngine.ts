@@ -2,10 +2,29 @@ import { z } from 'zod';
 import { AnnotationSchema, annotationState } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 
-export const AdvanceWhenSchema = z.object({
-  type: z.literal('terminal-match'),
-  pattern: z.string().min(1).max(500),
-}).optional();
+export const AdvanceWhenSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('terminal-match'),
+    pattern: z.string().min(1).max(500),
+  }),
+  z.object({
+    type: z.literal('pixel-sample'),
+    regions: z.array(z.object({
+      x: z.number(), y: z.number(), w: z.number(), h: z.number(),
+      expectedColor: z.string().optional(), minBrightness: z.number().optional(),
+    })).min(1).max(10),
+  }),
+  z.object({
+    type: z.literal('screenshot-diff'),
+    diffThreshold: z.number().min(0).max(1),
+    maskRegions: z.array(z.object({
+      x: z.number(), y: z.number(), w: z.number(), h: z.number(),
+    })).optional(),
+  }),
+  z.object({
+    type: z.literal('manual'),
+  }),
+]).optional();
 
 export const WalkthroughStepSchema = z.object({
   stepId: z.string().min(1).max(200),
@@ -88,6 +107,7 @@ class WalkthroughEngine {
     if (!this.active) return null;
     const step = this.active.walkthrough.steps[this.active.currentIndex];
     if (!step.advanceWhen) return null;
+    if (step.advanceWhen.type !== 'terminal-match') return null;
     try {
       return new RegExp(step.advanceWhen.pattern);
     } catch {

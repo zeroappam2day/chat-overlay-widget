@@ -31,6 +31,13 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   terminalWriteMcp: 'Terminal Write (MCP)',
   conditionalAdvance: 'Conditional Walkthrough Advance',
   webFetchTool: 'Web Fetch Tool',
+  batchConsent: 'Batch Consent',
+  windowFocusManager: 'Window Focus Manager',
+  clipboardAccess: 'Clipboard Access',
+  agentTaskOrchestrator: 'Agent Task Orchestrator',
+  screenshotVerification: 'Screenshot Verification',
+  enhancedAccessibility: 'Enhanced Accessibility',
+  workflowRecording: 'Workflow Recording',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];

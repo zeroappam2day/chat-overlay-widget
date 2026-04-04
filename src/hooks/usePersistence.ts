@@ -46,6 +46,13 @@ function gatherState(windowState: WindowState | null): PersistedState {
       terminalWriteMcp: flags.terminalWriteMcp,
       conditionalAdvance: flags.conditionalAdvance,
       webFetchTool: flags.webFetchTool,
+      batchConsent: flags.batchConsent,
+      windowFocusManager: flags.windowFocusManager,
+      clipboardAccess: flags.clipboardAccess,
+      agentTaskOrchestrator: flags.agentTaskOrchestrator,
+      screenshotVerification: flags.screenshotVerification,
+      enhancedAccessibility: flags.enhancedAccessibility,
+      workflowRecording: flags.workflowRecording,
     },
     windowState,
   };

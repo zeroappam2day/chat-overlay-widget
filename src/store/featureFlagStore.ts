@@ -26,6 +26,13 @@ export interface FeatureFlags {
   terminalWriteMcp: boolean;     // Agent Runtime Phase 1 — Terminal write MCP tool
   conditionalAdvance: boolean;   // Agent Runtime Phase 2 — Conditional walkthrough advancement
   webFetchTool: boolean;         // EAC-5 — Web Fetch & Documentation Tool
+  batchConsent: boolean;         // EAC-2 — Batch Consent Manager
+  windowFocusManager: boolean;   // EAC-3 — Window Focus Manager
+  clipboardAccess: boolean;      // EAC-4 — Clipboard Access
+  agentTaskOrchestrator: boolean; // EAC-6 — Agent Task Orchestrator
+  screenshotVerification: boolean; // EAC-7 — Screenshot Verification
+  enhancedAccessibility: boolean; // EAC-8 — Enhanced Accessibility
+  workflowRecording: boolean;    // EAC-9 — Workflow Recording
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -65,6 +72,13 @@ const defaults: FeatureFlags = {
   terminalWriteMcp: false,   // OFF by default — agent runtime
   conditionalAdvance: false, // OFF by default — agent runtime
   webFetchTool: false,       // OFF by default — EAC-5
+  batchConsent: false,       // OFF by default — EAC-2
+  windowFocusManager: false, // OFF by default — EAC-3
+  clipboardAccess: false,    // OFF by default — EAC-4
+  agentTaskOrchestrator: false, // OFF by default — EAC-6
+  screenshotVerification: false, // OFF by default — EAC-7
+  enhancedAccessibility: false, // OFF by default — EAC-8
+  workflowRecording: false,  // OFF by default — EAC-9
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -105,6 +119,13 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         terminalWriteMcp: next.terminalWriteMcp,
         conditionalAdvance: next.conditionalAdvance,
         webFetchTool: next.webFetchTool,
+        batchConsent: next.batchConsent,
+        windowFocusManager: next.windowFocusManager,
+        clipboardAccess: next.clipboardAccess,
+        agentTaskOrchestrator: next.agentTaskOrchestrator,
+        screenshotVerification: next.screenshotVerification,
+        enhancedAccessibility: next.enhancedAccessibility,
+        workflowRecording: next.workflowRecording,
       }));
       return { [key]: value };
     }),
