@@ -164,6 +164,11 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         useDiffStore.getState().setDiffs(parsed, msg.raw);
         break;
       }
+      case 'ask-code-response': {
+        // Forward to AskCodeCard via custom event (Phase 16)
+        document.dispatchEvent(new CustomEvent('ask-code-response', { detail: msg }));
+        break;
+      }
       default:
         // Delegate history-sessions, history-chunk, history-end, session-start
         handleHistoryMessageRef.current(msg);
@@ -266,6 +271,16 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
     };
     document.addEventListener('keydown', handler);
 
+    // Phase 16: Forward ask-code-send events from DiffPanel to WebSocket
+    const handleAskCodeSend = (e: Event) => {
+      if (!isActiveRef.current) return;
+      const detail = (e as CustomEvent).detail;
+      if (detail && typeof detail === 'object' && detail.type) {
+        sendMessageRef.current(detail);
+      }
+    };
+    document.addEventListener('ask-code-send', handleAskCodeSend);
+
     // Document-level paste listener for clipboard images (SCRN-02)
     // Catches Ctrl+V when terminal has focus (not textarea) — e.g. Snipping Tool paste
     const handleDocPaste = (e: ClipboardEvent) => {
@@ -295,6 +310,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       document.removeEventListener('keyboard-request-diff', gatedRequestDiff);
       document.removeEventListener('toggle-bookmark-bar', gatedToggleBookmarks);
       document.removeEventListener('paste', handleDocPaste);
+      document.removeEventListener('ask-code-send', handleAskCodeSend);
     };
   }, [searchOpen]);
 

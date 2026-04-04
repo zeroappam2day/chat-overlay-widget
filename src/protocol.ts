@@ -26,7 +26,9 @@ export type ClientMessage =
   | { type: 'capture-window-with-metadata'; hwnd: number; pid: number; title: string }
   | { type: 'set-flags'; flags: Record<string, boolean> }
   | { type: 'plan-read'; cwd?: string }
-  | { type: 'request-diff'; cwd?: string };
+  | { type: 'request-diff'; cwd?: string }
+  | { type: 'ask-code'; requestId: string; prompt: string; cwd?: string }
+  | { type: 'cancel-ask-code'; requestId: string };
 
 export interface SessionMeta {
   id: number;
@@ -68,4 +70,5 @@ export type ServerMessage =
   | { type: 'agent-event'; event: AgentEvent }
   | { type: 'auto-trust-event'; action: 'accepted' | 'blocked'; pattern: string; timestamp: string }
   | { type: 'plan-update'; fileName: string | null; content: string | null; mtime: number }
-  | { type: 'diff-result'; raw: string; cwd: string; error?: string };
+  | { type: 'diff-result'; raw: string; cwd: string; error?: string }
+  | { type: 'ask-code-response'; requestId: string; messageType: 'chunk' | 'error' | 'done'; text?: string; exitCode?: number };
