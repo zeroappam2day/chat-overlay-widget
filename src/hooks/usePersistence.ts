@@ -38,6 +38,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       diffSyntaxHighlight: flags.diffSyntaxHighlight,
       askAboutCode: flags.askAboutCode,
       completionStats: flags.completionStats,
+      focusTrap: flags.focusTrap,
     },
     windowState,
   };
