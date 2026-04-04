@@ -473,6 +473,101 @@ server.tool(
   }
 );
 
+// ─── Tool 9: interact_with_element (EAC-8) ──────────────────────────────────
+
+server.tool(
+  'interact_with_element',
+  `Interact with UI elements via UI Automation. Supports searching the element tree, invoking buttons,
+setting text values, and querying supported patterns — all without SendInput.
+
+Actions:
+- "search": Search UI Automation tree by name, automationId, or className. Returns matching elements with bounding rects.
+- "invoke": Activate an element using IInvokePattern (native click). Requires consentGate flag.
+- "setValue": Set text in an input field using IValuePattern. Requires consentGate flag.
+- "getPatterns": Query which UI Automation patterns an element supports.
+
+Requires enhancedAccessibility and uiAccessibility feature flags to be enabled.
+Invoke and setValue actions additionally require the consentGate flag.`,
+  {
+    action: z.enum(['search', 'invoke', 'setValue', 'getPatterns']).describe('Action to perform'),
+    hwnd: z.number().int().optional().describe('Window handle (provide hwnd or title)'),
+    title: z.string().optional().describe('Window title to find (provide hwnd or title)'),
+    automationId: z.string().optional().describe('UI Automation AutomationId of the target element'),
+    name: z.string().optional().describe('UI Automation Name of the target element'),
+    role: z.string().optional().describe('UI Automation ControlType role'),
+    searchText: z.string().optional().describe('Text to search for (required for search action)'),
+    searchProperty: z.enum(['name', 'automationId', 'className']).optional().describe('Property to search by (required for search action)'),
+    value: z.string().optional().describe('Value to set (required for setValue action)'),
+    maxResults: z.number().int().min(1).max(100).optional().describe('Max results for search (default 10)'),
+    maxDepth: z.number().int().min(1).max(20).optional().describe('Max tree depth for search (default 8)'),
+  },
+  async ({ action, hwnd, title, automationId, name, role, searchText, searchProperty, value, maxResults, maxDepth }) => {
+    try {
+      const discovery = readDiscovery();
+      let endpoint: string;
+      let method: 'GET' | 'POST' = 'POST';
+      let bodyStr = '';
+
+      switch (action) {
+        case 'search': {
+          if (!searchText || !searchProperty) {
+            return { content: [{ type: 'text' as const, text: 'searchText and searchProperty are required for search action' }], isError: true };
+          }
+          endpoint = '/ui-elements/search';
+          bodyStr = JSON.stringify({ hwnd, title, searchText, searchProperty, maxResults, maxDepth });
+          break;
+        }
+        case 'invoke': {
+          if (!hwnd) {
+            return { content: [{ type: 'text' as const, text: 'hwnd is required for invoke action' }], isError: true };
+          }
+          endpoint = '/ui-elements/invoke';
+          bodyStr = JSON.stringify({ hwnd, automationId, name, role });
+          break;
+        }
+        case 'setValue': {
+          if (!hwnd || value === undefined) {
+            return { content: [{ type: 'text' as const, text: 'hwnd and value are required for setValue action' }], isError: true };
+          }
+          endpoint = '/ui-elements/set-value';
+          bodyStr = JSON.stringify({ hwnd, automationId, name, value });
+          break;
+        }
+        case 'getPatterns': {
+          if (!hwnd) {
+            return { content: [{ type: 'text' as const, text: 'hwnd is required for getPatterns action' }], isError: true };
+          }
+          method = 'GET';
+          const params = new URLSearchParams();
+          params.set('hwnd', String(hwnd));
+          if (automationId) params.set('automationId', automationId);
+          if (name) params.set('name', name);
+          endpoint = `/ui-elements/patterns?${params.toString()}`;
+          break;
+        }
+      }
+
+      let resp: { status: number; headers: http.IncomingHttpHeaders; body: Buffer };
+      if (method === 'GET') {
+        resp = await sidecarGet(endpoint, discovery.token, discovery.port);
+      } else {
+        resp = await sidecarPost(endpoint, discovery.token, discovery.port, bodyStr);
+      }
+
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: `Feature flag disabled: ${resp.body.toString()}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const parsed = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(parsed, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module
