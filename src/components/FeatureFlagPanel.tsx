@@ -34,6 +34,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   uiAccessibility: 'UI Accessibility Tree',
   osInputSimulation: 'OS Input Simulation',
   consentGate: 'Action Consent Gate',
+  elementBoundAnnotations: 'Element-Bound Annotations',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];

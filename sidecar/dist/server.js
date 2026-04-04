@@ -72,6 +72,7 @@ const multiPtyManager_js_1 = require("./multiPtyManager.js");
 const uiAutomation_js_1 = require("./uiAutomation.js");
 const consentManager_js_1 = require("./consentManager.js");
 const inputSimulator_js_1 = require("./inputSimulator.js");
+const elementTracker_js_1 = require("./elementTracker.js");
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
@@ -172,6 +173,55 @@ function handleHttpRequest(req, res) {
                 const msg = err instanceof Error ? err.message : String(err);
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: msg }));
+            }
+        });
+        return;
+    }
+    // EAC-1: Bind annotation to UI element
+    if (req.method === 'POST' && url.pathname === '/annotations/bind') {
+        if (!sidecarFlags.elementBoundAnnotations) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Element-bound annotations are disabled. Enable the elementBoundAnnotations feature flag.' }));
+            return;
+        }
+        if (!sidecarFlags.uiAccessibility) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'UI accessibility is required for element binding. Enable the uiAccessibility feature flag.' }));
+            return;
+        }
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const parsed = JSON.parse(body);
+                if (!parsed.annotationId || !parsed.binding || !parsed.binding.strategy) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'annotationId and binding.strategy are required' }));
+                    return;
+                }
+                const validStrategies = ['automationId', 'nameRole', 'coordinates'];
+                if (!validStrategies.includes(parsed.binding.strategy)) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `Invalid strategy. Must be one of: ${validStrategies.join(', ')}` }));
+                    return;
+                }
+                const binding = {
+                    strategy: parsed.binding.strategy,
+                    automationId: parsed.binding.automationId,
+                    name: parsed.binding.name,
+                    role: parsed.binding.role,
+                    hwnd: parsed.binding.hwnd,
+                    offsetX: parsed.binding.offsetX,
+                    offsetY: parsed.binding.offsetY,
+                };
+                annotationStore_js_1.annotationState.setElementBinding(parsed.annotationId, binding);
+                elementTracker.bindAnnotation(parsed.annotationId, binding);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, annotationId: parsed.annotationId, strategy: binding.strategy }));
+            }
+            catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
             }
         });
         return;
@@ -645,6 +695,16 @@ httpServer.listen(0, '127.0.0.1', () => {
 const activeSessions = new Map();
 const multiPtyManager = new multiPtyManager_js_1.MultiPtyManager({ maxSessionsPerClient: 4 });
 const consentManager = new consentManager_js_1.ConsentManager();
+const elementTracker = new elementTracker_js_1.ElementTracker({
+    pollIntervalMs: 500,
+    getAnnotations: () => annotationStore_js_1.annotationState.getAll(),
+    updateAnnotation: (id, rect) => annotationStore_js_1.annotationState.updatePosition(id, rect),
+    markStale: (id, stale) => annotationStore_js_1.annotationState.setStale(id, stale),
+    getUiElements: uiAutomation_js_1.getUiElements,
+});
+elementTracker.onPositionsUpdated = (annotations) => {
+    broadcastAnnotations(annotations);
+};
 const planWatchers = new Map();
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
 const sidecarFlags = {
@@ -657,6 +717,7 @@ const sidecarFlags = {
     uiAccessibility: false,
     osInputSimulation: false,
     consentGate: false,
+    elementBoundAnnotations: false,
 };
 function sendMsg(ws, msg) {
     if (ws.readyState === ws.OPEN) {
@@ -977,6 +1038,15 @@ wss.on('connection', (ws) => {
                                     session.walkthroughWatcherInstance.setPattern(null);
                                 }
                             }
+                        }
+                    }
+                    // EAC-1: Live-update element tracker when flag changes
+                    if ('elementBoundAnnotations' in flags) {
+                        if (flags.elementBoundAnnotations && elementTracker.getBindings().size > 0) {
+                            elementTracker.start();
+                        }
+                        else if (!flags.elementBoundAnnotations) {
+                            elementTracker.stop();
                         }
                     }
                     // Live-update planWatcher (Phase 3)

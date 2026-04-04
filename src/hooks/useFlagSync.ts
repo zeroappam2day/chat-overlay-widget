@@ -15,6 +15,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
   const uiAccessibility = useFeatureFlagStore(s => s.uiAccessibility);
   const osInputSimulation = useFeatureFlagStore(s => s.osInputSimulation);
   const consentGate = useFeatureFlagStore(s => s.consentGate);
+  const elementBoundAnnotations = useFeatureFlagStore(s => s.elementBoundAnnotations);
   const sentRef = useRef(false);
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
       sentRef.current = false;
       return;
     }
-    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, osInputSimulation, consentGate } });
+    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, osInputSimulation, consentGate, elementBoundAnnotations } });
     sentRef.current = true;
-  }, [outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, osInputSimulation, consentGate, connected, sendMessage]);
+  }, [outputBatching, terminalWriteMcp, conditionalAdvance, multiPty, uiAccessibility, osInputSimulation, consentGate, elementBoundAnnotations, connected, sendMessage]);
 }

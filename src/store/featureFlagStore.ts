@@ -29,6 +29,7 @@ export interface FeatureFlags {
   uiAccessibility: boolean;      // Agent Runtime Phase 4 — UI Accessibility Tree Discovery
   osInputSimulation: boolean;    // Agent Runtime Phase 5 — OS-Level Input Simulation
   consentGate: boolean;           // Agent Runtime Phase 6 — Consent Gate & Action Verification
+  elementBoundAnnotations: boolean; // EAC-1 — Element-Bound Annotations
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -71,6 +72,7 @@ const defaults: FeatureFlags = {
   uiAccessibility: false,    // OFF by default — agent runtime
   osInputSimulation: false,  // OFF by default — agent runtime
   consentGate: false,         // OFF by default — agent runtime
+  elementBoundAnnotations: false, // OFF by default — EAC-1
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -114,6 +116,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         uiAccessibility: next.uiAccessibility,
         osInputSimulation: next.osInputSimulation,
         consentGate: next.consentGate,
+        elementBoundAnnotations: next.elementBoundAnnotations,
       }));
       return { [key]: value };
     }),

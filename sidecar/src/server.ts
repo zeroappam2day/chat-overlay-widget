@@ -42,6 +42,7 @@ import { MultiPtyManager } from './multiPtyManager.js';
 import { getUiElements } from './uiAutomation.js';
 import { ConsentManager } from './consentManager.js';
 import { simulateClick, simulateType, simulateKeyCombo, simulateDrag } from './inputSimulator.js';
+import { ElementTracker } from './elementTracker.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -143,6 +144,66 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         const msg = err instanceof Error ? err.message : String(err);
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: msg }));
+      }
+    });
+    return;
+  }
+
+  // EAC-1: Bind annotation to UI element
+  if (req.method === 'POST' && url.pathname === '/annotations/bind') {
+    if (!sidecarFlags.elementBoundAnnotations) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Element-bound annotations are disabled. Enable the elementBoundAnnotations feature flag.' }));
+      return;
+    }
+    if (!sidecarFlags.uiAccessibility) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'UI accessibility is required for element binding. Enable the uiAccessibility feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as {
+          annotationId?: string;
+          binding?: {
+            strategy?: string;
+            automationId?: string;
+            name?: string;
+            role?: string;
+            hwnd?: number;
+            offsetX?: number;
+            offsetY?: number;
+          };
+        };
+        if (!parsed.annotationId || !parsed.binding || !parsed.binding.strategy) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'annotationId and binding.strategy are required' }));
+          return;
+        }
+        const validStrategies = ['automationId', 'nameRole', 'coordinates'];
+        if (!validStrategies.includes(parsed.binding.strategy)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Invalid strategy. Must be one of: ${validStrategies.join(', ')}` }));
+          return;
+        }
+        const binding = {
+          strategy: parsed.binding.strategy as 'automationId' | 'nameRole' | 'coordinates',
+          automationId: parsed.binding.automationId,
+          name: parsed.binding.name,
+          role: parsed.binding.role,
+          hwnd: parsed.binding.hwnd,
+          offsetX: parsed.binding.offsetX,
+          offsetY: parsed.binding.offsetY,
+        };
+        annotationState.setElementBinding(parsed.annotationId, binding);
+        elementTracker.bindAnnotation(parsed.annotationId, binding);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, annotationId: parsed.annotationId, strategy: binding.strategy }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
       }
     });
     return;
@@ -646,6 +707,16 @@ httpServer.listen(0, '127.0.0.1', () => {
 const activeSessions = new Map<WebSocket, PTYSession | BatchedPTYSession>();
 const multiPtyManager = new MultiPtyManager({ maxSessionsPerClient: 4 });
 const consentManager = new ConsentManager();
+const elementTracker = new ElementTracker({
+  pollIntervalMs: 500,
+  getAnnotations: () => annotationState.getAll(),
+  updateAnnotation: (id, rect) => annotationState.updatePosition(id, rect),
+  markStale: (id, stale) => annotationState.setStale(id, stale),
+  getUiElements: getUiElements,
+});
+elementTracker.onPositionsUpdated = (annotations) => {
+  broadcastAnnotations(annotations);
+};
 const planWatchers = new Map<WebSocket, PlanWatcher>();
 
 // Sidecar-side feature flags (synced from frontend via 'set-flags' message)
@@ -659,6 +730,7 @@ const sidecarFlags: Record<string, boolean> = {
   uiAccessibility: false,
   osInputSimulation: false,
   consentGate: false,
+  elementBoundAnnotations: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -987,6 +1059,14 @@ wss.on('connection', (ws: WebSocket) => {
                   session.walkthroughWatcherInstance.setPattern(null);
                 }
               }
+            }
+          }
+          // EAC-1: Live-update element tracker when flag changes
+          if ('elementBoundAnnotations' in flags) {
+            if (flags.elementBoundAnnotations && elementTracker.getBindings().size > 0) {
+              elementTracker.start();
+            } else if (!flags.elementBoundAnnotations) {
+              elementTracker.stop();
             }
           }
           // Live-update planWatcher (Phase 3)

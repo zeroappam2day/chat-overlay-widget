@@ -718,6 +718,64 @@ After each action, a verification screenshot is returned so you can confirm the 
   }
 );
 
+// ─── Tool 11: bind_annotation_to_element (EAC-1) ──────────────────────────────
+
+server.tool(
+  'bind_annotation_to_element',
+  `Bind an annotation to a UI element so it automatically tracks the element's position when the window moves, scrolls, or resizes.
+
+Requires both elementBoundAnnotations and uiAccessibility feature flags to be enabled.
+
+Strategies:
+- "automationId": Match element by its unique UI Automation ID (most reliable).
+- "nameRole": Match element by name and/or control type role (e.g., name="Save", role="Button").
+- "coordinates": Bind to the window itself — annotation follows the window position.
+
+The annotation must already exist (created via send_annotation). Once bound, the tracker
+polls the UI Automation tree every 500ms to update the annotation's coordinates.
+If the element is not found, the annotation is marked as stale (not deleted).
+
+Example — bind to a button by automation ID:
+  { "annotationId": "step1", "strategy": "automationId", "automationId": "btnSave", "hwnd": 12345 }
+
+Example — bind to a menu item by name and role:
+  { "annotationId": "step2", "strategy": "nameRole", "name": "File", "role": "MenuItem", "hwnd": 12345 }`,
+  {
+    annotationId: z.string().min(1).max(200).describe('ID of an existing annotation to bind'),
+    strategy: z.enum(['automationId', 'nameRole', 'coordinates']).describe('How to find the target element'),
+    automationId: z.string().optional().describe('UI Automation ID (for automationId strategy)'),
+    name: z.string().optional().describe('Element name (for nameRole strategy)'),
+    role: z.string().optional().describe('Control type role like Button, Edit, MenuItem (for nameRole strategy)'),
+    hwnd: z.number().int().describe('Window handle of the target window'),
+    offsetX: z.number().int().optional().describe('Pixel offset from element top-left X'),
+    offsetY: z.number().int().optional().describe('Pixel offset from element top-left Y'),
+  },
+  async ({ annotationId, strategy, automationId, name, role, hwnd, offsetX, offsetY }) => {
+    try {
+      const body: Record<string, unknown> = {
+        annotationId,
+        binding: { strategy, automationId, name, role, hwnd, offsetX, offsetY },
+      };
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/annotations/bind', discovery.token, discovery.port, JSON.stringify(body));
+
+      if (resp.status === 403) {
+        const errBody = JSON.parse(resp.body.toString('utf-8'));
+        return { content: [{ type: 'text' as const, text: `Feature flag error: ${errBody.error}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: `Annotation "${result.annotationId}" bound to element via ${result.strategy} strategy.` }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

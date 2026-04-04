@@ -49,6 +49,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       uiAccessibility: flags.uiAccessibility,
       osInputSimulation: flags.osInputSimulation,
       consentGate: flags.consentGate,
+      elementBoundAnnotations: flags.elementBoundAnnotations,
     },
     windowState,
   };
