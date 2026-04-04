@@ -3,6 +3,7 @@ import { useFeatureFlagStore, type FeatureFlags } from '../store/featureFlagStor
 import { PlanPanel } from './PlanPanel';
 import { ThemeSelector } from './ThemeSelector';
 import { CompletionBadge } from './CompletionBadge';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   outputBatching: 'Output Batching',
@@ -22,6 +23,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   diffSyntaxHighlight: 'Diff Syntax Highlighting',
   askAboutCode: 'Ask About Code',
   completionStats: 'Completion Stats',
+  focusTrap: 'Focus Trap',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
@@ -30,6 +32,7 @@ export function FeatureFlagPanel() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const store = useFeatureFlagStore();
+  const focusTrapRef = useFocusTrap(open);
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +61,7 @@ export function FeatureFlagPanel() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-64 max-h-80 overflow-y-auto bg-[#2d2d2d] border border-[#404040] rounded shadow-lg z-50">
+        <div ref={focusTrapRef} className="absolute right-0 top-full mt-1 w-64 max-h-80 overflow-y-auto bg-[#2d2d2d] border border-[#404040] rounded shadow-lg z-50">
           <div className="flex items-center justify-between px-3 py-2 border-b border-[#404040]">
             <span className="text-xs font-medium text-gray-300">Feature Flags</span>
             <button

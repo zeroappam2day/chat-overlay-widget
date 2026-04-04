@@ -57,7 +57,7 @@ Begin by reading both plan files now.
 | 15 | Syntax Highlighting in Diffs | DONE | 2026-04-03 | Created syntaxHighlighter.ts (lazy Shiki singleton, detectLanguage 45+ extensions, highlightLines with fallback), useSyntaxHighlight.ts (React hook with content→HTML map, per-file caching). Added diffSyntaxHighlight flag to featureFlagStore. Modified EnhancedDiffPanel: EnhancedDiffLineRow accepts highlightedHtml prop, search highlighting takes precedence, useSyntaxHighlight called per file in EnhancedFileDiffView. Shiki code-split by Vite into lazy chunks. |
 | 16 | Ask About Code | DONE | 2026-04-04 | Created askCodeHandler.ts (sidecar child process spawner, 5 concurrent max, 2min timeout, 100K response cap, env cleaning), AskCodeCard.tsx (4-state inline card: input/loading/complete/error, Ctrl+Enter submit, streaming auto-scroll), diffSelection.ts (DOM selection extraction via data-diff-* attributes). Added ask-code/cancel-ask-code/ask-code-response to both protocol.ts files. Wired into server.ts switch. EnhancedDiffPanel extended with data-diff-* attrs on line rows, selection detection via onMouseUp, "Ask Claude" button bar, AskCodeCard inline render, custom event bridge. TerminalPane forwards ask-code-response via custom event + listens for ask-code-send. Added askAboutCode flag to featureFlagStore + FeatureFlagPanel + usePersistence gatherState. |
 | 17 | Completion Stats | DONE | 2026-04-04 | Created completionStore.ts (Zustand + localStorage, total + daily tracking), CompletionBadge.tsx (green check + "N today" with total tooltip). Added completionStats flag to featureFlagStore. Wired into TerminalPane pty-exit handler (exitCode 0 + flag ON). Badge renders in FeatureFlagPanel header area. |
-| 18 | Focus Trap for Dialogs | PENDING | — | — |
+| 18 | Focus Trap for Dialogs | DONE | 2026-04-04 | Created useFocusTrap.ts (Tab/Shift+Tab wrap, focus-first-on-open, restore-on-close). Added focusTrap flag to featureFlagStore. Integrated into FeatureFlagPanel dropdown via ref. |
 | 19 | GitHub URL Detection | PENDING | — | — |
 | 20 | Inline Editable Text | PENDING | — | — |
 | 21 | Error Boundaries | PENDING | — | — |
@@ -1916,6 +1916,14 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 - **Modified:** `src/store/featureFlagStore.ts` (+completionStats flag), `src/components/FeatureFlagPanel.tsx` (+label, +CompletionBadge import/render), `src/hooks/usePersistence.ts` (+completionStats in gatherState), `src/components/TerminalPane.tsx` (+useCompletionStore import, +recordCompleted in pty-exit handler)
 - **Pattern:** CompletionBadge uses inline date comparison `s.todayDate === new Date().toISOString().slice(0, 10)` for reactive today-count derivation. Badge renders next to PlanPanel in the header area.
 - **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`. CompletionStore persists to separate localStorage key `chat-overlay-completion-stats` (not in feature flag storage).
+- **Commits:** squash-merged via PR
+
+### Phase 18 (2026-04-04)
+- **Created:** `src/hooks/useFocusTrap.ts`
+- **Modified:** `src/store/featureFlagStore.ts` (+focusTrap flag), `src/components/FeatureFlagPanel.tsx` (+label, +useFocusTrap import/ref on dropdown), `src/hooks/usePersistence.ts` (+focusTrap in gatherState)
+- **Pattern:** useFocusTrap returns a ref that must be attached to the container element. It queries focusable elements dynamically on each Tab keydown (handles DOM changes while panel is open). Previous focus is restored on cleanup via `previousFocusRef`.
+- **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`. The ref uses `null!` assertion to satisfy React 18's stricter `RefObject<HTMLDivElement>` type (vs `RefObject<HTMLDivElement | null>`).
+- **Future adoption:** Other panels (DiffPanel, PlanPanel, PromptHistoryPanel) can call `useFocusTrap(isOpen)` and attach the ref to their container — no changes to the hook needed.
 - **Commits:** squash-merged via PR
 
 ---
