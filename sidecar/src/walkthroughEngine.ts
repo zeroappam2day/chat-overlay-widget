@@ -2,11 +2,17 @@ import { z } from 'zod';
 import { AnnotationSchema, annotationState } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 
+export const AdvanceWhenSchema = z.object({
+  type: z.literal('terminal-match'),
+  pattern: z.string().min(1).max(500),
+}).optional();
+
 export const WalkthroughStepSchema = z.object({
   stepId: z.string().min(1).max(200),
   title: z.string().max(200),
   instruction: z.string().max(1000),
   annotations: z.array(AnnotationSchema).max(50),
+  advanceWhen: AdvanceWhenSchema,
 });
 
 export type WalkthroughStep = z.infer<typeof WalkthroughStepSchema>;
@@ -72,6 +78,21 @@ class WalkthroughEngine {
       this.onAnnotationsChanged?.(current);
     }
     this.active = null;
+  }
+
+  /**
+   * Returns a compiled RegExp for the current step's advanceWhen pattern, or null.
+   * Used by WalkthroughWatcher to know what terminal output to watch for.
+   */
+  getCurrentAdvancePattern(): RegExp | null {
+    if (!this.active) return null;
+    const step = this.active.walkthrough.steps[this.active.currentIndex];
+    if (!step.advanceWhen) return null;
+    try {
+      return new RegExp(step.advanceWhen.pattern);
+    } catch {
+      return null;
+    }
   }
 
   getStatus(): { active: boolean; walkthroughId?: string; currentStep?: number; totalSteps?: number } {

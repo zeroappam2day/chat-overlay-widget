@@ -182,6 +182,10 @@ function handleHttpRequest(req, res) {
                 const walkthrough = walkthroughEngine_js_1.WalkthroughSchema.parse(raw);
                 const result = walkthroughEngine_js_1.walkthroughEngine.start(walkthrough);
                 broadcastWalkthroughStep(result);
+                // Agent Runtime Phase 2: Set watcher pattern for first step
+                if (sidecarFlags.conditionalAdvance) {
+                    updateWalkthroughWatcherPattern();
+                }
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(result));
             }
@@ -200,9 +204,17 @@ function handleHttpRequest(req, res) {
                 const result = walkthroughEngine_js_1.walkthroughEngine.advance();
                 if ('done' in result) {
                     broadcastWalkthroughStep(null);
+                    // Agent Runtime Phase 2: Clear watcher pattern on walkthrough complete
+                    if (sidecarFlags.conditionalAdvance) {
+                        updateWalkthroughWatcherPattern();
+                    }
                 }
                 else {
                     broadcastWalkthroughStep(result);
+                    // Agent Runtime Phase 2: Set watcher pattern for next step
+                    if (sidecarFlags.conditionalAdvance) {
+                        updateWalkthroughWatcherPattern();
+                    }
                 }
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(result));
@@ -221,6 +233,10 @@ function handleHttpRequest(req, res) {
             try {
                 walkthroughEngine_js_1.walkthroughEngine.stop();
                 broadcastWalkthroughStep(null);
+                // Agent Runtime Phase 2: Clear watcher pattern on stop
+                if (sidecarFlags.conditionalAdvance) {
+                    updateWalkthroughWatcherPattern();
+                }
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ ok: true }));
             }
@@ -408,6 +424,7 @@ const sidecarFlags = {
     autoTrust: false,
     planWatcher: true,
     terminalWriteMcp: false,
+    conditionalAdvance: false,
 };
 function sendMsg(ws, msg) {
     if (ws.readyState === ws.OPEN) {
@@ -427,6 +444,15 @@ function broadcastAnnotations(annotations) {
 function broadcastWalkthroughStep(step) {
     for (const client of wss.clients) {
         sendMsg(client, { type: 'walkthrough-step', step });
+    }
+}
+/** Agent Runtime Phase 2: Update watcher pattern on all active sessions */
+function updateWalkthroughWatcherPattern() {
+    const pattern = walkthroughEngine_js_1.walkthroughEngine.getCurrentAdvancePattern();
+    for (const session of activeSessions.values()) {
+        if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
+            session.walkthroughWatcherInstance.setPattern(pattern);
+        }
     }
 }
 async function sweepScreenshotTempFiles() {
@@ -481,6 +507,25 @@ wss.on('connection', (ws) => {
                     console.log(`[sidecar] PTY session created successfully (batching=${sidecarFlags.outputBatching ?? true})`);
                     console.log(`[sidecar] session started: id=${session.sessionId}`);
                     sendMsg(ws, { type: 'session-start', sessionId: session.sessionId });
+                    // Agent Runtime Phase 2: Wire walkthrough watcher to auto-advance
+                    session.walkthroughWatcherInstance.onAdvance = () => {
+                        try {
+                            const result = walkthroughEngine_js_1.walkthroughEngine.advance();
+                            if ('done' in result) {
+                                broadcastWalkthroughStep(null);
+                                session.walkthroughWatcherInstance.setPattern(null);
+                            }
+                            else {
+                                broadcastWalkthroughStep(result);
+                                // Set pattern for next step
+                                session.walkthroughWatcherInstance.setPattern(walkthroughEngine_js_1.walkthroughEngine.getCurrentAdvancePattern());
+                            }
+                        }
+                        catch (err) {
+                            console.error('[sidecar] walkthrough watcher advance error:', err);
+                        }
+                    };
+                    session.walkthroughWatcherEnabled = sidecarFlags.conditionalAdvance ?? false;
                     // Start PlanWatcher if flag is enabled (Phase 3)
                     if (sidecarFlags.planWatcher ?? true) {
                         const planWatcher = new planWatcher_js_1.PlanWatcher({
@@ -611,6 +656,21 @@ wss.on('connection', (ws) => {
                         for (const session of activeSessions.values()) {
                             if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
                                 session.autoTrustEnabled = flags.autoTrust;
+                            }
+                        }
+                    }
+                    // Agent Runtime Phase 2: Live-update conditionalAdvance on active sessions
+                    if ('conditionalAdvance' in flags) {
+                        for (const session of activeSessions.values()) {
+                            if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
+                                session.walkthroughWatcherEnabled = flags.conditionalAdvance;
+                                if (flags.conditionalAdvance) {
+                                    // Set pattern for current step if walkthrough is active
+                                    session.walkthroughWatcherInstance.setPattern(walkthroughEngine_js_1.walkthroughEngine.getCurrentAdvancePattern());
+                                }
+                                else {
+                                    session.walkthroughWatcherInstance.setPattern(null);
+                                }
                             }
                         }
                     }

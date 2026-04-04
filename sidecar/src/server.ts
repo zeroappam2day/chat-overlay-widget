@@ -154,6 +154,10 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         const walkthrough = WalkthroughSchema.parse(raw);
         const result = walkthroughEngine.start(walkthrough);
         broadcastWalkthroughStep(result);
+        // Agent Runtime Phase 2: Set watcher pattern for first step
+        if (sidecarFlags.conditionalAdvance) {
+          updateWalkthroughWatcherPattern();
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (err) {
@@ -172,8 +176,16 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         const result = walkthroughEngine.advance();
         if ('done' in result) {
           broadcastWalkthroughStep(null);
+          // Agent Runtime Phase 2: Clear watcher pattern on walkthrough complete
+          if (sidecarFlags.conditionalAdvance) {
+            updateWalkthroughWatcherPattern();
+          }
         } else {
           broadcastWalkthroughStep(result);
+          // Agent Runtime Phase 2: Set watcher pattern for next step
+          if (sidecarFlags.conditionalAdvance) {
+            updateWalkthroughWatcherPattern();
+          }
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
@@ -192,6 +204,10 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
       try {
         walkthroughEngine.stop();
         broadcastWalkthroughStep(null);
+        // Agent Runtime Phase 2: Clear watcher pattern on stop
+        if (sidecarFlags.conditionalAdvance) {
+          updateWalkthroughWatcherPattern();
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
@@ -395,6 +411,7 @@ const sidecarFlags: Record<string, boolean> = {
   autoTrust: false,
   planWatcher: true,
   terminalWriteMcp: false,
+  conditionalAdvance: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -418,6 +435,16 @@ function broadcastAnnotations(annotations: Annotation[]): void {
 function broadcastWalkthroughStep(step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null): void {
   for (const client of wss.clients) {
     sendMsg(client, { type: 'walkthrough-step', step });
+  }
+}
+
+/** Agent Runtime Phase 2: Update watcher pattern on all active sessions */
+function updateWalkthroughWatcherPattern(): void {
+  const pattern = walkthroughEngine.getCurrentAdvancePattern();
+  for (const session of activeSessions.values()) {
+    if (session instanceof BatchedPTYSession) {
+      session.walkthroughWatcherInstance.setPattern(pattern);
+    }
   }
 }
 
@@ -478,6 +505,23 @@ wss.on('connection', (ws: WebSocket) => {
           console.log(`[sidecar] PTY session created successfully (batching=${sidecarFlags.outputBatching ?? true})`);
           console.log(`[sidecar] session started: id=${session.sessionId}`);
           sendMsg(ws, { type: 'session-start', sessionId: session.sessionId });
+          // Agent Runtime Phase 2: Wire walkthrough watcher to auto-advance
+          session.walkthroughWatcherInstance.onAdvance = () => {
+            try {
+              const result = walkthroughEngine.advance();
+              if ('done' in result) {
+                broadcastWalkthroughStep(null);
+                session.walkthroughWatcherInstance.setPattern(null);
+              } else {
+                broadcastWalkthroughStep(result);
+                // Set pattern for next step
+                session.walkthroughWatcherInstance.setPattern(walkthroughEngine.getCurrentAdvancePattern());
+              }
+            } catch (err) {
+              console.error('[sidecar] walkthrough watcher advance error:', err);
+            }
+          };
+          session.walkthroughWatcherEnabled = sidecarFlags.conditionalAdvance ?? false;
           // Start PlanWatcher if flag is enabled (Phase 3)
           if (sidecarFlags.planWatcher ?? true) {
             const planWatcher = new PlanWatcher({
@@ -606,6 +650,20 @@ wss.on('connection', (ws: WebSocket) => {
             for (const session of activeSessions.values()) {
               if (session instanceof BatchedPTYSession) {
                 session.autoTrustEnabled = flags.autoTrust;
+              }
+            }
+          }
+          // Agent Runtime Phase 2: Live-update conditionalAdvance on active sessions
+          if ('conditionalAdvance' in flags) {
+            for (const session of activeSessions.values()) {
+              if (session instanceof BatchedPTYSession) {
+                session.walkthroughWatcherEnabled = flags.conditionalAdvance;
+                if (flags.conditionalAdvance) {
+                  // Set pattern for current step if walkthrough is active
+                  session.walkthroughWatcherInstance.setPattern(walkthroughEngine.getCurrentAdvancePattern());
+                } else {
+                  session.walkthroughWatcherInstance.setPattern(null);
+                }
               }
             }
           }

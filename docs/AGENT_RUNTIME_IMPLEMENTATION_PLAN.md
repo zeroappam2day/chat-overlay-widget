@@ -4,7 +4,7 @@
 > **Created:** 2026-04-04
 > **Repository:** C:/Users/anujd/Documents/01_AI/214_Chat_overlay_widget
 > **Branch:** main
-> **Status:** Phase 1 DONE — Phase 2 pending
+> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 pending
 
 ---
 
@@ -922,15 +922,32 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - Sidecar dist build: PASS (terminalWrite.js generated)
 
 ### Phase 2 — Conditional Walkthrough Advancement
-- **Status:** NEXT
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/walkthroughWatcher.ts` — WalkthroughWatcher class with AutoTrust-equivalent pattern (feed, setPattern, destroy, three-phase timing)
+- **Files modified:**
+  - `sidecar/src/walkthroughEngine.ts` — Added `AdvanceWhenSchema` (optional `advanceWhen` field on steps), added `getCurrentAdvancePattern()` method
+  - `sidecar/src/batchedPtySession.ts` — Added WalkthroughWatcher instantiation, feeds raw output to watcher in proxy intercept, exposes walkthroughWatcherInstance/walkthroughWatcherEnabled, cleanup in destroy()
+  - `sidecar/src/server.ts` — Added `conditionalAdvance: false` to sidecarFlags, wired watcher onAdvance callback in spawn handler, added `updateWalkthroughWatcherPattern()` helper called after walkthrough start/advance/stop, added live-update for conditionalAdvance in set-flags handler
+  - `sidecar/src/mcp-server.ts` — Added `advanceWhen` field to start_guided_walkthrough step schema, updated tool description with auto-advance documentation
+  - `src/store/featureFlagStore.ts` — Added `conditionalAdvance` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `conditionalAdvance` label
+  - `src/hooks/useFlagSync.ts` — Added `conditionalAdvance` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `conditionalAdvance` to persistence snapshot
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - WalkthroughWatcher reuses exact same timing constants as AutoTrustDetector (50ms detect, 1s settle, 3s cooldown, 4KB buffer).
+  - The watcher's `onAdvance` callback is set by server.ts after BatchedPTYSession construction (public field).
+  - When flag is OFF, advanceWhen fields are accepted in the schema but ignored — manual advance still works.
+  - Pattern is cleared on walkthrough stop/complete and reset on each step advance.
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (walkthroughWatcher.js generated)
 
 ### Phase 3 — Multi-PTY Pane Multiplexing
-- **Status:** PENDING (after Phase 2)
+- **Status:** NEXT
 - **Date:** —
 - **Files created:** —
 - **Files modified:** —

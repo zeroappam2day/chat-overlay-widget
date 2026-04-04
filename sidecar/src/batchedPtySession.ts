@@ -16,6 +16,7 @@ import type { ServerMessage } from './protocol.js';
 import { PTYSession } from './ptySession.js';
 import { OutputBatcher } from './outputBatcher.js';
 import { AutoTrustDetector } from './autoTrust.js';
+import { WalkthroughWatcher } from './walkthroughWatcher.js';
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
@@ -27,6 +28,7 @@ export class BatchedPTYSession {
   private ptySession: PTYSession;
   private batcher: OutputBatcher;
   private autoTrust: AutoTrustDetector;
+  private walkthroughWatcher: WalkthroughWatcher;
 
   constructor(
     private ws: WebSocket,
@@ -43,6 +45,14 @@ export class BatchedPTYSession {
       enabled: false, // OFF by default — gated by autoTrust feature flag
     });
     const autoTrust = this.autoTrust;
+
+    // 1b. Create WalkthroughWatcher (Agent Runtime Phase 2)
+    // onAdvance callback is set externally by server.ts after construction
+    this.walkthroughWatcher = new WalkthroughWatcher({
+      onAdvance: () => { /* wired by server.ts */ },
+      enabled: false, // OFF by default — gated by conditionalAdvance feature flag
+    });
+    const walkthroughWatcher = this.walkthroughWatcher;
 
     // 2. Create batcher (referenced by proxy closure)
     const batcher = new OutputBatcher({
@@ -64,6 +74,8 @@ export class BatchedPTYSession {
               if (parsed.type === 'output') {
                 // Feed raw output to autoTrust detector before batching
                 autoTrust.feed(parsed.data);
+                // Feed raw output to walkthrough watcher (Agent Runtime Phase 2)
+                walkthroughWatcher.feed(parsed.data);
                 // Route through batcher instead of sending directly
                 batcher.push(parsed.data);
                 return;
@@ -114,6 +126,19 @@ export class BatchedPTYSession {
     return this.autoTrust.enabled;
   }
 
+  /** Agent Runtime Phase 2: WalkthroughWatcher access */
+  get walkthroughWatcherInstance(): WalkthroughWatcher {
+    return this.walkthroughWatcher;
+  }
+
+  set walkthroughWatcherEnabled(v: boolean) {
+    this.walkthroughWatcher.enabled = v;
+  }
+
+  get walkthroughWatcherEnabled(): boolean {
+    return this.walkthroughWatcher.enabled;
+  }
+
   getScrollback(): string {
     return this.batcher.getScrollback();
   }
@@ -128,6 +153,7 @@ export class BatchedPTYSession {
 
   destroy(): void {
     this.autoTrust.destroy();
+    this.walkthroughWatcher.destroy();
     this.batcher.destroy();
     this.ptySession.destroy();
   }

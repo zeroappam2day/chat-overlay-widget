@@ -334,21 +334,26 @@ server.tool(
   'start_guided_walkthrough',
   `Start a multi-step guided walkthrough on the Chat Overlay Widget.
 Each step has a title, instruction text, and visual annotations that highlight areas on screen.
-The walkthrough renders one step at a time. Call advance_walkthrough to move to the next step.
+The walkthrough renders one step at a time. Call advance_walkthrough to move to the next step,
+or use advanceWhen to auto-advance when terminal output matches a regex pattern.
+
+advanceWhen requires the conditionalAdvance feature flag to be enabled. When the flag is off,
+advanceWhen fields are accepted but ignored (manual advance still works).
 
 Use this when guiding a user through a multi-step process like deploying an app,
 configuring a tool, or navigating a complex UI.
 
-Example:
+Example with auto-advance:
 {
   "id": "deploy-guide",
   "title": "Deploy to Production",
   "steps": [
     {
       "stepId": "step1",
-      "title": "Open Terminal",
-      "instruction": "Click the terminal tab at the bottom of the screen",
-      "annotations": [{ "id": "s1-box", "type": "box", "x": 0, "y": 700, "width": 1200, "height": 50, "label": "Click here" }]
+      "title": "Run Build",
+      "instruction": "Building the project...",
+      "annotations": [{ "id": "s1-box", "type": "box", "x": 0, "y": 700, "width": 1200, "height": 50 }],
+      "advanceWhen": { "type": "terminal-match", "pattern": "Build completed successfully" }
     },
     {
       "stepId": "step2",
@@ -375,6 +380,10 @@ Example:
         label: z.string().max(500).optional(),
         color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
       })).max(50).describe('Visual annotations for this step'),
+      advanceWhen: z.object({
+        type: z.literal('terminal-match'),
+        pattern: z.string().min(1).max(500).describe('Regex pattern to match against terminal output'),
+      }).optional().describe('Auto-advance when terminal output matches this pattern. Requires conditionalAdvance feature flag.'),
     })).min(1).max(50).describe('Ordered list of walkthrough steps'),
   },
   async ({ id, title, steps }) => {
