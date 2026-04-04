@@ -830,7 +830,7 @@ curl -X POST http://127.0.0.1:<PORT>/annotations \
 
 ## Phase 5: Guided Walkthrough Engine
 
-**Status:** PENDING
+**Status:** DONE
 **Estimated files to create:** 2 new
 **Estimated files to modify:** 1 existing (mcp-server.ts)
 
@@ -1144,11 +1144,12 @@ walkthroughEngine.onAnnotationsChanged = (annotations) => {
 
 ### Handover Notes
 
-> *(To be filled after implementation)*
-> - Files created:
-> - Files modified:
-> - Walkthrough flow tested end-to-end:
-> - Issues encountered:
+> - Files created: `sidecar/src/walkthroughEngine.ts` (walkthrough engine with start/advance/stop/getStatus), `sidecar/src/walkthroughEngine.test.ts` (13 tests covering all engine operations)
+> - Files modified: `sidecar/src/server.ts` (added import for walkthroughEngine + WalkthroughSchema, added 3 HTTP endpoints: POST /walkthrough/start, /walkthrough/advance, /walkthrough/stop, wired onAnnotationsChanged callback), `sidecar/src/mcp-server.ts` (added 3 MCP tools: start_guided_walkthrough, advance_walkthrough, stop_walkthrough)
+> - Tests passing: 279/279 (13 new walkthrough tests + 266 existing, all pass)
+> - TypeScript compile: Clean (no errors)
+> - Walkthrough flow tested end-to-end: Not tested (requires running app with start.bat)
+> - Issues encountered: None
 
 ---
 
@@ -1561,3 +1562,4 @@ TESTS:
 | 2026-04-04 | Phase 2 | DONE | Frontend annotation bridge: protocol sync, Zustand bridge store, TerminalPane handler |
 | 2026-04-04 | Phase 3 | DONE | MCP annotation tool: sidecarPost helper, send_annotation tool with full Zod schema |
 | 2026-04-04 | Phase 4 | DONE | Enhanced overlay rendering: all 4 annotation types, custom colors, arrowhead markers, pulse animation |
+| 2026-04-04 | Phase 5 | DONE | Guided walkthrough engine: walkthroughEngine.ts, 3 HTTP endpoints, 3 MCP tools (start/advance/stop) |

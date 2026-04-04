@@ -269,6 +269,112 @@ Example — clear all annotations:
   }
 );
 
+// ─── Tool 5: start_guided_walkthrough ──────────────────────────────────────────
+
+server.tool(
+  'start_guided_walkthrough',
+  `Start a multi-step guided walkthrough on the Chat Overlay Widget.
+Each step has a title, instruction text, and visual annotations that highlight areas on screen.
+The walkthrough renders one step at a time. Call advance_walkthrough to move to the next step.
+
+Use this when guiding a user through a multi-step process like deploying an app,
+configuring a tool, or navigating a complex UI.
+
+Example:
+{
+  "id": "deploy-guide",
+  "title": "Deploy to Production",
+  "steps": [
+    {
+      "stepId": "step1",
+      "title": "Open Terminal",
+      "instruction": "Click the terminal tab at the bottom of the screen",
+      "annotations": [{ "id": "s1-box", "type": "box", "x": 0, "y": 700, "width": 1200, "height": 50, "label": "Click here" }]
+    },
+    {
+      "stepId": "step2",
+      "title": "Run Deploy Command",
+      "instruction": "Type 'npm run deploy' and press Enter",
+      "annotations": [{ "id": "s2-text", "type": "text", "x": 100, "y": 730, "label": "Type: npm run deploy" }]
+    }
+  ]
+}`,
+  {
+    id: z.string().min(1).max(200).describe('Unique walkthrough identifier'),
+    title: z.string().max(300).describe('Walkthrough title'),
+    steps: z.array(z.object({
+      stepId: z.string().min(1).max(200).describe('Unique step identifier'),
+      title: z.string().max(200).describe('Step title'),
+      instruction: z.string().max(1000).describe('What the user should do'),
+      annotations: z.array(z.object({
+        id: z.string().min(1).max(200),
+        type: z.enum(['box', 'arrow', 'text', 'highlight']),
+        x: z.number().int().min(0).max(10000),
+        y: z.number().int().min(0).max(10000),
+        width: z.number().int().min(0).max(10000).optional(),
+        height: z.number().int().min(0).max(10000).optional(),
+        label: z.string().max(500).optional(),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      })).max(50).describe('Visual annotations for this step'),
+    })).min(1).max(50).describe('Ordered list of walkthrough steps'),
+  },
+  async ({ id, title, steps }) => {
+    try {
+      const body = JSON.stringify({ id, title, steps });
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/walkthrough/start', discovery.token, discovery.port, body);
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 6: advance_walkthrough ───────────────────────────────────────────────
+
+server.tool(
+  'advance_walkthrough',
+  'Move to the next step in the active guided walkthrough. Returns the next step details or indicates the walkthrough is complete.',
+  {},
+  async () => {
+    try {
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/walkthrough/advance', discovery.token, discovery.port, '{}');
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 7: stop_walkthrough ──────────────────────────────────────────────────
+
+server.tool(
+  'stop_walkthrough',
+  'Stop the active guided walkthrough and clear all its annotations from the overlay.',
+  {},
+  async () => {
+    try {
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/walkthrough/stop', discovery.token, discovery.port, '{}');
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      return { content: [{ type: 'text' as const, text: 'Walkthrough stopped. Annotations cleared.' }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

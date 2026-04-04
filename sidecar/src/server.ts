@@ -36,6 +36,7 @@ import { execGitDiff } from './diffHandler.js';
 import { askAboutCode, cancelAskCode } from './askCodeHandler.js';
 import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
+import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -137,6 +138,57 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         const msg = err instanceof Error ? err.message : String(err);
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: msg }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/walkthrough/start') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+        const raw = JSON.parse(cleaned);
+        const walkthrough = WalkthroughSchema.parse(raw);
+        const result = walkthroughEngine.start(walkthrough);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/walkthrough/advance') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const result = walkthroughEngine.advance();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/walkthrough/stop') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        walkthroughEngine.stop();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
       }
     });
     return;
@@ -286,6 +338,10 @@ const wss = new WebSocketServer({ server: httpServer });
 
 annotationState._onExpire = () => {
   broadcastAnnotations(annotationState.getAll());
+};
+
+walkthroughEngine.onAnnotationsChanged = (annotations) => {
+  broadcastAnnotations(annotations);
 };
 
 // Heartbeat: ping every 30s, terminate if no pong within 10s (Phase 5 hardening)
