@@ -38,6 +38,7 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { readClipboard, writeClipboard, pasteFromClipboard } from './clipboardManager.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -359,6 +360,101 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // EAC-4: Clipboard read endpoint (flag-gated)
+  if (req.method === 'GET' && url.pathname === '/clipboard') {
+    if (!sidecarFlags.clipboardAccess) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }));
+      return;
+    }
+    try {
+      const result = readClipboard();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (err) {
+      console.error('[sidecar] clipboard read error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Clipboard read failed' }));
+    }
+    return;
+  }
+
+  // EAC-4: Clipboard write endpoint (flag-gated)
+  if (req.method === 'POST' && url.pathname === '/clipboard') {
+    if (!sidecarFlags.clipboardAccess) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { text?: unknown };
+        const text = typeof parsed.text === 'string' ? parsed.text : '';
+        if (!text) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'text is required' }));
+          return;
+        }
+        const result = writeClipboard(text);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        console.error('[sidecar] clipboard write error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Clipboard write failed' }));
+      }
+    });
+    return;
+  }
+
+  // EAC-4: Clipboard paste endpoint (flag-gated: clipboardAccess + osInputSimulation + consentGate)
+  if (req.method === 'POST' && url.pathname === '/clipboard/paste') {
+    if (!sidecarFlags.clipboardAccess) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }));
+      return;
+    }
+    if (!sidecarFlags.osInputSimulation) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'OS input simulation is disabled. Enable the osInputSimulation feature flag.' }));
+      return;
+    }
+    if (!sidecarFlags.consentGate) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Consent gate is disabled. Enable the consentGate feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { text?: unknown; clearAfterPaste?: unknown };
+        const text = typeof parsed.text === 'string' ? parsed.text : '';
+        if (!text) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'text is required' }));
+          return;
+        }
+        const clearAfterPaste = parsed.clearAfterPaste === true;
+        pasteFromClipboard(text, clearAfterPaste).then(result => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        }).catch(err => {
+          console.error('[sidecar] clipboard paste error:', err);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'Clipboard paste failed' }));
+        });
+      } catch (err) {
+        console.error('[sidecar] clipboard paste error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Clipboard paste failed' }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -412,6 +508,7 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  clipboardAccess: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
