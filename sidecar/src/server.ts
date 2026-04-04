@@ -38,6 +38,7 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { WebFetcher } from './webFetcher.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -49,6 +50,9 @@ console.log('[sidecar] SQLite session database initialized');
 
 // Clean any stale discovery file from a previous force-killed session
 cleanStaleDiscoveryFile();
+
+// Web fetcher instance (EAC-5)
+const webFetcher = new WebFetcher();
 
 const authToken = crypto.randomBytes(32).toString('hex');
 let portFilePath: string | null = null;
@@ -359,6 +363,41 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // EAC-5: Web fetch endpoint (flag-gated)
+  if (req.method === 'POST' && url.pathname === '/web-fetch') {
+    if (!sidecarFlags.webFetchTool) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Web fetch tool is disabled. Enable the webFetchTool feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { url?: string; extractText?: boolean };
+        const fetchUrl = typeof parsed.url === 'string' ? parsed.url.trim() : '';
+        if (!fetchUrl) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'url is required' }));
+          return;
+        }
+        webFetcher.fetch(fetchUrl, { extractText: parsed.extractText ?? true })
+          .then(result => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          })
+          .catch(err => {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: String(err) }));
+          });
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -412,6 +451,7 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  webFetchTool: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {

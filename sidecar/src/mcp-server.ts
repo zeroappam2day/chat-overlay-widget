@@ -473,6 +473,40 @@ server.tool(
   }
 );
 
+// ─── Tool 9: web_fetch (EAC-5) ──────────────────────────────────────────────
+
+server.tool(
+  'web_fetch',
+  'Fetch a web page and extract readable text. Use for documentation lookups, API references, tutorials. HTTPS only, max 50KB text, 5-minute cache.',
+  {
+    url: z.string().min(1).describe('URL to fetch (must be https://)'),
+    extractText: z.boolean().optional().default(true).describe('Extract readable text from HTML (default true)'),
+  },
+  async ({ url, extractText }) => {
+    try {
+      const discovery = readDiscovery();
+      const body = JSON.stringify({ url, extractText });
+      const resp = await sidecarPost('/web-fetch', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Web fetch tool is disabled. Enable the webFetchTool feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const msg = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${msg}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8'));
+      if (!result.ok) {
+        return { content: [{ type: 'text' as const, text: `Fetch failed: ${result.error ?? 'Unknown error'}` }], isError: true };
+      }
+      const meta = `URL: ${result.url}\nStatus: ${result.statusCode}\nTruncated: ${result.truncated}\nCached: ${result.cached}\n\n`;
+      return { content: [{ type: 'text' as const, text: meta + result.text }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module
