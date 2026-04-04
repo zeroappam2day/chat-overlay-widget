@@ -55,7 +55,7 @@ Begin by reading both plan files now.
 | 13 | Ctrl+Wheel Zoom | DONE | 2026-04-03 | Created wheelZoom.ts (pure zoom math), useZoom.ts (React hook with wheel listener + localStorage + custom events), zoom.css (xterm isolation). Added ctrlWheelZoom flag to featureFlagStore. Integrated into PaneContainer (useZoom call + CSS import), useShortcuts (Ctrl+0/+/-), usePersistence (gatherState), FeatureFlagPanel (label). |
 | 14 | Diff Search & Context Collapse | DONE | 2026-04-03 | Created diffSearch.ts (search utils + match positions), DiffSearchBar.tsx (32px bar with prev/next/close, Enter/Shift+Enter/Escape), CollapsibleContext.tsx (collapseContextRuns + CollapsedRow), EnhancedDiffPanel.tsx (portal panel with Ctrl+F toggle, search highlighting, context collapse). Added diffSearch flag to featureFlagStore. Added searchQuery/currentMatchIndex to diffStore. Swapped DiffPanel import in TerminalPane to EnhancedDiffPanel. When diffSearch OFF, falls through to original DiffPanel. |
 | 15 | Syntax Highlighting in Diffs | DONE | 2026-04-03 | Created syntaxHighlighter.ts (lazy Shiki singleton, detectLanguage 45+ extensions, highlightLines with fallback), useSyntaxHighlight.ts (React hook with content→HTML map, per-file caching). Added diffSyntaxHighlight flag to featureFlagStore. Modified EnhancedDiffPanel: EnhancedDiffLineRow accepts highlightedHtml prop, search highlighting takes precedence, useSyntaxHighlight called per file in EnhancedFileDiffView. Shiki code-split by Vite into lazy chunks. |
-| 16 | Ask About Code | PENDING | — | — |
+| 16 | Ask About Code | DONE | 2026-04-04 | Created askCodeHandler.ts (sidecar child process spawner, 5 concurrent max, 2min timeout, 100K response cap, env cleaning), AskCodeCard.tsx (4-state inline card: input/loading/complete/error, Ctrl+Enter submit, streaming auto-scroll), diffSelection.ts (DOM selection extraction via data-diff-* attributes). Added ask-code/cancel-ask-code/ask-code-response to both protocol.ts files. Wired into server.ts switch. EnhancedDiffPanel extended with data-diff-* attrs on line rows, selection detection via onMouseUp, "Ask Claude" button bar, AskCodeCard inline render, custom event bridge. TerminalPane forwards ask-code-response via custom event + listens for ask-code-send. Added askAboutCode flag to featureFlagStore + FeatureFlagPanel + usePersistence gatherState. |
 | 17 | Completion Stats | PENDING | — | — |
 | 18 | Focus Trap for Dialogs | PENDING | — | — |
 | 19 | GitHub URL Detection | PENDING | — | — |
@@ -1903,6 +1903,14 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 - **Gotcha:** Same gatherState rule — any new flag MUST be added to usePersistence.ts. Shiki WASM chunk is ~600KB but only loads when diff panel opens AND flag is ON.
 - **Commits:** squash-merged via PR #20
 
+### Phase 16 (2026-04-04)
+- **Created:** `sidecar/src/askCodeHandler.ts`, `src/components/AskCodeCard.tsx`, `src/lib/diffSelection.ts`
+- **Modified:** `sidecar/src/protocol.ts` (+ask-code/cancel-ask-code/ask-code-response), `src/protocol.ts` (mirror), `sidecar/src/server.ts` (+import + switch cases), `src/components/EnhancedDiffPanel.tsx` (+data-diff-* attrs, selection state, Ask Claude button, AskCodeCard inline, onMouseUp, custom event bridge), `src/components/TerminalPane.tsx` (+ask-code-response forwarding, +ask-code-send listener), `src/store/featureFlagStore.ts` (+askAboutCode flag), `src/components/FeatureFlagPanel.tsx` (+label), `src/hooks/usePersistence.ts` (+askAboutCode in gatherState)
+- **Pattern:** Custom event bridge between DiffPanel (portal-rendered) and TerminalPane (owns WebSocket): DiffPanel dispatches `ask-code-send`, TerminalPane forwards to WS; TerminalPane dispatches `ask-code-response`, AskCodeCard listens filtered by `requestId`. This avoids prop-drilling the WS `sendMessage` into the portal.
+- **Pattern:** askCodeHandler uses `shell: true` in spawn options for Windows PATH resolution of `claude` command.
+- **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`. EnhancedDiffPanel line rows now carry `data-diff-line-num`, `data-diff-file-path`, `data-diff-line-type` attributes — diffSelection.ts depends on these.
+- **Commits:** squash-merged via PR #22, commit `7f48a55`
+
 ---
 
 ## Established PR History (continued from Volume 1)
@@ -1913,7 +1921,7 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 | 13 | — | — | — |
 | 14 | — | — | — |
 | 15 | #20 | 3327e1e | squash-merge |
-| 16 | — | — | — |
+| 16 | #22 | 7f48a55 | squash-merge |
 | 17 | — | — | — |
 | 18 | — | — | — |
 | 19 | — | — | — |
