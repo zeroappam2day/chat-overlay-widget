@@ -1,4 +1,5 @@
 import type { AgentEvent } from './agentEvent.js';
+import type { Annotation, AnnotationPayload } from './annotationStore.js';
 
 // Client -> Server messages
 export type ClientMessage =
@@ -15,7 +16,8 @@ export type ClientMessage =
   | { type: 'plan-read'; cwd?: string }
   | { type: 'request-diff'; cwd?: string }
   | { type: 'ask-code'; requestId: string; prompt: string; cwd?: string }
-  | { type: 'cancel-ask-code'; requestId: string };
+  | { type: 'cancel-ask-code'; requestId: string }
+  | { type: 'annotations'; payload: AnnotationPayload };
 
 export interface SessionMeta {
   id: number;
@@ -58,4 +60,5 @@ export type ServerMessage =
   | { type: 'auto-trust-event'; action: 'accepted' | 'blocked'; pattern: string; timestamp: string }
   | { type: 'plan-update'; fileName: string | null; content: string | null; mtime: number }
   | { type: 'diff-result'; raw: string; cwd: string; error?: string }
-  | { type: 'ask-code-response'; requestId: string; messageType: 'chunk' | 'error' | 'done'; text?: string; exitCode?: number };
+  | { type: 'ask-code-response'; requestId: string; messageType: 'chunk' | 'error' | 'done'; text?: string; exitCode?: number }
+  | { type: 'annotation-update'; annotations: Annotation[] };
