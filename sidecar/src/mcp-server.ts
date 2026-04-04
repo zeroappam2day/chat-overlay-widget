@@ -473,6 +473,75 @@ server.tool(
   }
 );
 
+// ─── Tool 12: submit_action_plan (EAC-2) ────────────────────────────────────
+
+server.tool(
+  'submit_action_plan',
+  'Submit a batch action plan for user approval. All actions in the plan are approved or denied as a group. Each approved action can be consumed exactly once. Plans expire after 5 minutes. Requires the batchConsent feature flag.',
+  {
+    planId: z.string().min(1).max(200).describe('Unique plan identifier'),
+    description: z.string().max(1000).describe('Human-readable plan description'),
+    actions: z.array(z.object({
+      type: z.string().min(1).max(50).describe('Action type (click, type, keyCombo, drag)'),
+      description: z.string().max(500).describe('Human-readable action description'),
+      coordinates: z.object({
+        x: z.number().int(),
+        y: z.number().int(),
+      }).optional().describe('Screen coordinates for the action'),
+      target: z.string().max(200).optional().describe('Target element identifier'),
+    })).min(1).max(100).describe('Ordered list of actions to approve'),
+    targetWindow: z.string().max(200).optional().describe('Target window title'),
+  },
+  async ({ planId, description, actions, targetWindow }) => {
+    try {
+      const body = JSON.stringify({ planId, description, actions, targetWindow });
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/consent/submit-plan', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Batch consent is disabled. Enable the batchConsent feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 13: request_trust_window (EAC-2) ──────────────────────────────────
+
+server.tool(
+  'request_trust_window',
+  'Request a time-limited trust window for a specific target window. While active, specified action types are auto-approved without individual consent prompts. Hard-capped at 120 seconds. Requires the batchConsent feature flag.',
+  {
+    targetTitle: z.string().min(1).max(200).describe('Target window title to trust'),
+    durationSec: z.number().int().min(1).max(120).describe('Trust duration in seconds (1-120)'),
+    allowedActions: z.array(z.string().min(1).max(50)).min(1).max(10).describe('Action types to allow (click, type, keyCombo, drag)'),
+  },
+  async ({ targetTitle, durationSec, allowedActions }) => {
+    try {
+      const body = JSON.stringify({ targetTitle, durationSec, allowedActions });
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/consent/grant-trust', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Batch consent is disabled. Enable the batchConsent feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

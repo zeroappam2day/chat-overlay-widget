@@ -38,6 +38,8 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { BatchConsentManager } from './batchConsentManager.js';
+import type { ActionPlan } from './batchConsentManager.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -359,6 +361,85 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // EAC-2: Batch Consent — Submit action plan
+  if (req.method === 'POST' && url.pathname === '/consent/submit-plan') {
+    if (!sidecarFlags.batchConsent) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Batch consent is disabled. Enable the batchConsent feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', async () => {
+      try {
+        const plan = JSON.parse(body) as ActionPlan;
+        const result = await batchConsentMgr.submitPlan(plan);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  // EAC-2: Batch Consent — Grant time-limited trust
+  if (req.method === 'POST' && url.pathname === '/consent/grant-trust') {
+    if (!sidecarFlags.batchConsent) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Batch consent is disabled. Enable the batchConsent feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const opts = JSON.parse(body) as { targetTitle: string; durationSec: number; allowedActions: string[] };
+        const trustId = batchConsentMgr.grantTimeLimitedTrust(opts);
+        if (!trustId) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid duration. Must be 1-120 seconds.' }));
+          return;
+        }
+        const grant = batchConsentMgr.isTrusted(opts.targetTitle, opts.allowedActions[0]);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ approved: true, trustId, expiresAt: Date.now() + opts.durationSec * 1000 }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  // EAC-2: Batch Consent — Revoke trust or plan
+  if (req.method === 'POST' && url.pathname === '/consent/revoke') {
+    if (!sidecarFlags.batchConsent) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Batch consent is disabled. Enable the batchConsent feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { trustId?: string; all?: boolean };
+        if (parsed.all) {
+          batchConsentMgr.revokeAll();
+        } else if (parsed.trustId) {
+          batchConsentMgr.revokeTrust(parsed.trustId);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -412,7 +493,11 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  batchConsent: false,
 };
+
+// EAC-2: Batch Consent Manager instance
+const batchConsentMgr = new BatchConsentManager();
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) {
@@ -741,6 +826,8 @@ wss.on('connection', (ws: WebSocket) => {
     }
     planWatchers.get(ws)?.stop();
     planWatchers.delete(ws);
+    // EAC-2: Revoke all batch consent grants on disconnect
+    batchConsentMgr.revokeAll();
   });
 });
 
