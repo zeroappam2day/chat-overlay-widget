@@ -19,6 +19,7 @@ export interface FeatureFlags {
   askAboutCode: boolean;         // Phase 16
   completionStats: boolean;      // Phase 17
   focusTrap: boolean;            // Phase 18
+  githubUrlDetection: boolean;   // Phase 19
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -51,6 +52,7 @@ const defaults: FeatureFlags = {
   askAboutCode: true,
   completionStats: true,
   focusTrap: true,
+  githubUrlDetection: true,
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -84,6 +86,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         askAboutCode: next.askAboutCode,
         completionStats: next.completionStats,
         focusTrap: next.focusTrap,
+        githubUrlDetection: next.githubUrlDetection,
       }));
       return { [key]: value };
     }),

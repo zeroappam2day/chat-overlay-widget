@@ -39,6 +39,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       askAboutCode: flags.askAboutCode,
       completionStats: flags.completionStats,
       focusTrap: flags.focusTrap,
+      githubUrlDetection: flags.githubUrlDetection,
     },
     windowState,
   };

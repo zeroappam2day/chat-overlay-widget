@@ -23,6 +23,7 @@ import { BookmarkBar } from './BookmarkBar';
 import { PromptHistoryPanel } from './PromptHistoryPanel';
 import { usePromptHistoryStore } from '../store/promptHistoryStore';
 import { ExitNotifier } from '../lib/exitNotifier';
+import { GitHubUrlBadge } from './GitHubUrlBadge';
 
 interface TerminalPaneProps {
   paneId: string;
@@ -472,6 +473,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         className="shrink-0 h-1 bg-[#404040] hover:bg-[#007acc] transition-colors cursor-row-resize"
         onMouseDown={handleDragStart}
       />
+
+      {/* GitHub URL badge (Phase 19) — informational badge above bookmark bar, does NOT modify PTY commands */}
+      <GitHubUrlBadge text={lastSentCommand} />
 
       {/* Bookmark bar (Phase 5) — rendered above input, gated by terminalBookmarks flag + Phase 8 toggle */}
       {bookmarkBarVisible && <BookmarkBar onSendCommand={handleSendInput} currentInput={lastSentCommand} />}
