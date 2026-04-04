@@ -40,6 +40,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       completionStats: flags.completionStats,
       focusTrap: flags.focusTrap,
       githubUrlDetection: flags.githubUrlDetection,
+      inlineEditing: flags.inlineEditing,
     },
     windowState,
   };

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useBookmarkStore, type Bookmark } from '../store/bookmarkStore';
 import { useFeatureFlagStore } from '../store/featureFlagStore';
+import { EditableText } from './EditableText';
 
 interface BookmarkBarProps {
   onSendCommand: (command: string) => void;
@@ -15,10 +16,7 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
   const updateLabel = useBookmarkStore((s) => s.updateLabel);
 
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
   const contextRef = useRef<HTMLDivElement>(null);
-  const editRef = useRef<HTMLInputElement>(null);
 
   // Close context menu on outside click
   useEffect(() => {
@@ -31,11 +29,6 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [contextMenu]);
-
-  // Focus edit input when editing starts
-  useEffect(() => {
-    if (editingId) editRef.current?.focus();
-  }, [editingId]);
 
   const handleClick = useCallback(
     (bookmark: Bookmark) => {
@@ -56,49 +49,24 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
     addBookmark(cmd);
   }, [currentInput, addBookmark]);
 
-  const startEdit = useCallback((bookmark: Bookmark) => {
-    setEditingId(bookmark.id);
-    setEditValue(bookmark.label);
-    setContextMenu(null);
-  }, []);
-
-  const commitEdit = useCallback(() => {
-    if (editingId && editValue.trim()) {
-      updateLabel(editingId, editValue.trim());
-    }
-    setEditingId(null);
-  }, [editingId, editValue, updateLabel]);
-
   if (!enabled) return null;
 
   return (
     <div className="shrink-0 h-8 px-3 bg-[#252525] border-t border-[#404040] flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
       {bookmarks.map((b) => (
-        <button
+        <div
           key={b.id}
           onClick={() => handleClick(b)}
           onContextMenu={(e) => handleContextMenu(e, b.id)}
-          className="shrink-0 px-2.5 py-0.5 text-[11px] rounded-full bg-[#333] text-gray-300 hover:bg-[#444] hover:text-white transition-colors border border-[#555] whitespace-nowrap max-w-[160px] truncate"
+          className="shrink-0 px-2.5 py-0.5 text-[11px] rounded-full bg-[#333] text-gray-300 hover:bg-[#444] hover:text-white transition-colors border border-[#555] whitespace-nowrap max-w-[160px] truncate cursor-pointer"
           title={b.command}
         >
-          {editingId === b.id ? (
-            <input
-              ref={editRef}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={commitEdit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitEdit();
-                if (e.key === 'Escape') setEditingId(null);
-                e.stopPropagation();
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-transparent text-[11px] text-white outline-none w-full"
-            />
-          ) : (
-            b.label
-          )}
-        </button>
+          <EditableText
+            value={b.label}
+            onCommit={(newLabel) => updateLabel(b.id, newLabel)}
+            className="text-[11px] text-inherit"
+          />
+        </div>
       ))}
 
       {/* Add bookmark button */}
@@ -120,15 +88,11 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
           className="fixed bg-[#2d2d2d] border border-[#555] rounded shadow-lg z-[9999] py-1"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          <button
-            onClick={() => {
-              const bk = bookmarks.find((b) => b.id === contextMenu.id);
-              if (bk) startEdit(bk);
-            }}
-            className="w-full text-left px-3 py-1 text-xs text-gray-300 hover:bg-[#444]"
+          <div
+            className="w-full text-left px-3 py-1 text-xs text-gray-500"
           >
-            Rename
-          </button>
+            Double-click to rename
+          </div>
           <button
             onClick={() => {
               removeBookmark(contextMenu.id);
