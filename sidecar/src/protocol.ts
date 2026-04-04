@@ -17,7 +17,9 @@ export type ClientMessage =
   | { type: 'request-diff'; cwd?: string }
   | { type: 'ask-code'; requestId: string; prompt: string; cwd?: string }
   | { type: 'cancel-ask-code'; requestId: string }
-  | { type: 'annotations'; payload: AnnotationPayload };
+  | { type: 'annotations'; payload: AnnotationPayload }
+  | { type: 'consent-plan-response'; planId: string; approved: boolean }
+  | { type: 'consent-trust-response'; trustId: string; approved: boolean };
 
 export interface SessionMeta {
   id: number;
@@ -62,4 +64,8 @@ export type ServerMessage =
   | { type: 'diff-result'; raw: string; cwd: string; error?: string }
   | { type: 'ask-code-response'; requestId: string; messageType: 'chunk' | 'error' | 'done'; text?: string; exitCode?: number }
   | { type: 'annotation-update'; annotations: Annotation[] }
-  | { type: 'walkthrough-step'; step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null };
+  | { type: 'walkthrough-step'; step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null }
+  | { type: 'consent-plan-request'; planId: string; description: string; actions: Array<{ type: string; description: string }>; targetWindow?: string }
+  | { type: 'consent-trust-request'; trustId: string; targetTitle: string; durationSec: number; allowedActions: string[] }
+  | { type: 'consent-trust-active'; trustId: string; expiresAt: number }
+  | { type: 'consent-trust-expired'; trustId: string };
