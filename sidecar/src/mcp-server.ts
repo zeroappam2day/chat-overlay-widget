@@ -473,6 +473,46 @@ server.tool(
   }
 );
 
+// ─── Tool 9: focus_window (EAC-3) ──────────────────────────────────────────────
+
+server.tool(
+  'focus_window',
+  'Focus a target window by hwnd or title. Brings the window to the foreground using SetForegroundWindow. Gated behind the windowFocusManager feature flag. Provide either hwnd (window handle as number) or title (partial title match).',
+  {
+    hwnd: z.number().int().positive().optional().describe('Window handle (hwnd) to focus'),
+    title: z.string().min(1).max(500).optional().describe('Partial window title to search for and focus'),
+  },
+  async ({ hwnd, title }) => {
+    if (!hwnd && !title) {
+      return { content: [{ type: 'text' as const, text: 'Either hwnd or title is required.' }], isError: true };
+    }
+    try {
+      const discovery = readDiscovery();
+      const body = JSON.stringify({ hwnd, title });
+      const resp = await sidecarPost('/focus-window', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Window focus manager is disabled. Enable the windowFocusManager feature flag.' }], isError: true };
+      }
+      if (resp.status === 404) {
+        const msg = JSON.parse(resp.body.toString()).error ?? 'Window not found';
+        return { content: [{ type: 'text' as const, text: msg }], isError: true };
+      }
+      if (resp.status === 409) {
+        const parsed = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: `Could not focus window: ${parsed.error}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const msg = resp.body.toString();
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${msg}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: `Window focused. hwnd: ${result.hwnd}` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

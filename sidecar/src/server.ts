@@ -38,6 +38,7 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { focusAndVerify } from './windowFocusManager.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -359,6 +360,60 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // EAC-3: Window Focus Manager endpoint (flag-gated)
+  if (req.method === 'POST' && url.pathname === '/focus-window') {
+    if (!sidecarFlags.windowFocusManager) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Window focus manager is disabled. Enable the windowFocusManager feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as { hwnd?: unknown; title?: unknown };
+        let targetHwnd: number | undefined;
+
+        if (typeof parsed.hwnd === 'number' && parsed.hwnd > 0) {
+          targetHwnd = parsed.hwnd;
+        } else if (typeof parsed.title === 'string' && parsed.title.trim()) {
+          // Look up hwnd by window title via windowEnumerator
+          const windows = listWindows();
+          const match = windows.find(w => w.title.toLowerCase().includes((parsed.title as string).toLowerCase()));
+          if (!match) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `No window found matching title: ${parsed.title}` }));
+            return;
+          }
+          targetHwnd = match.hwnd;
+        }
+
+        if (!targetHwnd) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'hwnd (number) or title (string) required' }));
+          return;
+        }
+
+        focusAndVerify(targetHwnd).then((result) => {
+          if (result.ok) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, hwnd: targetHwnd }));
+          } else {
+            res.writeHead(409, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: result.error, hwnd: targetHwnd }));
+          }
+        }).catch((err: unknown) => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -412,6 +467,7 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  windowFocusManager: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
