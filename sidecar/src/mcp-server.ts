@@ -8,6 +8,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import sharp from 'sharp';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -106,6 +107,57 @@ async function callSidecar(
   }
 }
 
+// ─── Vision-model image optimization ────────────────────────────────────────
+// Resize + encode for Claude/Gemini vision:
+//   - Long edge ≤ 1568px, short edge ≥ 200px
+//   - Total pixels ≤ 1,150,000
+//   - WebP lossy quality 85, no upscaling
+
+const LONG_EDGE_MAX = 1568;
+const SHORT_EDGE_MIN = 200;
+const MAX_PIXELS = 1_150_000;
+const WEBP_QUALITY = 85;
+
+async function optimizeForVision(pngBuffer: Buffer): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const meta = await sharp(pngBuffer).metadata();
+  let w = meta.width!;
+  let h = meta.height!;
+
+  // Only downscale, never upscale
+  if (w * h > MAX_PIXELS || Math.max(w, h) > LONG_EDGE_MAX) {
+    const longEdge = Math.max(w, h);
+    const shortEdge = Math.min(w, h);
+
+    // Scale by long edge constraint
+    let scale = Math.min(1, LONG_EDGE_MAX / longEdge);
+
+    // Check total pixel constraint
+    const pixelScale = Math.sqrt(MAX_PIXELS / (w * h));
+    if (pixelScale < scale) scale = pixelScale;
+
+    let newW = Math.round(w * scale);
+    let newH = Math.round(h * scale);
+
+    // Enforce short edge minimum (only matters for extreme aspect ratios)
+    const newShortEdge = Math.min(newW, newH);
+    if (newShortEdge < SHORT_EDGE_MIN && shortEdge >= SHORT_EDGE_MIN) {
+      const minScale = SHORT_EDGE_MIN / Math.min(w, h);
+      newW = Math.round(w * minScale);
+      newH = Math.round(h * minScale);
+    }
+
+    w = newW;
+    h = newH;
+  }
+
+  const output = await sharp(pngBuffer)
+    .resize(w, h, { fit: 'fill' })
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer();
+
+  return { buffer: output, width: w, height: h };
+}
+
 // ─── MCP Server setup (per D-06, D-07) ───────────────────────────────────────
 
 const server = new McpServer({
@@ -184,7 +236,7 @@ server.tool(
 
 server.tool(
   'capture_screenshot',
-  'Capture a screenshot of the Chat Overlay Widget window. Returns a PNG image with sensitive areas blurred. The screenshot shows the current state of the terminal and any UI elements.',
+  'Capture a screenshot of the Chat Overlay Widget window. Returns a WebP image optimized for vision models (≤1568px long edge, ≤1.15MP, quality 85) with sensitive areas blurred.',
   {},
   async () => {
     try {
@@ -193,8 +245,15 @@ server.tool(
         const errText = resp.body.toString('utf-8');
         return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
       }
-      const base64 = resp.body.toString('base64');
-      return { content: [{ type: 'image' as const, data: base64, mimeType: 'image/png' }] };
+      const { buffer, width, height } = await optimizeForVision(resp.body);
+      const base64 = buffer.toString('base64');
+      const tokens = Math.ceil((width * height) / 750);
+      return {
+        content: [
+          { type: 'image' as const, data: base64, mimeType: 'image/webp' },
+          { type: 'text' as const, text: `${width}×${height} webp (${(buffer.length / 1024).toFixed(0)}KB, ~${tokens} tokens)` },
+        ],
+      };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { content: [{ type: 'text' as const, text: msg }], isError: true };
