@@ -166,6 +166,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       case 'annotation-update':
         useAnnotationBridgeStore.getState().setAnnotations(msg.annotations);
         break;
+      case 'walkthrough-step':
+        useAnnotationBridgeStore.getState().setWalkthroughStep(msg.step);
+        break;
       case 'plan-update':
         usePlanStore.getState().setContent(msg.content, msg.fileName);
         break;

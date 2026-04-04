@@ -152,6 +152,7 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         const raw = JSON.parse(cleaned);
         const walkthrough = WalkthroughSchema.parse(raw);
         const result = walkthroughEngine.start(walkthrough);
+        broadcastWalkthroughStep(result);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (err) {
@@ -168,6 +169,11 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     req.on('end', () => {
       try {
         const result = walkthroughEngine.advance();
+        if ('done' in result) {
+          broadcastWalkthroughStep(null);
+        } else {
+          broadcastWalkthroughStep(result);
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (err) {
@@ -184,6 +190,7 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     req.on('end', () => {
       try {
         walkthroughEngine.stop();
+        broadcastWalkthroughStep(null);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
@@ -397,6 +404,12 @@ function broadcastAgentEvent(event: AgentEvent): void {
 function broadcastAnnotations(annotations: Annotation[]): void {
   for (const client of wss.clients) {
     sendMsg(client, { type: 'annotation-update', annotations });
+  }
+}
+
+function broadcastWalkthroughStep(step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'walkthrough-step', step });
   }
 }
 

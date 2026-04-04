@@ -11,6 +11,7 @@ import { registerShortcut, initShortcutListener } from '../lib/shortcuts';
 import { useFeatureFlagStore } from '../store/featureFlagStore';
 import { usePaneStore, getAllPaneIds } from '../store/paneStore';
 import { usePlanStore } from '../store/planStore';
+import { useOverlayStore } from '../store/overlayStore';
 
 export function useShortcuts(): void {
   const enabled = useFeatureFlagStore((s) => s.keyboardNavigation);
@@ -166,6 +167,21 @@ export function useShortcuts(): void {
         handler: () => {
           if (useFeatureFlagStore.getState().ctrlWheelZoom) {
             document.dispatchEvent(new Event('zoom-out'));
+          }
+        },
+      }),
+    );
+
+    // Alt+Shift+X: toggle annotation overlay (Phase 6 Annotation)
+    unregisters.push(
+      registerShortcut({
+        key: 'X',
+        alt: true,
+        shift: true,
+        global: true,
+        handler: () => {
+          if (useFeatureFlagStore.getState().annotationOverlay) {
+            useOverlayStore.getState().toggleOverlay();
           }
         },
       }),

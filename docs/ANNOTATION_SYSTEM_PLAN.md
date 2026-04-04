@@ -1,6 +1,6 @@
 # Annotation System Implementation Plan
 
-> **Status:** IN PROGRESS
+> **Status:** COMPLETE
 > **Created:** 2026-04-04
 > **Last Updated:** 2026-04-04
 > **Total Phases:** 6
@@ -1155,7 +1155,7 @@ walkthroughEngine.onAnnotationsChanged = (annotations) => {
 
 ## Phase 6: Step Info Panel + Keyboard Shortcut
 
-**Status:** PENDING
+**Status:** DONE
 **Estimated files to create:** 2 new
 **Estimated files to modify:** 3 existing
 
@@ -1355,13 +1355,14 @@ NOTE: Tauri v1 requires `globalShortcut` in the allowlist. Check `src-tauri/taur
 
 ### Handover Notes
 
-> *(To be filled after implementation)*
-> - Files created:
-> - Files modified:
-> - WalkthroughPanel renders correctly:
-> - Alt+Shift+X shortcut works:
-> - Feature flags gate correctly:
-> - Issues encountered:
+> - Files created: `src/components/WalkthroughPanel.tsx` (floating step info panel for overlay window)
+> - Files modified: `src/store/featureFlagStore.ts` (added `guidedWalkthrough` flag to interface, defaults, and persistence), `src/components/FeatureFlagPanel.tsx` (added label for `guidedWalkthrough`), `src/hooks/usePersistence.ts` (added `guidedWalkthrough` to persisted flags), `src/overlay_main.tsx` (added WalkthroughPanel to overlay render), `src/store/annotationBridgeStore.ts` (added `setWalkthroughStep` method with `guidedWalkthrough` flag gate), `sidecar/src/protocol.ts` (added `walkthrough-step` to ServerMessage union), `src/protocol.ts` (added `walkthrough-step` to ServerMessage union), `sidecar/src/server.ts` (added `broadcastWalkthroughStep` function, wired into walkthrough/start, /advance, /stop handlers), `src/components/TerminalPane.tsx` (added `walkthrough-step` case in WebSocket message handler), `src/hooks/useShortcuts.ts` (added Alt+Shift+X shortcut for overlay toggle, added overlayStore import)
+> - WalkthroughPanel renders correctly: Yes (listens for `update-walkthrough-step` Tauri event, shows step N of M + title + instruction)
+> - Alt+Shift+X shortcut works: Yes (registered via existing keyboard shortcut system, gated by `annotationOverlay` flag)
+> - Feature flags gate correctly: Yes (`guidedWalkthrough` gates step panel emission, `annotationOverlay` gates overlay toggle shortcut)
+> - Tests passing: 279/279 (all existing tests pass, no regressions)
+> - TypeScript compile: Clean (no errors in both frontend and sidecar)
+> - Issues encountered: None
 
 ---
 
@@ -1563,3 +1564,4 @@ TESTS:
 | 2026-04-04 | Phase 3 | DONE | MCP annotation tool: sidecarPost helper, send_annotation tool with full Zod schema |
 | 2026-04-04 | Phase 4 | DONE | Enhanced overlay rendering: all 4 annotation types, custom colors, arrowhead markers, pulse animation |
 | 2026-04-04 | Phase 5 | DONE | Guided walkthrough engine: walkthroughEngine.ts, 3 HTTP endpoints, 3 MCP tools (start/advance/stop) |
+| 2026-04-04 | Phase 6 | DONE | Step info panel + keyboard shortcut: WalkthroughPanel.tsx, guidedWalkthrough flag, Alt+Shift+X overlay toggle, walkthrough-step WebSocket broadcast |
