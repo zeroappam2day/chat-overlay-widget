@@ -473,6 +473,542 @@ server.tool(
   }
 );
 
+// ─── Tool 9: web_fetch (EAC-5) ──────────────────────────────────────────────
+
+server.tool(
+  'web_fetch',
+  'Fetch a web page and extract readable text. Use for documentation lookups, API references, tutorials. HTTPS only, max 50KB text, 5-minute cache.',
+  {
+    url: z.string().min(1).describe('URL to fetch (must be https://)'),
+    extractText: z.boolean().optional().default(true).describe('Extract readable text from HTML (default true)'),
+  },
+  async ({ url, extractText }) => {
+    try {
+      const discovery = readDiscovery();
+      const body = JSON.stringify({ url, extractText });
+      const resp = await sidecarPost('/web-fetch', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Web fetch tool is disabled. Enable the webFetchTool feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const msg = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${msg}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8'));
+      if (!result.ok) {
+        return { content: [{ type: 'text' as const, text: `Fetch failed: ${result.error ?? 'Unknown error'}` }], isError: true };
+      }
+      const meta = `URL: ${result.url}\nStatus: ${result.statusCode}\nTruncated: ${result.truncated}\nCached: ${result.cached}\n\n`;
+      return { content: [{ type: 'text' as const, text: meta + result.text }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 12: submit_action_plan (EAC-2) ────────────────────────────────────
+
+server.tool(
+  'submit_action_plan',
+  'Submit a batch action plan for user approval. All actions in the plan are approved or denied as a group. Each approved action can be consumed exactly once. Plans expire after 5 minutes. Requires the batchConsent feature flag.',
+  {
+    planId: z.string().min(1).max(200).describe('Unique plan identifier'),
+    description: z.string().max(1000).describe('Human-readable plan description'),
+    actions: z.array(z.object({
+      type: z.string().min(1).max(50).describe('Action type (click, type, keyCombo, drag)'),
+      description: z.string().max(500).describe('Human-readable action description'),
+      coordinates: z.object({
+        x: z.number().int(),
+        y: z.number().int(),
+      }).optional().describe('Screen coordinates for the action'),
+      target: z.string().max(200).optional().describe('Target element identifier'),
+    })).min(1).max(100).describe('Ordered list of actions to approve'),
+    targetWindow: z.string().max(200).optional().describe('Target window title'),
+  },
+  async ({ planId, description, actions, targetWindow }) => {
+    try {
+      const body = JSON.stringify({ planId, description, actions, targetWindow });
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/consent/submit-plan', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Batch consent is disabled. Enable the batchConsent feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 13: request_trust_window (EAC-2) ──────────────────────────────────
+
+server.tool(
+  'request_trust_window',
+  'Request a time-limited trust window for a specific target window. While active, specified action types are auto-approved without individual consent prompts. Hard-capped at 120 seconds. Requires the batchConsent feature flag.',
+  {
+    targetTitle: z.string().min(1).max(200).describe('Target window title to trust'),
+    durationSec: z.number().int().min(1).max(120).describe('Trust duration in seconds (1-120)'),
+    allowedActions: z.array(z.string().min(1).max(50)).min(1).max(10).describe('Action types to allow (click, type, keyCombo, drag)'),
+  },
+  async ({ targetTitle, durationSec, allowedActions }) => {
+    try {
+      const body = JSON.stringify({ targetTitle, durationSec, allowedActions });
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/consent/grant-trust', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Batch consent is disabled. Enable the batchConsent feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8'));
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 14: focus_window (EAC-3) ──────────────────────────────────────────────
+
+server.tool(
+  'focus_window',
+  'Focus a target window by hwnd or title. Brings the window to the foreground using SetForegroundWindow. Gated behind the windowFocusManager feature flag. Provide either hwnd (window handle as number) or title (partial title match).',
+  {
+    hwnd: z.number().int().positive().optional().describe('Window handle (hwnd) to focus'),
+    title: z.string().min(1).max(500).optional().describe('Partial window title to search for and focus'),
+  },
+  async ({ hwnd, title }) => {
+    if (!hwnd && !title) {
+      return { content: [{ type: 'text' as const, text: 'Either hwnd or title is required.' }], isError: true };
+    }
+    try {
+      const discovery = readDiscovery();
+      const body = JSON.stringify({ hwnd, title });
+      const resp = await sidecarPost('/focus-window', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Window focus manager is disabled. Enable the windowFocusManager feature flag.' }], isError: true };
+      }
+      if (resp.status === 404) {
+        const msg = JSON.parse(resp.body.toString()).error ?? 'Window not found';
+        return { content: [{ type: 'text' as const, text: msg }], isError: true };
+      }
+      if (resp.status === 409) {
+        const parsed = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: `Could not focus window: ${parsed.error}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const msg = resp.body.toString();
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${msg}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: `Window focused. hwnd: ${result.hwnd}` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 15: clipboard (EAC-4) ──────────────────────────────────────────────
+
+server.tool(
+  'clipboard',
+  `Read, write, or paste text via the Windows clipboard.
+
+Actions:
+- "read": Read current clipboard text content. Returns { ok, text }.
+- "write": Write text to clipboard. Requires 'text' parameter.
+- "paste": Write text to clipboard then simulate Ctrl+V keystroke. Requires 'text' parameter.
+  Paste action requires osInputSimulation and consentGate feature flags in addition to clipboardAccess.
+
+Maximum text size: 100KB. Clipboard contents are never logged for security.`,
+  {
+    action: z.enum(['read', 'write', 'paste']).describe('Clipboard operation to perform'),
+    text: z.string().max(102400).optional().describe('Text to write/paste (required for write and paste actions)'),
+    clearAfterPaste: z.boolean().optional().default(false).describe('Clear clipboard after paste (only for paste action)'),
+  },
+  async ({ action, text, clearAfterPaste }) => {
+    try {
+      const discovery = readDiscovery();
+
+      if (action === 'read') {
+        const resp = await sidecarGet('/clipboard', discovery.token, discovery.port);
+        if (resp.status === 403) {
+          return { content: [{ type: 'text' as const, text: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }], isError: true };
+        }
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (action === 'write') {
+        if (!text) {
+          return { content: [{ type: 'text' as const, text: 'text parameter is required for write action' }], isError: true };
+        }
+        const body = JSON.stringify({ text });
+        const resp = await sidecarPost('/clipboard', discovery.token, discovery.port, body);
+        if (resp.status === 403) {
+          return { content: [{ type: 'text' as const, text: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }], isError: true };
+        }
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: result.ok ? 'Clipboard updated.' : `Error: ${result.error}` }] };
+      }
+
+      if (action === 'paste') {
+        if (!text) {
+          return { content: [{ type: 'text' as const, text: 'text parameter is required for paste action' }], isError: true };
+        }
+        const body = JSON.stringify({ text, clearAfterPaste });
+        const resp = await sidecarPost('/clipboard/paste', discovery.token, discovery.port, body);
+        if (resp.status === 403) {
+          const errBody = JSON.parse(resp.body.toString());
+          return { content: [{ type: 'text' as const, text: errBody.error || 'Paste action requires clipboardAccess, osInputSimulation, and consentGate feature flags.' }], isError: true };
+        }
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: result.ok ? 'Paste completed.' : `Error: ${result.error}` }] };
+      }
+
+      return { content: [{ type: 'text' as const, text: `Unknown action: ${action}` }], isError: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 16: manage_tasks (EAC-6) ───────────────────────────────────────────────
+
+server.tool(
+  'manage_tasks',
+  `Manage agent tasks in the Chat Overlay Widget. Tasks are shell commands submitted to PTY sessions with lifecycle tracking (pending, running, completed, failed, timeout).
+
+Actions:
+- "submit": Submit a new task. Requires name, command, paneId. Optional: exitPattern (regex for completion), failPattern (regex for failure), timeoutMs (default 300000).
+- "list": List all tasks.
+- "get": Get a specific task by taskId.
+- "cancel": Cancel a running task (sends Ctrl+C).
+
+Requires agentTaskOrchestrator, multiPty, and terminalWriteMcp feature flags enabled.`,
+  {
+    action: z.enum(['submit', 'list', 'get', 'cancel']).describe('Action to perform'),
+    taskId: z.string().optional().describe('Task ID (required for get/cancel)'),
+    name: z.string().max(200).optional().describe('Human-readable task name (required for submit)'),
+    command: z.string().max(10000).optional().describe('Shell command to execute (required for submit)'),
+    paneId: z.string().optional().describe('Target PTY pane ID (default: "default")'),
+    exitPattern: z.string().max(500).optional().describe('Regex to detect task completion in output'),
+    failPattern: z.string().max(500).optional().describe('Regex to detect task failure in output'),
+    timeoutMs: z.number().int().min(1000).max(3600000).optional().describe('Task timeout in ms (default 300000)'),
+  },
+  async ({ action, taskId, name, command, paneId, exitPattern, failPattern, timeoutMs }) => {
+    try {
+      const discovery = readDiscovery();
+
+      if (action === 'submit') {
+        if (!name || !command) {
+          return { content: [{ type: 'text' as const, text: 'Error: name and command are required for submit' }], isError: true };
+        }
+        const body = JSON.stringify({ name, command, paneId: paneId ?? 'default', exitPattern, failPattern, timeoutMs });
+        const resp = await sidecarPost('/tasks/submit', discovery.token, discovery.port, body);
+        if (resp.status !== 200) {
+          const msg = JSON.parse(resp.body.toString()).error ?? resp.body.toString();
+          return { content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (action === 'list') {
+        const resp = await sidecarGet('/tasks', discovery.token, discovery.port);
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (action === 'get') {
+        if (!taskId) {
+          return { content: [{ type: 'text' as const, text: 'Error: taskId is required for get' }], isError: true };
+        }
+        const resp = await sidecarGet(`/tasks/${taskId}`, discovery.token, discovery.port);
+        if (resp.status !== 200) {
+          const msg = JSON.parse(resp.body.toString()).error ?? resp.body.toString();
+          return { content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (action === 'cancel') {
+        if (!taskId) {
+          return { content: [{ type: 'text' as const, text: 'Error: taskId is required for cancel' }], isError: true };
+        }
+        const resp = await sidecarPost(`/tasks/${taskId}/cancel`, discovery.token, discovery.port, '{}');
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        return { content: [{ type: 'text' as const, text: 'Task cancelled.' }] };
+      }
+
+      return { content: [{ type: 'text' as const, text: `Unknown action: ${action}` }], isError: true };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 17: verify_walkthrough_step (EAC-7) ───────────────────────────────
+
+server.tool(
+  'verify_walkthrough_step',
+  'Verify the current walkthrough step using its configured advanceWhen strategy (pixel-sample, screenshot-diff, terminal-match, or manual). Requires both screenshotVerification and guidedWalkthrough feature flags to be enabled. Returns whether the step passed verification and strategy details.',
+  {},
+  async () => {
+    try {
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/walkthrough/verify-step', discovery.token, discovery.port, '{}');
+      if (resp.status === 403) {
+        const errBody = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: `Feature flag disabled: ${errBody.error}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 18: interact_with_element (EAC-8) ──────────────────────────────────
+
+server.tool(
+  'interact_with_element',
+  `Interact with UI elements via UI Automation. Supports searching the element tree, invoking buttons,
+setting text values, and querying supported patterns — all without SendInput.
+
+Actions:
+- "search": Search UI Automation tree by name, automationId, or className. Returns matching elements with bounding rects.
+- "invoke": Activate an element using IInvokePattern (native click). Requires consentGate flag.
+- "setValue": Set text in an input field using IValuePattern. Requires consentGate flag.
+- "getPatterns": Query which UI Automation patterns an element supports.
+
+Requires enhancedAccessibility and uiAccessibility feature flags to be enabled.
+Invoke and setValue actions additionally require the consentGate flag.`,
+  {
+    action: z.enum(['search', 'invoke', 'setValue', 'getPatterns']).describe('Action to perform'),
+    hwnd: z.number().int().optional().describe('Window handle (provide hwnd or title)'),
+    title: z.string().optional().describe('Window title to find (provide hwnd or title)'),
+    automationId: z.string().optional().describe('UI Automation AutomationId of the target element'),
+    name: z.string().optional().describe('UI Automation Name of the target element'),
+    role: z.string().optional().describe('UI Automation ControlType role'),
+    searchText: z.string().optional().describe('Text to search for (required for search action)'),
+    searchProperty: z.enum(['name', 'automationId', 'className']).optional().describe('Property to search by (required for search action)'),
+    value: z.string().optional().describe('Value to set (required for setValue action)'),
+    maxResults: z.number().int().min(1).max(100).optional().describe('Max results for search (default 10)'),
+    maxDepth: z.number().int().min(1).max(20).optional().describe('Max tree depth for search (default 8)'),
+  },
+  async ({ action, hwnd, title, automationId, name, role, searchText, searchProperty, value, maxResults, maxDepth }) => {
+    try {
+      const discovery = readDiscovery();
+      let endpoint: string;
+      let method: 'GET' | 'POST' = 'POST';
+      let bodyStr = '';
+
+      switch (action) {
+        case 'search': {
+          if (!searchText || !searchProperty) {
+            return { content: [{ type: 'text' as const, text: 'searchText and searchProperty are required for search action' }], isError: true };
+          }
+          endpoint = '/ui-elements/search';
+          bodyStr = JSON.stringify({ hwnd, title, searchText, searchProperty, maxResults, maxDepth });
+          break;
+        }
+        case 'invoke': {
+          if (!hwnd) {
+            return { content: [{ type: 'text' as const, text: 'hwnd is required for invoke action' }], isError: true };
+          }
+          endpoint = '/ui-elements/invoke';
+          bodyStr = JSON.stringify({ hwnd, automationId, name, role });
+          break;
+        }
+        case 'setValue': {
+          if (!hwnd || value === undefined) {
+            return { content: [{ type: 'text' as const, text: 'hwnd and value are required for setValue action' }], isError: true };
+          }
+          endpoint = '/ui-elements/set-value';
+          bodyStr = JSON.stringify({ hwnd, automationId, name, value });
+          break;
+        }
+        case 'getPatterns': {
+          if (!hwnd) {
+            return { content: [{ type: 'text' as const, text: 'hwnd is required for getPatterns action' }], isError: true };
+          }
+          method = 'GET';
+          const params = new URLSearchParams();
+          params.set('hwnd', String(hwnd));
+          if (automationId) params.set('automationId', automationId);
+          if (name) params.set('name', name);
+          endpoint = `/ui-elements/patterns?${params.toString()}`;
+          break;
+        }
+      }
+
+      let resp: { status: number; headers: http.IncomingHttpHeaders; body: Buffer };
+      if (method === 'GET') {
+        resp = await sidecarGet(endpoint, discovery.token, discovery.port);
+      } else {
+        resp = await sidecarPost(endpoint, discovery.token, discovery.port, bodyStr);
+      }
+
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: `Feature flag disabled: ${resp.body.toString()}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const parsed = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(parsed, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 19: workflow (EAC-9) ────────────────────────────────────────────────
+
+server.tool(
+  'workflow',
+  `Manage workflow recordings in Chat Overlay Widget. Record sequences of tool calls as replayable workflows.
+
+Actions:
+- "startRecording": Begin recording a new workflow. Requires name and description.
+- "addStep": Add a step to the current recording. Requires tool, params, description.
+- "stopRecording": Stop recording and save the workflow.
+- "list": List all saved workflows.
+- "get": Get a workflow by ID. Requires workflowId.
+- "delete": Delete a workflow by ID. Requires workflowId.
+- "replay": Replay a workflow. Requires workflowId. Optional: startFromStep, dryRun, pauseBeforeEach.
+
+Gated behind the workflowRecording feature flag.`,
+  {
+    action: z.enum(['startRecording', 'addStep', 'stopRecording', 'list', 'get', 'delete', 'replay'])
+      .describe('Which workflow action to perform'),
+    workflowId: z.string().optional().describe('Workflow ID (for get, delete, replay)'),
+    name: z.string().optional().describe('Workflow name (for startRecording)'),
+    description: z.string().optional().describe('Workflow description (for startRecording)'),
+    tool: z.string().optional().describe('MCP tool name (for addStep)'),
+    params: z.record(z.unknown()).optional().describe('Tool parameters (for addStep)'),
+    delayAfterMs: z.number().optional().describe('Delay after step in ms (for addStep)'),
+    verification: z.object({
+      strategy: z.enum(['terminal-match', 'pixel-sample', 'manual']),
+      config: z.record(z.unknown()),
+    }).optional().describe('Verification config (for addStep)'),
+    startFromStep: z.number().optional().describe('Step index to start replay from'),
+    dryRun: z.boolean().optional().describe('Dry run mode for replay'),
+    pauseBeforeEach: z.boolean().optional().describe('Pause before each step during replay'),
+  },
+  async ({ action, workflowId, name, description: desc, tool: toolName, params: toolParams, delayAfterMs, verification, startFromStep, dryRun, pauseBeforeEach }) => {
+    try {
+      const discovery = readDiscovery();
+      let resp: { status: number; headers: http.IncomingHttpHeaders; body: Buffer };
+
+      switch (action) {
+        case 'startRecording': {
+          const body = JSON.stringify({ name: name ?? 'Untitled', description: desc ?? '' });
+          resp = await sidecarPost('/workflows/start-recording', discovery.token, discovery.port, body);
+          break;
+        }
+        case 'addStep': {
+          const stepBody: Record<string, unknown> = {
+            tool: toolName ?? 'unknown',
+            params: toolParams ?? {},
+            description: desc ?? '',
+          };
+          if (delayAfterMs !== undefined) stepBody.delayAfterMs = delayAfterMs;
+          if (verification) stepBody.verification = verification;
+          resp = await sidecarPost('/workflows/add-step', discovery.token, discovery.port, JSON.stringify(stepBody));
+          break;
+        }
+        case 'stopRecording': {
+          resp = await sidecarPost('/workflows/stop-recording', discovery.token, discovery.port, '{}');
+          break;
+        }
+        case 'list': {
+          resp = await sidecarGet('/workflows', discovery.token, discovery.port);
+          break;
+        }
+        case 'get': {
+          if (!workflowId) return { content: [{ type: 'text' as const, text: 'workflowId is required for get action' }], isError: true };
+          resp = await sidecarGet(`/workflows/${workflowId}`, discovery.token, discovery.port);
+          break;
+        }
+        case 'delete': {
+          if (!workflowId) return { content: [{ type: 'text' as const, text: 'workflowId is required for delete action' }], isError: true };
+          // Use a DELETE request via raw http
+          resp = await new Promise((resolve, reject) => {
+            const req = http.request(
+              `http://127.0.0.1:${discovery.port}/workflows/${workflowId}`,
+              {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${discovery.token}` },
+              },
+              (res) => {
+                const chunks: Buffer[] = [];
+                res.on('data', (chunk: Buffer) => chunks.push(chunk));
+                res.on('end', () => resolve({ status: res.statusCode ?? 500, headers: res.headers, body: Buffer.concat(chunks) }));
+              }
+            );
+            req.on('error', reject);
+            req.setTimeout(10000, () => { req.destroy(); reject(new Error('Request timeout')); });
+            req.end();
+          });
+          break;
+        }
+        case 'replay': {
+          if (!workflowId) return { content: [{ type: 'text' as const, text: 'workflowId is required for replay action' }], isError: true };
+          const replayBody: Record<string, unknown> = {};
+          if (startFromStep !== undefined) replayBody.startFromStep = startFromStep;
+          if (dryRun !== undefined) replayBody.dryRun = dryRun;
+          if (pauseBeforeEach !== undefined) replayBody.pauseBeforeEach = pauseBeforeEach;
+          resp = await sidecarPost(`/workflows/${workflowId}/replay`, discovery.token, discovery.port, JSON.stringify(replayBody));
+          break;
+        }
+        default:
+          return { content: [{ type: 'text' as const, text: `Unknown action: ${action}` }], isError: true };
+      }
+
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Workflow recording is disabled. Enable the workflowRecording feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const parsed = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(parsed, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module
