@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 Phase: 28 (adapter-layer-sidebar) — EXECUTING
 Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-04 - Completed quick task 260404-6yd: Phase 20 Inline Editable Text
+Last activity: 2026-04-04 - Completed quick task 260404-765: Phase 21 Error Boundaries
 
 Progress: [░░░░░░░░░░] 0% (v1.6 milestone — 0/4 phases complete)
 
@@ -72,7 +72,8 @@ None.
 | 260403-mgs | Implement Phase 13 Ctrl+Wheel Zoom | 2026-04-03 | 7329f9a | [260403-mgs-implement-phase-13-ctrl-wheel-zoom-wheel](./quick/260403-mgs-implement-phase-13-ctrl-wheel-zoom-wheel/) |
 | 260403-msm | Phase 14: Diff Search & Context Collapse | 2026-04-03 | 887fbae | [260403-msm-phase-14-diff-search-context-collapse](./quick/260403-msm-phase-14-diff-search-context-collapse/) |
 | 260404-6no | Phase 19: GitHub URL Detection | 2026-04-04 | 725ed80 | [260404-6no-phase-19-github-url-detection](./quick/260404-6no-phase-19-github-url-detection/) |
-| 260404-6yd | Phase 20: Inline Editable Text | 2026-04-04 | pending | [260404-6yd-phase-20-inline-editable-text-create-edi](./quick/260404-6yd-phase-20-inline-editable-text-create-edi/) |
+| 260404-6yd | Phase 20: Inline Editable Text | 2026-04-04 | db1c6cb | [260404-6yd-phase-20-inline-editable-text-create-edi](./quick/260404-6yd-phase-20-inline-editable-text-create-edi/) |
+| 260404-765 | Phase 21: Error Boundaries | 2026-04-04 | 3c8ed74 | [260404-765-phase-21-error-boundaries](./quick/260404-765-phase-21-error-boundaries/) |
 
 ### Untested Assumptions (validate via spike or during early phases)
 
