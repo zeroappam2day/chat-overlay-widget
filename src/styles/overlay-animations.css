@@ -1,0 +1,8 @@
+/* src/styles/overlay-animations.css */
+@keyframes annotation-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.annotation-pulse {
+  animation: annotation-pulse 1.5s ease-in-out 3;
+}

@@ -699,7 +699,7 @@ After implementing:
 
 ## Phase 4: Enhanced Overlay Rendering
 
-**Status:** PENDING
+**Status:** DONE
 **Estimated files to create:** 1 new
 **Estimated files to modify:** 1 existing (Overlay.tsx)
 
@@ -818,12 +818,13 @@ curl -X POST http://127.0.0.1:<PORT>/annotations \
 
 ### Handover Notes
 
-> *(To be filled after implementation)*
-> - Files created:
-> - Files modified:
-> - All 4 annotation types render correctly:
-> - Pulse animation works:
-> - Issues encountered:
+> - Files created: `src/styles/overlay-animations.css` (pulse animation keyframes)
+> - Files modified: `src/components/Overlay.tsx` (added highlight/arrow/text types, custom color support, arrowhead marker def, pulse animation class, updated Annotation interface to match protocol)
+> - All 4 annotation types render correctly: Yes (box=dashed rect, highlight=semi-transparent fill, arrow=line with arrowhead marker, text=standalone with drop-shadow)
+> - Pulse animation works: Yes (3 cycles, 1.5s ease-in-out)
+> - Tests passing: 266/266 (all existing tests pass, no regressions)
+> - TypeScript compile: Clean (no errors)
+> - Issues encountered: None
 
 ---
 
@@ -1559,3 +1560,4 @@ TESTS:
 | 2026-04-04 | Phase 1 | DONE | Annotation data layer: store, validation, HTTP endpoint, WebSocket broadcast |
 | 2026-04-04 | Phase 2 | DONE | Frontend annotation bridge: protocol sync, Zustand bridge store, TerminalPane handler |
 | 2026-04-04 | Phase 3 | DONE | MCP annotation tool: sidecarPost helper, send_annotation tool with full Zod schema |
+| 2026-04-04 | Phase 4 | DONE | Enhanced overlay rendering: all 4 annotation types, custom colors, arrowhead markers, pulse animation |
