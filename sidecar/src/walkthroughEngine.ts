@@ -1,0 +1,88 @@
+import { z } from 'zod';
+import { AnnotationSchema, annotationState } from './annotationStore.js';
+import type { Annotation } from './annotationStore.js';
+
+export const WalkthroughStepSchema = z.object({
+  stepId: z.string().min(1).max(200),
+  title: z.string().max(200),
+  instruction: z.string().max(1000),
+  annotations: z.array(AnnotationSchema).max(50),
+});
+
+export type WalkthroughStep = z.infer<typeof WalkthroughStepSchema>;
+
+export const WalkthroughSchema = z.object({
+  id: z.string().min(1).max(200),
+  title: z.string().max(300),
+  steps: z.array(WalkthroughStepSchema).min(1).max(50),
+});
+
+export type Walkthrough = z.infer<typeof WalkthroughSchema>;
+
+interface ActiveWalkthrough {
+  walkthrough: Walkthrough;
+  currentIndex: number;
+}
+
+class WalkthroughEngine {
+  private active: ActiveWalkthrough | null = null;
+  /** Called by server.ts to broadcast annotation updates when step changes. */
+  onAnnotationsChanged: ((annotations: Annotation[]) => void) | undefined;
+
+  start(walkthrough: Walkthrough): { stepId: string; title: string; instruction: string; totalSteps: number; currentStep: number } {
+    this.active = { walkthrough, currentIndex: 0 };
+    const step = walkthrough.steps[0];
+    // Group all walkthrough annotations for easy clearing
+    const grouped = step.annotations.map(a => ({ ...a, group: `walkthrough-${walkthrough.id}` }));
+    const current = annotationState.apply({ action: 'set', annotations: grouped });
+    this.onAnnotationsChanged?.(current);
+    return {
+      stepId: step.stepId,
+      title: step.title,
+      instruction: step.instruction,
+      totalSteps: walkthrough.steps.length,
+      currentStep: 1,
+    };
+  }
+
+  advance(): { stepId: string; title: string; instruction: string; totalSteps: number; currentStep: number } | { done: true; walkthroughId: string } {
+    if (!this.active) throw new Error('No active walkthrough');
+    this.active.currentIndex++;
+    if (this.active.currentIndex >= this.active.walkthrough.steps.length) {
+      const id = this.active.walkthrough.id;
+      this.stop();
+      return { done: true, walkthroughId: id };
+    }
+    const step = this.active.walkthrough.steps[this.active.currentIndex];
+    const grouped = step.annotations.map(a => ({ ...a, group: `walkthrough-${this.active!.walkthrough.id}` }));
+    const current = annotationState.apply({ action: 'set', annotations: grouped });
+    this.onAnnotationsChanged?.(current);
+    return {
+      stepId: step.stepId,
+      title: step.title,
+      instruction: step.instruction,
+      totalSteps: this.active.walkthrough.steps.length,
+      currentStep: this.active.currentIndex + 1,
+    };
+  }
+
+  stop(): void {
+    if (this.active) {
+      const current = annotationState.apply({ action: 'clear-all' });
+      this.onAnnotationsChanged?.(current);
+    }
+    this.active = null;
+  }
+
+  getStatus(): { active: boolean; walkthroughId?: string; currentStep?: number; totalSteps?: number } {
+    if (!this.active) return { active: false };
+    return {
+      active: true,
+      walkthroughId: this.active.walkthrough.id,
+      currentStep: this.active.currentIndex + 1,
+      totalSteps: this.active.walkthrough.steps.length,
+    };
+  }
+}
+
+export const walkthroughEngine = new WalkthroughEngine();

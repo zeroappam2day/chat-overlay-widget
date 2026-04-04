@@ -22,6 +22,7 @@ export interface FeatureFlags {
   githubUrlDetection: boolean;   // Phase 19
   inlineEditing: boolean;        // Phase 20
   errorBoundaries: boolean;      // Phase 21
+  guidedWalkthrough: boolean;    // Phase 6 (Annotation) — Guided walkthrough panel
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -57,6 +58,7 @@ const defaults: FeatureFlags = {
   githubUrlDetection: true,
   inlineEditing: true,
   errorBoundaries: true,
+  guidedWalkthrough: false,  // OFF by default
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -93,6 +95,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         githubUrlDetection: next.githubUrlDetection,
         inlineEditing: next.inlineEditing,
         errorBoundaries: next.errorBoundaries,
+        guidedWalkthrough: next.guidedWalkthrough,
       }));
       return { [key]: value };
     }),

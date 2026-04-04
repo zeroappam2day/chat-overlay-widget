@@ -13,6 +13,26 @@ export interface AgentEvent {
   status?: string;
 }
 
+export interface Annotation {
+  id: string;
+  type: 'box' | 'arrow' | 'text' | 'highlight';
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  label?: string;
+  color?: string;
+  ttl?: number;
+  group?: string;
+}
+
+export interface AnnotationPayload {
+  action: 'set' | 'merge' | 'clear' | 'clear-group' | 'clear-all';
+  annotations?: Annotation[];
+  ids?: string[];
+  group?: string;
+}
+
 // Client -> Server messages
 export type ClientMessage =
   | { type: 'input'; data: string }
@@ -28,7 +48,8 @@ export type ClientMessage =
   | { type: 'plan-read'; cwd?: string }
   | { type: 'request-diff'; cwd?: string }
   | { type: 'ask-code'; requestId: string; prompt: string; cwd?: string }
-  | { type: 'cancel-ask-code'; requestId: string };
+  | { type: 'cancel-ask-code'; requestId: string }
+  | { type: 'annotations'; payload: AnnotationPayload };
 
 export interface SessionMeta {
   id: number;
@@ -71,4 +92,6 @@ export type ServerMessage =
   | { type: 'auto-trust-event'; action: 'accepted' | 'blocked'; pattern: string; timestamp: string }
   | { type: 'plan-update'; fileName: string | null; content: string | null; mtime: number }
   | { type: 'diff-result'; raw: string; cwd: string; error?: string }
-  | { type: 'ask-code-response'; requestId: string; messageType: 'chunk' | 'error' | 'done'; text?: string; exitCode?: number };
+  | { type: 'ask-code-response'; requestId: string; messageType: 'chunk' | 'error' | 'done'; text?: string; exitCode?: number }
+  | { type: 'annotation-update'; annotations: Annotation[] }
+  | { type: 'walkthrough-step'; step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null };

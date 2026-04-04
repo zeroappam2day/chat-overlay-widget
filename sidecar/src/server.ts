@@ -34,6 +34,9 @@ import { getActiveWindowRect } from './spatial_engine.js';
 import { PlanWatcher } from './planWatcher.js';
 import { execGitDiff } from './diffHandler.js';
 import { askAboutCode, cancelAskCode } from './askCodeHandler.js';
+import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
+import type { Annotation } from './annotationStore.js';
+import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -118,6 +121,85 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
   }
   // Parse URL for new routes that use query parameters
   const url = new URL(req.url!, 'http://localhost');
+
+  if (req.method === 'POST' && url.pathname === '/annotations') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+        const raw = JSON.parse(cleaned);
+        const payload = AnnotationPayloadSchema.parse(raw);
+        const current = annotationState.apply(payload);
+        broadcastAnnotations(current);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, count: current.length }));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: msg }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/walkthrough/start') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+        const raw = JSON.parse(cleaned);
+        const walkthrough = WalkthroughSchema.parse(raw);
+        const result = walkthroughEngine.start(walkthrough);
+        broadcastWalkthroughStep(result);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/walkthrough/advance') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const result = walkthroughEngine.advance();
+        if ('done' in result) {
+          broadcastWalkthroughStep(null);
+        } else {
+          broadcastWalkthroughStep(result);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/walkthrough/stop') {
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        walkthroughEngine.stop();
+        broadcastWalkthroughStep(null);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
 
   if (req.method === 'POST' && url.pathname === '/hook-event') {
     let body = '';
@@ -261,6 +343,14 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
 const httpServer = http.createServer(handleHttpRequest);
 const wss = new WebSocketServer({ server: httpServer });
 
+annotationState._onExpire = () => {
+  broadcastAnnotations(annotationState.getAll());
+};
+
+walkthroughEngine.onAnnotationsChanged = (annotations) => {
+  broadcastAnnotations(annotations);
+};
+
 // Heartbeat: ping every 30s, terminate if no pong within 10s (Phase 5 hardening)
 const HEARTBEAT_INTERVAL = 30_000;
 const HEARTBEAT_TIMEOUT = 10_000;
@@ -308,6 +398,18 @@ function sendMsg(ws: WebSocket, msg: ServerMessage): void {
 function broadcastAgentEvent(event: AgentEvent): void {
   for (const client of wss.clients) {
     sendMsg(client, { type: 'agent-event', event });
+  }
+}
+
+function broadcastAnnotations(annotations: Annotation[]): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'annotation-update', annotations });
+  }
+}
+
+function broadcastWalkthroughStep(step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'walkthrough-step', step });
   }
 }
 
