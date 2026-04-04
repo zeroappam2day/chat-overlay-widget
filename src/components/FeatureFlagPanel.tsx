@@ -32,6 +32,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   conditionalAdvance: 'Conditional Walkthrough Advance',
   multiPty: 'Multi-PTY Panes',
   uiAccessibility: 'UI Accessibility Tree',
+  osInputSimulation: 'OS Input Simulation',
   consentGate: 'Action Consent Gate',
 };
 

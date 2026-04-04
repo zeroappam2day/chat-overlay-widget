@@ -27,6 +27,7 @@ export interface FeatureFlags {
   conditionalAdvance: boolean;   // Agent Runtime Phase 2 — Conditional walkthrough advancement
   multiPty: boolean;             // Agent Runtime Phase 3 — Multi-PTY pane multiplexing
   uiAccessibility: boolean;      // Agent Runtime Phase 4 — UI Accessibility Tree Discovery
+  osInputSimulation: boolean;    // Agent Runtime Phase 5 — OS-Level Input Simulation
   consentGate: boolean;           // Agent Runtime Phase 6 — Consent Gate & Action Verification
 }
 
@@ -68,6 +69,7 @@ const defaults: FeatureFlags = {
   conditionalAdvance: false, // OFF by default — agent runtime
   multiPty: false,           // OFF by default — agent runtime
   uiAccessibility: false,    // OFF by default — agent runtime
+  osInputSimulation: false,  // OFF by default — agent runtime
   consentGate: false,         // OFF by default — agent runtime
 };
 
@@ -110,6 +112,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         conditionalAdvance: next.conditionalAdvance,
         multiPty: next.multiPty,
         uiAccessibility: next.uiAccessibility,
+        osInputSimulation: next.osInputSimulation,
         consentGate: next.consentGate,
       }));
       return { [key]: value };

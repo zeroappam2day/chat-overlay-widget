@@ -555,6 +555,169 @@ Example — get full tree of a window by handle:
   }
 );
 
+// ─── Tool 10: send_input (Agent Runtime Phase 5) ───────────────────────────
+
+server.tool(
+  'send_input',
+  `CRITICAL: This tool simulates real mouse/keyboard input at the OS level. Every action requires user approval via the consent dialog. The uiAccessibility, osInputSimulation, and consentGate feature flags must ALL be enabled.
+
+Simulates mouse clicks, keyboard typing, key combinations, and drag operations on any Windows application.
+
+Actions:
+- "click": Click at screen coordinates (x, y). Use get_ui_elements first to find precise element positions.
+- "type": Type text at the current cursor/focus position using Unicode input.
+- "keyCombo": Press a keyboard shortcut (e.g., ["ctrl", "s"] for Ctrl+S).
+- "drag": Drag from (x, y) to (toX, toY).
+
+Supported keys for keyCombo: ctrl, alt, shift, win, enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9.
+
+Always use get_ui_elements first to discover element positions. Prefer element-based targeting over guessing from screenshots.
+After each action, a verification screenshot is returned so you can confirm the result.`,
+  {
+    action: z
+      .enum(['click', 'type', 'keyCombo', 'drag'])
+      .describe('The type of input action to simulate'),
+    x: z
+      .number()
+      .int()
+      .min(0)
+      .max(65535)
+      .optional()
+      .describe('X screen coordinate (for click/drag)'),
+    y: z
+      .number()
+      .int()
+      .min(0)
+      .max(65535)
+      .optional()
+      .describe('Y screen coordinate (for click/drag)'),
+    toX: z
+      .number()
+      .int()
+      .min(0)
+      .max(65535)
+      .optional()
+      .describe('Destination X coordinate (for drag)'),
+    toY: z
+      .number()
+      .int()
+      .min(0)
+      .max(65535)
+      .optional()
+      .describe('Destination Y coordinate (for drag)'),
+    button: z
+      .enum(['left', 'right'])
+      .optional()
+      .default('left')
+      .describe('Mouse button (for click, default "left")'),
+    text: z
+      .string()
+      .min(1)
+      .max(10000)
+      .optional()
+      .describe('Text to type (for type action)'),
+    keys: z
+      .array(z.string())
+      .max(10)
+      .optional()
+      .describe('Key names for keyboard shortcut (for keyCombo, e.g., ["ctrl", "s"])'),
+    description: z
+      .string()
+      .min(1)
+      .max(500)
+      .describe('Human-readable description of this action. Shown in the consent dialog. e.g., "Click the Save button in Notepad"'),
+    target: z
+      .string()
+      .max(200)
+      .optional()
+      .describe('Optional target element name (for consent dialog context)'),
+  },
+  async ({ action, x, y, toX, toY, button, text, keys, description, target }) => {
+    try {
+      const body: Record<string, unknown> = { action, description };
+      if (x !== undefined) body.x = x;
+      if (y !== undefined) body.y = y;
+      if (toX !== undefined) body.toX = toX;
+      if (toY !== undefined) body.toY = toY;
+      if (button) body.button = button;
+      if (text) body.text = text;
+      if (keys) body.keys = keys;
+      if (target) body.target = target;
+
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/send-input', discovery.token, discovery.port, JSON.stringify(body));
+
+      if (resp.status === 403) {
+        const errBody = JSON.parse(resp.body.toString('utf-8'));
+        return {
+          content: [{ type: 'text' as const, text: `Feature flag error: ${errBody.error}` }],
+          isError: true,
+        };
+      }
+
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+
+      const result = JSON.parse(resp.body.toString('utf-8')) as {
+        ok: boolean;
+        error?: string;
+        verificationScreenshot?: string | null;
+        verificationFormat?: string;
+        verificationError?: string;
+      };
+
+      if (!result.ok) {
+        return {
+          content: [{ type: 'text' as const, text: `Action failed: ${result.error}` }],
+          isError: true,
+        };
+      }
+
+      // Build response with optional verification screenshot
+      const content: Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }> = [];
+
+      if (result.verificationScreenshot) {
+        // Optimize screenshot for vision model
+        const pngBuffer = Buffer.from(result.verificationScreenshot, 'base64');
+        try {
+          const optimized = await optimizeForVision(pngBuffer);
+          content.push({
+            type: 'image' as const,
+            data: optimized.buffer.toString('base64'),
+            mimeType: 'image/webp',
+          });
+          content.push({
+            type: 'text' as const,
+            text: `Action "${action}" executed successfully. Verification screenshot: ${optimized.width}x${optimized.height} webp (${(optimized.buffer.length / 1024).toFixed(0)}KB)`,
+          });
+        } catch {
+          content.push({
+            type: 'text' as const,
+            text: `Action "${action}" executed successfully. Verification screenshot optimization failed — raw PNG attached.`,
+          });
+          content.push({
+            type: 'image' as const,
+            data: result.verificationScreenshot,
+            mimeType: 'image/png',
+          });
+        }
+      } else {
+        content.push({
+          type: 'text' as const,
+          text: `Action "${action}" executed successfully.${result.verificationError ? ` (Verification screenshot unavailable: ${result.verificationError})` : ''}`,
+        });
+      }
+
+      return { content };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

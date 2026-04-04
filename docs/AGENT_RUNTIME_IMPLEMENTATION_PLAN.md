@@ -4,7 +4,7 @@
 > **Created:** 2026-04-04
 > **Repository:** C:/Users/anujd/Documents/01_AI/214_Chat_overlay_widget
 > **Branch:** main
-> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 DONE — Phase 6 DONE — Phase 5 NEXT — Phase 7 pending
+> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 DONE — Phase 5 DONE — Phase 6 DONE — Phase 7 NEXT
 
 ---
 
@@ -1004,12 +1004,30 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - Sidecar dist build: PASS (uiAutomation.js generated)
 
 ### Phase 5 — OS-Level Input Simulation
-- **Status:** NEXT
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/inputSimulator.ts` — Win32 SendInput wrapper via PowerShell P/Invoke. Exports simulateClick, simulateType, simulateKeyCombo, simulateDrag. Each action is an isolated PowerShell invocation with 5s timeout. Click uses DPI-aware absolute coordinates via GetSystemMetrics. Type uses KEYEVENTF_UNICODE for full Unicode support. KeyCombo maps key names to VK codes (ctrl, alt, shift, win, a-z, 0-9, f1-f12, arrows, nav keys). Drag uses move+down, delay, move+up sequence.
+- **Files modified:**
+  - `sidecar/src/server.ts` — Imported inputSimulator functions, added `osInputSimulation: false` to sidecarFlags, added `POST /send-input` HTTP route with triple flag guard (osInputSimulation + uiAccessibility + consentGate), integrates ConsentManager for user approval before execution, captures verification screenshot via captureSelfScreenshot after approved actions (500ms settle delay)
+  - `sidecar/src/mcp-server.ts` — Added `send_input` MCP tool (Tool 10) with action/x/y/toX/toY/button/text/keys/description/target params, POSTs to /send-input, returns optimized verification screenshot via optimizeForVision
+  - `src/store/featureFlagStore.ts` — Added `osInputSimulation` to FeatureFlags interface, defaults (false), and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `osInputSimulation` label ('OS Input Simulation')
+  - `src/hooks/useFlagSync.ts` — Added `osInputSimulation` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `osInputSimulation` to persistence snapshot
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - Triple safety gate enforced: `osInputSimulation` + `uiAccessibility` + `consentGate` must all be ON. Each missing flag returns a specific 403 error message.
+  - Consent flow: POST /send-input → consentManager.requestConsent() → WebSocket consent-request to frontend → user approves/denies → action executes or returns error.
+  - Verification screenshot: after each approved action, waits 500ms for UI to settle, then captures via captureSelfScreenshot (no blur). Screenshot is base64-encoded in the response. MCP tool optimizes it to WebP via optimizeForVision before returning to the LLM.
+  - If verification screenshot fails, the action result still reports success (ok: true) with verificationScreenshot: null and an error message.
+  - VK_MAP covers: modifiers (ctrl, alt, shift, win), navigation (enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown), arrows (up, down, left, right), function keys (f1-f12), letters (a-z), and numbers (0-9).
+  - simulateType uses KEYEVENTF_UNICODE (wScan = char code) for direct Unicode input — no VK code translation needed.
+  - simulateDrag includes 50ms delays between move-down, move-to, and release phases for reliable drag recognition.
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (inputSimulator.js generated)
 
 ### Phase 6 — Consent Gate & Action Verification Loop
 - **Status:** DONE
@@ -1039,7 +1057,7 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - Sidecar dist build: PASS (consentManager.js generated)
 
 ### Phase 7 — Integration Testing & Hardening
-- **Status:** PENDING (after all above)
+- **Status:** NEXT
 - **Date:** —
 - **Files created:** —
 - **Files modified:** —

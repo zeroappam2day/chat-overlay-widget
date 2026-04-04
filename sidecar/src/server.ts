@@ -41,6 +41,7 @@ import { handleTerminalWrite } from './terminalWrite.js';
 import { MultiPtyManager } from './multiPtyManager.js';
 import { getUiElements } from './uiAutomation.js';
 import { ConsentManager } from './consentManager.js';
+import { simulateClick, simulateType, simulateKeyCombo, simulateDrag } from './inputSimulator.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -446,6 +447,159 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // Agent Runtime Phase 5: OS-level input simulation endpoint (triple flag-gated)
+  if (req.method === 'POST' && url.pathname === '/send-input') {
+    // Triple guard: osInputSimulation + uiAccessibility + consentGate must all be ON
+    if (!sidecarFlags.osInputSimulation) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'OS input simulation is disabled. Enable the osInputSimulation feature flag.' }));
+      return;
+    }
+    if (!sidecarFlags.uiAccessibility) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'UI accessibility is required for input simulation. Enable the uiAccessibility feature flag.' }));
+      return;
+    }
+    if (!sidecarFlags.consentGate) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Consent gate is required for input simulation. Enable the consentGate feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body) as {
+          action?: string;
+          description?: string;
+          x?: number; y?: number;
+          toX?: number; toY?: number;
+          button?: 'left' | 'right';
+          text?: string;
+          keys?: string[];
+          target?: string;
+        };
+        if (!parsed.action || !parsed.description) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'action and description are required' }));
+          return;
+        }
+        const validActions = ['click', 'type', 'keyCombo', 'drag'];
+        if (!validActions.includes(parsed.action)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` }));
+          return;
+        }
+
+        // Build consent action description
+        const consentAction = {
+          type: parsed.action,
+          description: parsed.description,
+          coordinates: (parsed.x !== undefined && parsed.y !== undefined) ? { x: parsed.x, y: parsed.y } : undefined,
+          target: parsed.target,
+        };
+
+        // Request user consent before executing
+        consentManager.requestConsent(consentAction)
+          .then(async (approved) => {
+            if (!approved) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, error: 'User denied the action' }));
+              return;
+            }
+
+            // Execute the action
+            let result: { ok: boolean; error?: string };
+            switch (parsed.action) {
+              case 'click':
+                if (parsed.x === undefined || parsed.y === undefined) {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ error: 'x and y are required for click action' }));
+                  return;
+                }
+                result = simulateClick(parsed.x, parsed.y, parsed.button ?? 'left');
+                break;
+              case 'type':
+                if (!parsed.text) {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ error: 'text is required for type action' }));
+                  return;
+                }
+                result = simulateType(parsed.text);
+                break;
+              case 'keyCombo':
+                if (!parsed.keys || !Array.isArray(parsed.keys)) {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ error: 'keys array is required for keyCombo action' }));
+                  return;
+                }
+                result = simulateKeyCombo(parsed.keys);
+                break;
+              case 'drag':
+                if (parsed.x === undefined || parsed.y === undefined || parsed.toX === undefined || parsed.toY === undefined) {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ error: 'x, y, toX, toY are required for drag action' }));
+                  return;
+                }
+                result = simulateDrag(parsed.x, parsed.y, parsed.toX, parsed.toY);
+                break;
+              default:
+                result = { ok: false, error: 'Unknown action' };
+            }
+
+            if (!result.ok) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify(result));
+              return;
+            }
+
+            // Verification loop: wait 500ms for UI to settle, then capture screenshot
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            try {
+              const screenshotResp = await captureSelfScreenshot(
+                getAnySession()?.terminalBuffer ?? null as unknown as import('./terminalBuffer.js').TerminalBuffer,
+                false // no blur for verification
+              );
+              if (screenshotResp.ok) {
+                const base64 = screenshotResp.buffer.toString('base64');
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                  ok: true,
+                  verificationScreenshot: base64,
+                  verificationFormat: 'png',
+                }));
+              } else {
+                // Action succeeded but verification screenshot failed — still report success
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                  ok: true,
+                  verificationScreenshot: null,
+                  verificationError: screenshotResp.error,
+                }));
+              }
+            } catch {
+              // Action succeeded but screenshot threw — report success without screenshot
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                ok: true,
+                verificationScreenshot: null,
+                verificationError: 'Screenshot capture failed',
+              }));
+            }
+          })
+          .catch((err) => {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: String(err) }));
+          });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -503,6 +657,7 @@ const sidecarFlags: Record<string, boolean> = {
   conditionalAdvance: false,
   multiPty: false,
   uiAccessibility: false,
+  osInputSimulation: false,
   consentGate: false,
 };
 
