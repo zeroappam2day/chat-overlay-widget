@@ -61,4 +61,5 @@ export type ServerMessage =
   | { type: 'plan-update'; fileName: string | null; content: string | null; mtime: number }
   | { type: 'diff-result'; raw: string; cwd: string; error?: string }
   | { type: 'ask-code-response'; requestId: string; messageType: 'chunk' | 'error' | 'done'; text?: string; exitCode?: number }
-  | { type: 'annotation-update'; annotations: Annotation[] };
+  | { type: 'annotation-update'; annotations: Annotation[] }
+  | { type: 'walkthrough-step'; step: { stepId: string; title: string; instruction: string; currentStep: number; totalSteps: number } | null };
