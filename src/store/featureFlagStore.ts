@@ -23,6 +23,7 @@ export interface FeatureFlags {
   inlineEditing: boolean;        // Phase 20
   errorBoundaries: boolean;      // Phase 21
   guidedWalkthrough: boolean;    // Phase 6 (Annotation) — Guided walkthrough panel
+  terminalWriteMcp: boolean;     // Agent Runtime Phase 1 — Terminal write MCP tool
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -59,6 +60,7 @@ const defaults: FeatureFlags = {
   inlineEditing: true,
   errorBoundaries: true,
   guidedWalkthrough: false,  // OFF by default
+  terminalWriteMcp: false,   // OFF by default — agent runtime
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -96,6 +98,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         inlineEditing: next.inlineEditing,
         errorBoundaries: next.errorBoundaries,
         guidedWalkthrough: next.guidedWalkthrough,
+        terminalWriteMcp: next.terminalWriteMcp,
       }));
       return { [key]: value };
     }),

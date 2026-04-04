@@ -4,7 +4,7 @@
 > **Created:** 2026-04-04
 > **Repository:** C:/Users/anujd/Documents/01_AI/214_Chat_overlay_widget
 > **Branch:** main
-> **Status:** PLAN APPROVED — Phase 1 pending
+> **Status:** Phase 1 DONE — Phase 2 pending
 
 ---
 
@@ -900,15 +900,29 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
 ## 14. Progress Tracker
 
 ### Phase 1 — Terminal Write MCP Tool
-- **Status:** NEXT
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/terminalWrite.ts` — HTTP route handler for POST /terminal-write, flag-gated, validates input, calls session.write()
+- **Files modified:**
+  - `sidecar/src/server.ts` — Added `terminalWriteMcp: false` to sidecarFlags, imported handleTerminalWrite, registered POST /terminal-write route
+  - `sidecar/src/mcp-server.ts` — Added `write_terminal` MCP tool (Tool 8) with text/paneId/pressEnter params
+  - `src/store/featureFlagStore.ts` — Added `terminalWriteMcp` to FeatureFlags interface, defaults, and localStorage persistence
+  - `src/components/FeatureFlagPanel.tsx` — Added `terminalWriteMcp` label
+  - `src/hooks/useFlagSync.ts` — Added `terminalWriteMcp` to sidecar flag sync
+  - `src/hooks/usePersistence.ts` — Added `terminalWriteMcp` to persistence snapshot
+- **Handover notes:**
+  - All changes are additive and flag-gated. Flag defaults to false (OFF).
+  - The write_terminal MCP tool POSTs to /terminal-write on the sidecar HTTP server, which calls session.write() on the first active PTY session.
+  - paneId parameter is accepted but currently uses first session (multi-PTY support deferred to Phase 3).
+  - Text is validated to max 10000 chars. pressEnter appends \r.
+  - Both frontend (tsc --noEmit) and sidecar (tsc) compile cleanly.
+- **Test results:**
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - Sidecar dist build: PASS (terminalWrite.js generated)
 
 ### Phase 2 — Conditional Walkthrough Advancement
-- **Status:** PENDING (after Phase 1)
+- **Status:** NEXT
 - **Date:** —
 - **Files created:** —
 - **Files modified:** —

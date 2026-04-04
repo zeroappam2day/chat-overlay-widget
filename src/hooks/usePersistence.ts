@@ -43,6 +43,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       inlineEditing: flags.inlineEditing,
       errorBoundaries: flags.errorBoundaries,
       guidedWalkthrough: flags.guidedWalkthrough,
+      terminalWriteMcp: flags.terminalWriteMcp,
     },
     windowState,
   };
