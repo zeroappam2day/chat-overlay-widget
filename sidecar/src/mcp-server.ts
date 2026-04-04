@@ -434,6 +434,36 @@ server.tool(
   }
 );
 
+// ─── Tool 8: write_terminal (Agent Runtime Phase 1) ──────────────────────────
+
+server.tool(
+  'write_terminal',
+  'Send text to the active terminal session. WARNING: This sends keystrokes to the terminal. The command will execute immediately if pressEnter is true. Use with caution. Gated behind the terminalWriteMcp feature flag.',
+  {
+    text: z.string().min(1).max(10000).describe('Text to send to the terminal'),
+    paneId: z.string().optional().describe('Target pane ID (for future multi-PTY support)'),
+    pressEnter: z.boolean().optional().default(false).describe('Append Enter (\\r) after text'),
+  },
+  async ({ text, paneId, pressEnter }) => {
+    try {
+      const discovery = readDiscovery();
+      const body = JSON.stringify({ text, paneId, pressEnter });
+      const resp = await sidecarPost('/terminal-write', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Terminal write MCP tool is disabled. Enable the terminalWriteMcp feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const msg = JSON.parse(resp.body.toString()).error ?? resp.body.toString();
+        return { content: [{ type: 'text' as const, text: `Error: ${msg}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: `Sent ${result.bytesWritten} bytes to terminal.` }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module

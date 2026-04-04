@@ -1,4 +1,5 @@
 import type { AgentEvent } from './agentEvent.js';
+import type { Annotation, AnnotationPayload } from './annotationStore.js';
 export type ClientMessage = {
     type: 'input';
     data: string;
@@ -37,6 +38,17 @@ export type ClientMessage = {
 } | {
     type: 'request-diff';
     cwd?: string;
+} | {
+    type: 'ask-code';
+    requestId: string;
+    prompt: string;
+    cwd?: string;
+} | {
+    type: 'cancel-ask-code';
+    requestId: string;
+} | {
+    type: 'annotations';
+    payload: AnnotationPayload;
 };
 export interface SessionMeta {
     id: number;
@@ -128,4 +140,22 @@ export type ServerMessage = {
     raw: string;
     cwd: string;
     error?: string;
+} | {
+    type: 'ask-code-response';
+    requestId: string;
+    messageType: 'chunk' | 'error' | 'done';
+    text?: string;
+    exitCode?: number;
+} | {
+    type: 'annotation-update';
+    annotations: Annotation[];
+} | {
+    type: 'walkthrough-step';
+    step: {
+        stepId: string;
+        title: string;
+        instruction: string;
+        currentStep: number;
+        totalSteps: number;
+    } | null;
 };

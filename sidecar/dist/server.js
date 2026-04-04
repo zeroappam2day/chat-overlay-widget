@@ -64,6 +64,10 @@ const windowThumbnailBatch_js_1 = require("./windowThumbnailBatch.js");
 const spatial_engine_js_1 = require("./spatial_engine.js");
 const planWatcher_js_1 = require("./planWatcher.js");
 const diffHandler_js_1 = require("./diffHandler.js");
+const askCodeHandler_js_1 = require("./askCodeHandler.js");
+const annotationStore_js_1 = require("./annotationStore.js");
+const walkthroughEngine_js_1 = require("./walkthroughEngine.js");
+const terminalWrite_js_1 = require("./terminalWrite.js");
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
@@ -147,6 +151,86 @@ function handleHttpRequest(req, res) {
     }
     // Parse URL for new routes that use query parameters
     const url = new URL(req.url, 'http://localhost');
+    if (req.method === 'POST' && url.pathname === '/annotations') {
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+                const raw = JSON.parse(cleaned);
+                const payload = annotationStore_js_1.AnnotationPayloadSchema.parse(raw);
+                const current = annotationStore_js_1.annotationState.apply(payload);
+                broadcastAnnotations(current);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, count: current.length }));
+            }
+            catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: msg }));
+            }
+        });
+        return;
+    }
+    if (req.method === 'POST' && url.pathname === '/walkthrough/start') {
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+                const raw = JSON.parse(cleaned);
+                const walkthrough = walkthroughEngine_js_1.WalkthroughSchema.parse(raw);
+                const result = walkthroughEngine_js_1.walkthroughEngine.start(walkthrough);
+                broadcastWalkthroughStep(result);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+            }
+            catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+            }
+        });
+        return;
+    }
+    if (req.method === 'POST' && url.pathname === '/walkthrough/advance') {
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const result = walkthroughEngine_js_1.walkthroughEngine.advance();
+                if ('done' in result) {
+                    broadcastWalkthroughStep(null);
+                }
+                else {
+                    broadcastWalkthroughStep(result);
+                }
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+            }
+            catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+            }
+        });
+        return;
+    }
+    if (req.method === 'POST' && url.pathname === '/walkthrough/stop') {
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                walkthroughEngine_js_1.walkthroughEngine.stop();
+                broadcastWalkthroughStep(null);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true }));
+            }
+            catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+            }
+        });
+        return;
+    }
     if (req.method === 'POST' && url.pathname === '/hook-event') {
         let body = '';
         req.on('data', (chunk) => { body += chunk.toString(); });
@@ -276,11 +360,22 @@ function handleHttpRequest(req, res) {
         });
         return;
     }
+    // Agent Runtime Phase 1: Terminal write endpoint (flag-gated)
+    if (req.method === 'POST' && url.pathname === '/terminal-write') {
+        (0, terminalWrite_js_1.handleTerminalWrite)(req, res, activeSessions, sidecarFlags);
+        return;
+    }
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
 }
 const httpServer = http.createServer(handleHttpRequest);
 const wss = new ws_1.WebSocketServer({ server: httpServer });
+annotationStore_js_1.annotationState._onExpire = () => {
+    broadcastAnnotations(annotationStore_js_1.annotationState.getAll());
+};
+walkthroughEngine_js_1.walkthroughEngine.onAnnotationsChanged = (annotations) => {
+    broadcastAnnotations(annotations);
+};
 // Heartbeat: ping every 30s, terminate if no pong within 10s (Phase 5 hardening)
 const HEARTBEAT_INTERVAL = 30000;
 const HEARTBEAT_TIMEOUT = 10000;
@@ -312,6 +407,7 @@ const sidecarFlags = {
     outputBatching: true,
     autoTrust: false,
     planWatcher: true,
+    terminalWriteMcp: false,
 };
 function sendMsg(ws, msg) {
     if (ws.readyState === ws.OPEN) {
@@ -321,6 +417,16 @@ function sendMsg(ws, msg) {
 function broadcastAgentEvent(event) {
     for (const client of wss.clients) {
         sendMsg(client, { type: 'agent-event', event });
+    }
+}
+function broadcastAnnotations(annotations) {
+    for (const client of wss.clients) {
+        sendMsg(client, { type: 'annotation-update', annotations });
+    }
+}
+function broadcastWalkthroughStep(step) {
+    for (const client of wss.clients) {
+        sendMsg(client, { type: 'walkthrough-step', step });
     }
 }
 async function sweepScreenshotTempFiles() {
@@ -559,6 +665,16 @@ wss.on('connection', (ws) => {
                 const cwd = msg.cwd ?? process.cwd();
                 const { raw, error } = (0, diffHandler_js_1.execGitDiff)(cwd);
                 sendMsg(ws, { type: 'diff-result', raw, cwd, error });
+                break;
+            }
+            case 'ask-code': {
+                const askMsg = msg;
+                (0, askCodeHandler_js_1.askAboutCode)(ws, askMsg.requestId, askMsg.prompt, askMsg.cwd ?? process.cwd());
+                break;
+            }
+            case 'cancel-ask-code': {
+                const cancelMsg = msg;
+                (0, askCodeHandler_js_1.cancelAskCode)(cancelMsg.requestId);
                 break;
             }
         }

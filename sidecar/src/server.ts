@@ -37,6 +37,7 @@ import { askAboutCode, cancelAskCode } from './askCodeHandler.js';
 import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
+import { handleTerminalWrite } from './terminalWrite.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -336,6 +337,12 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // Agent Runtime Phase 1: Terminal write endpoint (flag-gated)
+  if (req.method === 'POST' && url.pathname === '/terminal-write') {
+    handleTerminalWrite(req, res, activeSessions, sidecarFlags);
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -387,6 +394,7 @@ const sidecarFlags: Record<string, boolean> = {
   outputBatching: true,
   autoTrust: false,
   planWatcher: true,
+  terminalWriteMcp: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
