@@ -4,7 +4,7 @@
 > **Created:** 2026-04-04
 > **Repository:** C:/Users/anujd/Documents/01_AI/214_Chat_overlay_widget
 > **Branch:** main
-> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 DONE — Phase 5 DONE — Phase 6 DONE — Phase 7 NEXT
+> **Status:** Phase 1 DONE — Phase 2 DONE — Phase 3 DONE — Phase 4 DONE — Phase 5 DONE — Phase 6 DONE — Phase 7 DONE
 
 ---
 
@@ -1057,12 +1057,37 @@ The implementing LLM/agent MUST update Section 14 (Progress Tracker) with:
   - Sidecar dist build: PASS (consentManager.js generated)
 
 ### Phase 7 — Integration Testing & Hardening
-- **Status:** NEXT
-- **Date:** —
-- **Files created:** —
-- **Files modified:** —
-- **Handover notes:** —
-- **Test results:** —
+- **Status:** DONE
+- **Date:** 2026-04-04
+- **Files created:**
+  - `sidecar/src/terminalWrite.test.ts` — Unit tests for Phase 1 terminal write handler (flag gating, input validation, session routing, pressEnter)
+  - `sidecar/src/walkthroughWatcher.test.ts` — Unit tests for Phase 2 watcher (pattern matching, ANSI stripping, timing, cooldown, destroy cleanup)
+  - `sidecar/src/multiPtyManager.test.ts` — Unit tests for Phase 3 multi-PTY manager (CRUD, max sessions, destroyAll, cross-connection lookup, iterator)
+  - `sidecar/src/consentManager.test.ts` — Unit tests for Phase 6 consent manager (request/response flow, timeout auto-deny, denyAll, no-broadcast safety)
+  - `sidecar/src/inputSimulator.test.ts` — Validation tests for Phase 5 input simulator (text length limit, key combo validation, unknown key rejection)
+  - `sidecar/src/uiAutomation.test.ts` — Validation tests for Phase 4 UI automation (cache reset, module exports)
+  - `sidecar/src/agentRuntimeIntegration.test.ts` — Cross-phase integration tests (flag defaults, flag isolation, triple-gate dependency enforcement, cross-phase state isolation, module export verification, combined consent+watcher flow)
+  - `src/components/__tests__/ConsentDialog.test.tsx` — React component tests for Phase 6 consent dialog (rendering, approve/deny, keyboard shortcuts, double-click guard, accessibility)
+- **Files modified:**
+  - `package.json` — Added `test` and `test:watch` scripts
+  - `sidecar/tsconfig.json` — Added `exclude` for `*.test.ts` to prevent test files from being included in production build
+- **Handover notes:**
+  - All 8 new test files follow existing codebase patterns (Vitest, @testing-library/react for components).
+  - Tests cover all Phase 7 acceptance criteria: flag defaults, flag independence, flag dependency enforcement (osInputSimulation triple-gate), cross-phase state isolation, and module export verification.
+  - PowerShell-dependent code (uiAutomation.getUiElements, inputSimulator.simulateClick/simulateDrag) is NOT tested at runtime since it requires Windows desktop + active windows. Only validation logic and module exports are tested.
+  - Sidecar tsconfig.json now excludes `*.test.ts` from compilation. Tests are run by vitest (which uses its own TypeScript transform) not the sidecar build.
+  - Frontend (tsc --noEmit) and sidecar (tsc) both compile cleanly.
+  - Hardening checklist items verified:
+    - [x] All flags OFF: zero behavioral change (flag defaults all false)
+    - [x] Each flag independently toggleable (isolation test)
+    - [x] Flag dependency enforcement (triple-gate test)
+    - [x] Memory cleanup: destroyAll, denyAll, watcher.destroy all tested
+    - [x] All existing tests still pass (353 total, 0 failures)
+    - [x] No regressions in existing functionality
+- **Test results:**
+  - Vitest run: 25 test files, 353 tests, 0 failures
+  - TypeScript compilation: PASS (frontend + sidecar, zero errors)
+  - New tests added: 8 files with ~80 test cases covering all 6 phases + integration
 
 ---
 
