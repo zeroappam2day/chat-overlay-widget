@@ -25,6 +25,7 @@ export interface FeatureFlags {
   guidedWalkthrough: boolean;    // Phase 6 (Annotation) — Guided walkthrough panel
   terminalWriteMcp: boolean;     // Agent Runtime Phase 1 — Terminal write MCP tool
   conditionalAdvance: boolean;   // Agent Runtime Phase 2 — Conditional walkthrough advancement
+  enhancedAccessibility: boolean; // EAC-8 — Enhanced Accessibility Bridge
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -63,6 +64,7 @@ const defaults: FeatureFlags = {
   guidedWalkthrough: false,  // OFF by default
   terminalWriteMcp: false,   // OFF by default — agent runtime
   conditionalAdvance: false, // OFF by default — agent runtime
+  enhancedAccessibility: false, // OFF by default — EAC-8
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -102,6 +104,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         guidedWalkthrough: next.guidedWalkthrough,
         terminalWriteMcp: next.terminalWriteMcp,
         conditionalAdvance: next.conditionalAdvance,
+        enhancedAccessibility: next.enhancedAccessibility,
       }));
       return { [key]: value };
     }),

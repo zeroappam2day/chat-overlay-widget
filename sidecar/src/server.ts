@@ -38,6 +38,7 @@ import { annotationState, AnnotationPayloadSchema } from './annotationStore.js';
 import type { Annotation } from './annotationStore.js';
 import { walkthroughEngine, WalkthroughSchema } from './walkthroughEngine.js';
 import { handleTerminalWrite } from './terminalWrite.js';
+import { searchElements, invokeElement, setElementValue, getElementPatterns } from './enhancedAccessibility.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -359,6 +360,95 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
 
+  // EAC-8: Enhanced Accessibility Bridge endpoints
+  if (req.method === 'POST' && url.pathname === '/ui-elements/search') {
+    if (!sidecarFlags.enhancedAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'enhancedAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.uiAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'uiAccessibility flag is disabled' })); return; }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        searchElements(parsed).then(elements => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ elements }));
+        }).catch(err => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/ui-elements/invoke') {
+    if (!sidecarFlags.enhancedAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'enhancedAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.uiAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'uiAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.consentGate) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'consentGate flag is disabled' })); return; }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        invokeElement(parsed).then(result => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        }).catch(err => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/ui-elements/set-value') {
+    if (!sidecarFlags.enhancedAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'enhancedAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.uiAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'uiAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.consentGate) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'consentGate flag is disabled' })); return; }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body);
+        setElementValue(parsed).then(result => {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        }).catch(err => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Invalid JSON: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/ui-elements/patterns') {
+    if (!sidecarFlags.enhancedAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'enhancedAccessibility flag is disabled' })); return; }
+    if (!sidecarFlags.uiAccessibility) { res.writeHead(403, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'uiAccessibility flag is disabled' })); return; }
+    const hwnd = parseInt(url.searchParams.get('hwnd') ?? '0', 10);
+    const automationId = url.searchParams.get('automationId') ?? undefined;
+    const name = url.searchParams.get('name') ?? undefined;
+    if (!hwnd) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'hwnd is required' })); return; }
+    getElementPatterns({ hwnd, automationId, name }).then(result => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    }).catch(err => {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -412,6 +502,7 @@ const sidecarFlags: Record<string, boolean> = {
   planWatcher: true,
   terminalWriteMcp: false,
   conditionalAdvance: false,
+  enhancedAccessibility: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
