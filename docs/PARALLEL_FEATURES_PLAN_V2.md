@@ -58,7 +58,7 @@ Begin by reading both plan files now.
 | 16 | Ask About Code | DONE | 2026-04-04 | Created askCodeHandler.ts (sidecar child process spawner, 5 concurrent max, 2min timeout, 100K response cap, env cleaning), AskCodeCard.tsx (4-state inline card: input/loading/complete/error, Ctrl+Enter submit, streaming auto-scroll), diffSelection.ts (DOM selection extraction via data-diff-* attributes). Added ask-code/cancel-ask-code/ask-code-response to both protocol.ts files. Wired into server.ts switch. EnhancedDiffPanel extended with data-diff-* attrs on line rows, selection detection via onMouseUp, "Ask Claude" button bar, AskCodeCard inline render, custom event bridge. TerminalPane forwards ask-code-response via custom event + listens for ask-code-send. Added askAboutCode flag to featureFlagStore + FeatureFlagPanel + usePersistence gatherState. |
 | 17 | Completion Stats | DONE | 2026-04-04 | Created completionStore.ts (Zustand + localStorage, total + daily tracking), CompletionBadge.tsx (green check + "N today" with total tooltip). Added completionStats flag to featureFlagStore. Wired into TerminalPane pty-exit handler (exitCode 0 + flag ON). Badge renders in FeatureFlagPanel header area. |
 | 18 | Focus Trap for Dialogs | DONE | 2026-04-04 | Created useFocusTrap.ts (Tab/Shift+Tab wrap, focus-first-on-open, restore-on-close). Added focusTrap flag to featureFlagStore. Integrated into FeatureFlagPanel dropdown via ref. |
-| 19 | GitHub URL Detection | PENDING | — | — |
+| 19 | GitHub URL Detection | DONE | 2026-04-04 | Created githubUrl.ts (parseGitHubUrl regex parser, extractGitHubUrl, formatGitHubRef for issues/PRs/discussions/action runs), githubUrl.test.ts (20 unit tests all passing), GitHubUrlBadge.tsx (pill badge with clipboard copy, 1.5s "Copied!" feedback, auto-hides when no URL). Added githubUrlDetection flag to featureFlagStore. Integrated into TerminalPane above BookmarkBar via lastSentCommand state tracking. |
 | 20 | Inline Editable Text | PENDING | — | — |
 | 21 | Error Boundaries | PENDING | — | — |
 
@@ -1925,6 +1925,15 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 - **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`. The ref uses `null!` assertion to satisfy React 18's stricter `RefObject<HTMLDivElement>` type (vs `RefObject<HTMLDivElement | null>`).
 - **Future adoption:** Other panels (DiffPanel, PlanPanel, PromptHistoryPanel) can call `useFocusTrap(isOpen)` and attach the ref to their container — no changes to the hook needed.
 - **Commits:** squash-merged via PR
+
+### Phase 19 (2026-04-04)
+- **Created:** `src/lib/githubUrl.ts`, `src/lib/githubUrl.test.ts`, `src/components/GitHubUrlBadge.tsx`
+- **Modified:** `src/store/featureFlagStore.ts` (+githubUrlDetection flag), `src/components/FeatureFlagPanel.tsx` (+label), `src/hooks/usePersistence.ts` (+githubUrlDetection in gatherState), `src/components/TerminalPane.tsx` (+GitHubUrlBadge import/render, +lastSentCommand state)
+- **Pattern:** GitHubUrlBadge is passive/informational — scans `lastSentCommand` for GitHub URLs, displays formatted reference pill, click copies to clipboard with 1.5s "Copied!" feedback. Does NOT modify the command sent to PTY.
+- **Pattern:** TerminalPane tracks `lastSentCommand` state, updated on each ChatInputBar submit, passed as `text` prop to GitHubUrlBadge.
+- **Tests:** 20 unit tests in githubUrl.test.ts covering parseGitHubUrl (repo, issue, PR, discussion, action run, .git suffix, fragments, malformed), extractGitHubUrl, formatGitHubRef.
+- **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`.
+- **Commits:** aef2fae, 69d6ab8, 725ed80
 
 ---
 
