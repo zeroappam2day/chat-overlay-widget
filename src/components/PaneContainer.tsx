@@ -5,6 +5,7 @@ import { appWindow } from '@tauri-apps/api/window';
 import { usePaneStore, getAllPaneIds } from '../store/paneStore';
 import type { LayoutNode, SplitNode } from '../store/paneStore';
 import { TerminalPane } from './TerminalPane';
+import { SafePane } from './SafePane';
 import { AppHeader } from './AppHeader';
 import { AgentSidebar } from './AgentSidebar';
 import { useShortcuts } from '../hooks/useShortcuts';
@@ -212,11 +213,13 @@ export function PaneContainer() {
                 visibility: rects.has(paneId) ? 'visible' : 'hidden',
               }}
             >
-              <TerminalPane
-                paneId={paneId}
-                droppedImagePath={activePaneId === paneId ? droppedImagePath : null}
-                onDroppedPathConsumed={clearDroppedPath}
-              />
+              <SafePane paneId={paneId}>
+                <TerminalPane
+                  paneId={paneId}
+                  droppedImagePath={activePaneId === paneId ? droppedImagePath : null}
+                  onDroppedPathConsumed={clearDroppedPath}
+                />
+              </SafePane>
             </div>
           ))}
         </div>

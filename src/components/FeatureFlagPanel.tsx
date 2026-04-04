@@ -26,6 +26,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   focusTrap: 'Focus Trap',
   githubUrlDetection: 'GitHub URL Detection',
   inlineEditing: 'Inline Editing',
+  errorBoundaries: 'Error Boundaries',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];

@@ -21,6 +21,7 @@ export interface FeatureFlags {
   focusTrap: boolean;            // Phase 18
   githubUrlDetection: boolean;   // Phase 19
   inlineEditing: boolean;        // Phase 20
+  errorBoundaries: boolean;      // Phase 21
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -55,6 +56,7 @@ const defaults: FeatureFlags = {
   focusTrap: true,
   githubUrlDetection: true,
   inlineEditing: true,
+  errorBoundaries: true,
 };
 
 interface FeatureFlagStore extends FeatureFlags {
@@ -90,6 +92,7 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         focusTrap: next.focusTrap,
         githubUrlDetection: next.githubUrlDetection,
         inlineEditing: next.inlineEditing,
+        errorBoundaries: next.errorBoundaries,
       }));
       return { [key]: value };
     }),
