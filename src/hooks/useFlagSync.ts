@@ -10,6 +10,7 @@ import type { ClientMessage } from '../protocol';
 export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected: boolean): void {
   const outputBatching = useFeatureFlagStore(s => s.outputBatching);
   const terminalWriteMcp = useFeatureFlagStore(s => s.terminalWriteMcp);
+  const conditionalAdvance = useFeatureFlagStore(s => s.conditionalAdvance);
   const sentRef = useRef(false);
 
   useEffect(() => {
@@ -17,7 +18,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
       sentRef.current = false;
       return;
     }
-    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp } });
+    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance } });
     sentRef.current = true;
-  }, [outputBatching, terminalWriteMcp, connected, sendMessage]);
+  }, [outputBatching, terminalWriteMcp, conditionalAdvance, connected, sendMessage]);
 }

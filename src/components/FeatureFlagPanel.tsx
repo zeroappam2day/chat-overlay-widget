@@ -29,6 +29,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   errorBoundaries: 'Error Boundaries',
   guidedWalkthrough: 'Guided Walkthrough Panel',
   terminalWriteMcp: 'Terminal Write (MCP)',
+  conditionalAdvance: 'Conditional Walkthrough Advance',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
