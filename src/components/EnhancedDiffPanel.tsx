@@ -8,6 +8,8 @@ import { renderHighlightedLine, countMatchesInDiff, highlightSearchMatches } fro
 import { useSyntaxHighlight } from '../hooks/useSyntaxHighlight';
 import type { FileDiff, Hunk, DiffLine } from '../lib/diffParser';
 import { DiffPanel } from './DiffPanel';
+import { AskCodeCard } from './AskCodeCard';
+import { getDiffSelection, type DiffSelection } from '../lib/diffSelection';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -33,9 +35,10 @@ interface EnhancedDiffLineRowProps {
   currentGlobalIndex: number;
   globalOffset: number;
   highlightedHtml?: string;
+  filePath?: string;
 }
 
-function EnhancedDiffLineRow({ line, searchQuery, currentGlobalIndex, globalOffset, highlightedHtml }: EnhancedDiffLineRowProps) {
+function EnhancedDiffLineRow({ line, searchQuery, currentGlobalIndex, globalOffset, highlightedHtml, filePath }: EnhancedDiffLineRowProps) {
   const bgClass =
     line.type === 'add'
       ? 'bg-[#1e3a1e]'
@@ -50,11 +53,17 @@ function EnhancedDiffLineRow({ line, searchQuery, currentGlobalIndex, globalOffs
         : 'text-gray-400';
   const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' ';
 
+  const dataAttrs = {
+    'data-diff-line-num': line.newLine ?? line.oldLine ?? undefined,
+    'data-diff-file-path': filePath,
+    'data-diff-line-type': line.type,
+  };
+
   // Search highlighting takes precedence over syntax highlighting
   if (searchQuery) {
     const content = renderHighlightedLine(line.content, searchQuery, [currentGlobalIndex], globalOffset);
     return (
-      <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`}>
+      <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`} {...dataAttrs}>
         <LineNumber num={line.oldLine} />
         <LineNumber num={line.newLine} />
         <span className={`${textClass} whitespace-pre overflow-x-auto flex-1 px-1`}>
@@ -67,7 +76,7 @@ function EnhancedDiffLineRow({ line, searchQuery, currentGlobalIndex, globalOffs
   // Syntax highlighting: render HTML from Shiki
   if (highlightedHtml) {
     return (
-      <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`}>
+      <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`} {...dataAttrs}>
         <LineNumber num={line.oldLine} />
         <LineNumber num={line.newLine} />
         <span className="whitespace-pre overflow-x-auto flex-1 px-1">
@@ -79,7 +88,7 @@ function EnhancedDiffLineRow({ line, searchQuery, currentGlobalIndex, globalOffs
   }
 
   return (
-    <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`}>
+    <div className={`flex font-mono text-[11px] leading-[18px] ${bgClass}`} {...dataAttrs}>
       <LineNumber num={line.oldLine} />
       <LineNumber num={line.newLine} />
       <span className={`${textClass} whitespace-pre overflow-x-auto flex-1 px-1`}>
@@ -97,9 +106,10 @@ interface EnhancedHunkViewProps {
   currentGlobalIndex: number;
   globalMatchOffset: number;
   highlightMap: Map<string, string> | null;
+  filePath: string;
 }
 
-function EnhancedHunkView({ hunk, searchQuery, currentGlobalIndex, globalMatchOffset, highlightMap }: EnhancedHunkViewProps) {
+function EnhancedHunkView({ hunk, searchQuery, currentGlobalIndex, globalMatchOffset, highlightMap, filePath }: EnhancedHunkViewProps) {
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
   const displayItems = useMemo(() => collapseContextRuns(hunk.lines), [hunk.lines]);
@@ -138,6 +148,7 @@ function EnhancedHunkView({ hunk, searchQuery, currentGlobalIndex, globalMatchOf
               currentGlobalIndex={currentGlobalIndex}
               globalOffset={localMatchOffset}
               highlightedHtml={highlightMap?.get(line.content)}
+              filePath={filePath}
             />,
           );
           localMatchOffset += matchCount;
@@ -170,6 +181,7 @@ function EnhancedHunkView({ hunk, searchQuery, currentGlobalIndex, globalMatchOf
           currentGlobalIndex={currentGlobalIndex}
           globalOffset={localMatchOffset}
           highlightedHtml={highlightMap?.get(line.content)}
+          filePath={filePath}
         />,
       );
       localMatchOffset += matchCount;
@@ -254,6 +266,7 @@ function EnhancedFileDiffView({
                   currentGlobalIndex={currentGlobalIndex}
                   globalMatchOffset={hunkOffset}
                   highlightMap={highlightMap}
+                  filePath={file.path}
                 />
               );
               // Advance offset by match count in this hunk
@@ -277,6 +290,35 @@ function EnhancedDiffPanelInner() {
     useDiffStore();
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const askAboutCode = useFeatureFlagStore((s) => s.askAboutCode);
+  const [askSelection, setAskSelection] = useState<DiffSelection | null>(null);
+  const [askRequestId, setAskRequestId] = useState<string | null>(null);
+
+  // Handle text selection → show "Ask" button
+  const handleMouseUp = useCallback(() => {
+    if (!askAboutCode) return;
+    // Small delay to let selection settle
+    requestAnimationFrame(() => {
+      const sel = getDiffSelection();
+      setAskSelection(sel);
+    });
+  }, [askAboutCode]);
+
+  const handleAskStart = useCallback(() => {
+    if (!askSelection) return;
+    const id = `ask-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setAskRequestId(id);
+  }, [askSelection]);
+
+  const handleAskDismiss = useCallback(() => {
+    setAskRequestId(null);
+    setAskSelection(null);
+  }, []);
+
+  // Send message to sidecar via custom event (TerminalPane listens and forwards)
+  const sendAskMessage = useCallback((msg: object) => {
+    document.dispatchEvent(new CustomEvent('ask-code-send', { detail: msg }));
+  }, []);
 
   const matchCount = useMemo(() => countMatchesInDiff(diffs, searchQuery), [diffs, searchQuery]);
 
@@ -334,6 +376,8 @@ function EnhancedDiffPanelInner() {
         flexDirection: 'column',
       }}
       className="bg-[#1e1e1e] border-l border-[#404040] shadow-2xl"
+      data-diff-panel=""
+      onMouseUp={handleMouseUp}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-[#404040] shrink-0">
@@ -387,6 +431,39 @@ function EnhancedDiffPanelInner() {
           onPrev={handlePrev}
           onClose={handleClose}
         />
+      )}
+
+      {/* Ask About Code: floating button when text selected */}
+      {askAboutCode && askSelection && !askRequestId && (
+        <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-[#252540] border-b border-[#404040]">
+          <span className="text-[10px] text-gray-500 truncate flex-1">
+            Selected {askSelection.startLine === askSelection.endLine
+              ? `line ${askSelection.startLine}`
+              : `lines ${askSelection.startLine}-${askSelection.endLine}`
+            } in <span className="text-blue-400 font-mono">{askSelection.filePath.split('/').pop()}</span>
+          </span>
+          <button
+            onClick={handleAskStart}
+            className="px-2 py-0.5 text-[10px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded transition-colors"
+          >
+            Ask Claude
+          </button>
+        </div>
+      )}
+
+      {/* Ask About Code: inline card */}
+      {askAboutCode && askRequestId && askSelection && (
+        <div className="shrink-0">
+          <AskCodeCard
+            requestId={askRequestId}
+            filePath={askSelection.filePath}
+            startLine={askSelection.startLine}
+            endLine={askSelection.endLine}
+            selectedText={askSelection.selectedText}
+            onDismiss={handleAskDismiss}
+            sendMessage={sendAskMessage}
+          />
+        </div>
       )}
 
       {/* Scrollable file list */}

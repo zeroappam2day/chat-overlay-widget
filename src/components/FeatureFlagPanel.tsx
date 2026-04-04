@@ -19,6 +19,7 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   ctrlWheelZoom: 'Ctrl+Wheel Zoom',
   diffSearch: 'Diff Search',
   diffSyntaxHighlight: 'Diff Syntax Highlighting',
+  askAboutCode: 'Ask About Code',
 };
 
 const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
