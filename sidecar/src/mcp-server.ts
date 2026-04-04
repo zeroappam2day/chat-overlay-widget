@@ -473,6 +473,81 @@ server.tool(
   }
 );
 
+// ─── Tool 9: clipboard (EAC-4) ──────────────────────────────────────────────
+
+server.tool(
+  'clipboard',
+  `Read, write, or paste text via the Windows clipboard.
+
+Actions:
+- "read": Read current clipboard text content. Returns { ok, text }.
+- "write": Write text to clipboard. Requires 'text' parameter.
+- "paste": Write text to clipboard then simulate Ctrl+V keystroke. Requires 'text' parameter.
+  Paste action requires osInputSimulation and consentGate feature flags in addition to clipboardAccess.
+
+Maximum text size: 100KB. Clipboard contents are never logged for security.`,
+  {
+    action: z.enum(['read', 'write', 'paste']).describe('Clipboard operation to perform'),
+    text: z.string().max(102400).optional().describe('Text to write/paste (required for write and paste actions)'),
+    clearAfterPaste: z.boolean().optional().default(false).describe('Clear clipboard after paste (only for paste action)'),
+  },
+  async ({ action, text, clearAfterPaste }) => {
+    try {
+      const discovery = readDiscovery();
+
+      if (action === 'read') {
+        const resp = await sidecarGet('/clipboard', discovery.token, discovery.port);
+        if (resp.status === 403) {
+          return { content: [{ type: 'text' as const, text: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }], isError: true };
+        }
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+      }
+
+      if (action === 'write') {
+        if (!text) {
+          return { content: [{ type: 'text' as const, text: 'text parameter is required for write action' }], isError: true };
+        }
+        const body = JSON.stringify({ text });
+        const resp = await sidecarPost('/clipboard', discovery.token, discovery.port, body);
+        if (resp.status === 403) {
+          return { content: [{ type: 'text' as const, text: 'Clipboard access is disabled. Enable the clipboardAccess feature flag.' }], isError: true };
+        }
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: result.ok ? 'Clipboard updated.' : `Error: ${result.error}` }] };
+      }
+
+      if (action === 'paste') {
+        if (!text) {
+          return { content: [{ type: 'text' as const, text: 'text parameter is required for paste action' }], isError: true };
+        }
+        const body = JSON.stringify({ text, clearAfterPaste });
+        const resp = await sidecarPost('/clipboard/paste', discovery.token, discovery.port, body);
+        if (resp.status === 403) {
+          const errBody = JSON.parse(resp.body.toString());
+          return { content: [{ type: 'text' as const, text: errBody.error || 'Paste action requires clipboardAccess, osInputSimulation, and consentGate feature flags.' }], isError: true };
+        }
+        if (resp.status !== 200) {
+          return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+        }
+        const result = JSON.parse(resp.body.toString());
+        return { content: [{ type: 'text' as const, text: result.ok ? 'Paste completed.' : `Error: ${result.error}` }] };
+      }
+
+      return { content: [{ type: 'text' as const, text: `Unknown action: ${action}` }], isError: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
 // ─── Server startup ───────────────────────────────────────────────────────────
 
 // server.ts throws 'mcp-server should not return' after require()ing this module
