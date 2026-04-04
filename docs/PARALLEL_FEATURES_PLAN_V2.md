@@ -60,7 +60,7 @@ Begin by reading both plan files now.
 | 18 | Focus Trap for Dialogs | DONE | 2026-04-04 | Created useFocusTrap.ts (Tab/Shift+Tab wrap, focus-first-on-open, restore-on-close). Added focusTrap flag to featureFlagStore. Integrated into FeatureFlagPanel dropdown via ref. |
 | 19 | GitHub URL Detection | DONE | 2026-04-04 | Created githubUrl.ts (parseGitHubUrl regex parser, extractGitHubUrl, formatGitHubRef for issues/PRs/discussions/action runs), githubUrl.test.ts (20 unit tests all passing), GitHubUrlBadge.tsx (pill badge with clipboard copy, 1.5s "Copied!" feedback, auto-hides when no URL). Added githubUrlDetection flag to featureFlagStore. Integrated into TerminalPane above BookmarkBar via lastSentCommand state tracking. |
 | 20 | Inline Editable Text | DONE | 2026-04-04 | Created EditableText.tsx (double-click-to-edit, Enter/Escape/blur commit, auto-select, stopPropagation for parent click safety). Added inlineEditing flag to featureFlagStore. Replaced BookmarkBar's inline rename logic (editingId/editValue/editRef/startEdit/commitEdit) with EditableText component. Context menu "Rename" replaced with "Double-click to rename" hint. |
-| 21 | Error Boundaries | PENDING | — | — |
+| 21 | Error Boundaries | DONE | 2026-04-04 | Created PaneErrorBoundary.tsx (class component with error UI, retry/close buttons, collapsible stack trace), SafePane.tsx (flag-gated wrapper). Added errorBoundaries flag to featureFlagStore. Wrapped TerminalPane in SafePane inside PaneContainer. |
 
 ---
 
@@ -1940,6 +1940,14 @@ This is a minimal additive change: import `SafePane` and wrap the existing `Term
 - **Modified:** `src/store/featureFlagStore.ts` (+inlineEditing flag), `src/components/FeatureFlagPanel.tsx` (+label), `src/hooks/usePersistence.ts` (+inlineEditing in gatherState), `src/components/BookmarkBar.tsx` (+EditableText import, replaced inline edit logic)
 - **Pattern:** EditableText uses `stopPropagation` on both `onDoubleClick` (edit trigger) and `onClick`/`onKeyDown` (input mode) to prevent parent container click handlers from firing during edit. This is essential when EditableText is nested inside clickable containers (like BookmarkBar buttons).
 - **Simplification:** Removed 5 pieces of BookmarkBar state/logic: `editingId`, `editValue`, `editRef`, `startEdit()`, `commitEdit()`. Context menu "Rename" replaced with "Double-click to rename" hint since EditableText handles editing internally.
+- **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`.
+- **Commits:** pending PR
+
+### Phase 21 (2026-04-04)
+- **Created:** `src/components/PaneErrorBoundary.tsx`, `src/components/SafePane.tsx`
+- **Modified:** `src/store/featureFlagStore.ts` (+errorBoundaries flag), `src/components/FeatureFlagPanel.tsx` (+label), `src/hooks/usePersistence.ts` (+errorBoundaries in gatherState), `src/components/PaneContainer.tsx` (+SafePane import, wrapped TerminalPane)
+- **Pattern:** SafePane is a thin functional wrapper that checks the `errorBoundaries` flag. When ON, wraps children in PaneErrorBoundary (class component). When OFF, renders children directly. This two-layer pattern is needed because Error Boundaries must be class components, but feature flag hooks require functional components.
+- **Pattern:** PaneErrorBoundary accesses `usePaneStore.getState().closePane()` directly (not via hook) since it's a class component. This is safe because it's called only on button click, not during render.
 - **Gotcha:** Same gatherState rule — any new flag MUST be added to `usePersistence.ts`.
 - **Commits:** pending PR
 

@@ -41,6 +41,7 @@ function gatherState(windowState: WindowState | null): PersistedState {
       focusTrap: flags.focusTrap,
       githubUrlDetection: flags.githubUrlDetection,
       inlineEditing: flags.inlineEditing,
+      errorBoundaries: flags.errorBoundaries,
     },
     windowState,
   };
