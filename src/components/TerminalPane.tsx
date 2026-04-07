@@ -12,6 +12,7 @@ import { WindowPicker } from './WindowPicker';
 import type { ServerMessage, WindowThumbnail } from '../protocol';
 import { formatCaptureBlock } from '../utils/formatCaptureBlock';
 import { useAgentEventStore } from '../store/agentEventStore';
+import { usePmChatStore } from '../store/pmChatStore';
 import { useAnnotationBridgeStore } from '../store/annotationBridgeStore';
 import { useFlagSync } from '../hooks/useFlagSync';
 import { usePlanStore } from '../store/planStore';
@@ -164,6 +165,28 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       case 'agent-event':
         useAgentEventStore.getState().pushEvent(msg.event);
         break;
+      case 'pm-chat-token': {
+        const pmMsg = msg as { type: 'pm-chat-token'; requestId: string; token: string };
+        usePmChatStore.getState().appendToken(pmMsg.requestId, pmMsg.token);
+        break;
+      }
+      case 'pm-chat-done': {
+        const pmMsg = msg as { type: 'pm-chat-done'; requestId: string };
+        usePmChatStore.getState().finalizeResponse(pmMsg.requestId);
+        break;
+      }
+      case 'pm-chat-error': {
+        const pmMsg = msg as { type: 'pm-chat-error'; requestId: string; error: string };
+        usePmChatStore.getState().setStreaming(false);
+        usePmChatStore.getState().appendToken(pmMsg.requestId, `\n[Error: ${pmMsg.error}]`);
+        usePmChatStore.getState().finalizeResponse(pmMsg.requestId);
+        break;
+      }
+      case 'pm-chat-health': {
+        const pmMsg = msg as { type: 'pm-chat-health'; ok: boolean; error?: string };
+        usePmChatStore.getState().setHealth(pmMsg.ok, pmMsg.error);
+        break;
+      }
       case 'annotation-update':
         useAnnotationBridgeStore.getState().setAnnotations(msg.annotations);
         break;
@@ -206,9 +229,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   useEffect(() => {
     if (state === 'connected') {
       useModeStore.getState().setSendMessage(sendMessage);
+      usePmChatStore.getState().setWsSend((msg: unknown) => sendMessage(msg as Parameters<typeof sendMessage>[0]));
     }
     return () => {
       useModeStore.getState().setSendMessage(null);
+      usePmChatStore.getState().setWsSend(null);
+      usePmChatStore.getState().setStreaming(false);
     };
   }, [state, sendMessage]);
 
