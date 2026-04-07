@@ -49,6 +49,22 @@ export type ClientMessage = {
 } | {
     type: 'annotations';
     payload: AnnotationPayload;
+} | {
+    type: 'consent-plan-response';
+    planId: string;
+    approved: boolean;
+} | {
+    type: 'consent-trust-response';
+    trustId: string;
+    approved: boolean;
+} | {
+    type: 'mode-activate';
+    modeId: 'walkMeThrough' | 'workWithMe';
+} | {
+    type: 'mode-deactivate';
+} | {
+    type: 'cancel-pending-action';
+    actionId: string;
 };
 export interface SessionMeta {
     id: number;
@@ -158,4 +174,64 @@ export type ServerMessage = {
         currentStep: number;
         totalSteps: number;
     } | null;
+} | {
+    type: 'consent-plan-request';
+    planId: string;
+    description: string;
+    actions: Array<{
+        type: string;
+        description: string;
+    }>;
+    targetWindow?: string;
+} | {
+    type: 'consent-trust-request';
+    trustId: string;
+    targetTitle: string;
+    durationSec: number;
+    allowedActions: string[];
+} | {
+    type: 'consent-trust-active';
+    trustId: string;
+    expiresAt: number;
+} | {
+    type: 'consent-trust-expired';
+    trustId: string;
+} | {
+    type: 'task-state-change';
+    task: {
+        taskId: string;
+        name: string;
+        status: string;
+        paneId: string;
+        lastOutput?: string;
+    };
+} | {
+    type: 'workflow-recording-status';
+    recording: boolean;
+    workflowId?: string;
+    stepCount?: number;
+} | {
+    type: 'workflow-replay-progress';
+    workflowId: string;
+    step: number;
+    totalSteps: number;
+    status: string;
+    error?: string;
+} | {
+    type: 'mode-status';
+    active: boolean;
+    modeId?: string;
+    activatedAt?: number;
+} | {
+    type: 'mode-crash-recovery';
+    previousMode: string;
+    flagsRestored: boolean;
+} | {
+    type: 'action-announced';
+    actionId: string;
+    description: string;
+    delayMs: number;
+} | {
+    type: 'action-cancelled';
+    actionId: string;
 };

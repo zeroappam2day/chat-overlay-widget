@@ -48,6 +48,9 @@ import type { AgentTask } from './taskOrchestrator.js';
 import { ScreenshotVerifier } from './screenshotVerifier.js';
 import { searchElements, invokeElement, setElementValue, getElementPatterns } from './enhancedAccessibility.js';
 import { WorkflowRecorder } from './workflowRecorder.js';
+import { ModeManager } from './modeManager.js';
+import { ActionCoordinator } from './actionCoordinator.js';
+import { skillDiscoveryBridge } from './skillDiscoveryBridge.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -85,6 +88,11 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
   if (req.method === 'GET' && req.url === '/list-windows') {
+    if (!sidecarFlags.externalWindowCapture) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'External window capture is disabled. Enable the externalWindowCapture feature flag.' }));
+      return;
+    }
     try {
       const windows = listWindows();
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -108,6 +116,11 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     return;
   }
   if (req.method === 'POST' && req.url === '/capture/window') {
+    if (!sidecarFlags.externalWindowCapture) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'External window capture is disabled. Enable the externalWindowCapture feature flag.' }));
+      return;
+    }
     let body = '';
     req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
     req.on('end', () => {
@@ -228,6 +241,64 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/walkthrough/modify') {
+    if (!sidecarFlags.guidedWalkthrough) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'guidedWalkthrough flag is disabled' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const cleaned = body.charCodeAt(0) === 0xFEFF ? body.slice(1) : body;
+        const parsed = JSON.parse(cleaned) as { action?: string; steps?: unknown[]; step?: unknown };
+        const { action, steps, step } = parsed;
+        let result: unknown;
+
+        switch (action) {
+          case 'append_steps': {
+            if (!Array.isArray(steps)) throw new Error('steps array is required for append_steps');
+            result = walkthroughEngine.appendSteps(steps as any);
+            break;
+          }
+          case 'replace_current_step': {
+            if (!step || typeof step !== 'object') throw new Error('step object is required for replace_current_step');
+            result = walkthroughEngine.replaceCurrentStep(step as any);
+            // Broadcast updated step to UI
+            const stepResult = result as { stepId: string; title: string; instruction: string; totalSteps: number; currentStep: number };
+            broadcastWalkthroughStep(stepResult);
+            // Update watcher pattern for the replaced step
+            if (sidecarFlags.conditionalAdvance) {
+              updateWalkthroughWatcherPattern();
+            }
+            break;
+          }
+          case 'update_remaining_steps': {
+            if (!Array.isArray(steps)) throw new Error('steps array is required for update_remaining_steps');
+            result = walkthroughEngine.updateRemainingSteps(steps as any);
+            // Update watcher pattern since remaining steps changed
+            if (sidecarFlags.conditionalAdvance) {
+              updateWalkthroughWatcherPattern();
+            }
+            break;
+          }
+          default:
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `Unknown action: ${action}. Use append_steps, replace_current_step, or update_remaining_steps.` }));
+            return;
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
@@ -1039,6 +1110,59 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
     }
   }
 
+  // Action Coordinator — announce an intended action before executing
+  if (req.method === 'POST' && url.pathname === '/action/announce') {
+    if (!sidecarFlags.batchConsent) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Action coordination is disabled. Enable the batchConsent feature flag.' }));
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+    req.on('end', async () => {
+      try {
+        const parsed = JSON.parse(body) as { description: string; position?: { x: number; y: number } };
+        if (!parsed.description || typeof parsed.description !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'description is required' }));
+          return;
+        }
+        const result = await actionCoordinator.announce(parsed.description, parsed.position);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      }
+    });
+    return;
+  }
+
+  // Skill Discovery Bridge — Postgres full-text search (flag-gated)
+  if (req.method === 'GET' && url.pathname === '/skill-discovery') {
+    if (!sidecarFlags.skillDiscovery) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Skill discovery is disabled. Enable the skillDiscovery feature flag.' }));
+      return;
+    }
+    const query = url.searchParams.get('query') ?? '';
+    if (!query.trim()) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'query parameter is required' }));
+      return;
+    }
+    const windowTitle = url.searchParams.get('windowTitle') ?? undefined;
+    skillDiscoveryBridge.discoverSkills(query, windowTitle).then(skills => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(skills));
+    }).catch(err => {
+      console.error('[sidecar] skill-discovery error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
 }
@@ -1119,6 +1243,11 @@ const sidecarFlags: Record<string, boolean> = {
   screenshotVerification: false,
   enhancedAccessibility: false,
   workflowRecording: false,
+  guidedWalkthrough: false,
+  externalWindowCapture: false,
+  skillDiscovery: false,
+  multiPty: false,
+  consentGate: false,
 };
 
 function sendMsg(ws: WebSocket, msg: ServerMessage): void {
@@ -1126,6 +1255,82 @@ function sendMsg(ws: WebSocket, msg: ServerMessage): void {
     ws.send(JSON.stringify(msg));
   }
 }
+
+// Mode Manager — lifecycle, flag snapshot/restore, crash recovery
+const modeManager = new ModeManager({
+  sidecarFlags,
+  onFlagsChanged: (flags) => {
+    // Broadcast updated flags to all connected clients
+    for (const client of wss.clients) {
+      sendMsg(client, { type: 'flags-updated', flags } as any);
+    }
+    console.log(`[modeManager] flags broadcast: ${JSON.stringify(flags)}`);
+  },
+  onModeChanged: (state) => {
+    const msg = state
+      ? { type: 'mode-status' as const, active: true, modeId: state.modeId, activatedAt: state.activatedAt }
+      : { type: 'mode-status' as const, active: false };
+    for (const client of wss.clients) {
+      sendMsg(client, msg as any);
+    }
+
+    if (state && state.modeId === 'walkMeThrough') {
+      // Walk Me Through activated: enable walkthrough watcher on all active PTY sessions
+      // so conditional advance works immediately when mode starts
+      const pattern = walkthroughEngine.getCurrentAdvancePattern();
+      for (const session of activeSessions.values()) {
+        if (session instanceof BatchedPTYSession) {
+          session.walkthroughWatcherInstance.setPattern(pattern);
+        }
+      }
+      console.log(`[modeManager] walkMeThrough activated — walkthrough watcher enabled on ${activeSessions.size} session(s)`);
+    }
+
+    if (state && state.modeId === 'workWithMe') {
+      // Work With Me activated: enable action coordinator + walkthrough watcher
+      actionCoordinator.enabled = true;
+      // Enable walkthrough watcher on all active PTY sessions (same as walkMeThrough)
+      const pattern = walkthroughEngine.getCurrentAdvancePattern();
+      for (const session of activeSessions.values()) {
+        if (session instanceof BatchedPTYSession) {
+          session.walkthroughWatcherInstance.setPattern(pattern);
+        }
+      }
+      console.log(`[modeManager] workWithMe activated — actionCoordinator enabled, walkthrough watcher enabled on ${activeSessions.size} session(s)`);
+    }
+
+    if (!state) {
+      // Mode deactivated: clean up any active walkthrough
+      if (walkthroughEngine.getStatus().active) {
+        walkthroughEngine.stop();
+        // stop() already clears annotations via annotationState.apply({ action: 'clear-all' })
+        // and triggers onAnnotationsChanged which broadcasts to clients
+        updateWalkthroughWatcherPattern(); // clears watcher pattern (engine has no active walkthrough now)
+        console.log('[modeManager] mode deactivated — stopped active walkthrough and cleared annotations');
+      }
+      // Broadcast walkthrough-step null to clear the walkthrough panel in frontend
+      broadcastWalkthroughStep(null);
+
+      // Work With Me cleanup: disable action coordinator and cancel pending actions
+      actionCoordinator.enabled = false;
+      actionCoordinator.cancelAll();
+      // Revoke all batch consent grants so no stale trust windows remain
+      batchConsentMgr.revokeAll();
+      console.log('[modeManager] mode deactivated — actionCoordinator disabled, pending actions cancelled, batch consent revoked');
+    }
+  },
+});
+
+// Action Coordinator — announce-then-act protocol for Work With Me mode
+const actionCoordinator = new ActionCoordinator({
+  annotationState,
+  onBroadcast: (msg) => {
+    for (const client of wss.clients) {
+      sendMsg(client, msg);
+    }
+  },
+  defaultDelayMs: 2000,
+});
 
 function broadcastAgentEvent(event: AgentEvent): void {
   for (const client of wss.clients) {
@@ -1195,6 +1400,17 @@ wss.on('connection', (ws: WebSocket) => {
   const shellListMsg = { type: 'shell-list' as const, shells: shells.map(s => s.name) };
   console.log(`[sidecar] sending shell-list: ${JSON.stringify(shellListMsg)}`);
   sendMsg(ws, shellListMsg);
+
+  // Send crash recovery info to first connecting client (if sidecar recovered from a crash)
+  const crashInfo = modeManager.getCrashRecoveryInfo();
+  if (crashInfo) {
+    sendMsg(ws, {
+      type: 'mode-crash-recovery' as const,
+      previousMode: crashInfo.previousMode,
+      flagsRestored: crashInfo.flagsRestored,
+    } as any);
+    console.log(`[sidecar] sent crash recovery info: previousMode=${crashInfo.previousMode}`);
+  }
 
   ws.on('message', (raw: Buffer) => {
     let msg: ClientMessage;
@@ -1451,6 +1667,26 @@ wss.on('connection', (ws: WebSocket) => {
         cancelAskCode(cancelMsg.requestId);
         break;
       }
+      case 'mode-activate': {
+        const { modeId } = msg as { type: 'mode-activate'; modeId: string };
+        const result = modeManager.activate(modeId);
+        if (!result.success) {
+          sendMsg(ws, { type: 'error', message: result.error! });
+        }
+        break;
+      }
+      case 'mode-deactivate': {
+        const result = modeManager.deactivate();
+        if (!result.success) {
+          sendMsg(ws, { type: 'error', message: result.error! });
+        }
+        break;
+      }
+      case 'cancel-pending-action': {
+        const { actionId } = msg as { type: 'cancel-pending-action'; actionId: string };
+        actionCoordinator.cancel(actionId);
+        break;
+      }
     }
   });
 
@@ -1465,6 +1701,10 @@ wss.on('connection', (ws: WebSocket) => {
     planWatchers.delete(ws);
     // EAC-2: Revoke all batch consent grants on disconnect
     batchConsentMgr.revokeAll();
+    // Mode cleanup on disconnect: deactivate if mode was active
+    if (modeManager.getStatus().active) {
+      modeManager.deactivate();
+    }
   });
 });
 
@@ -1475,6 +1715,7 @@ process.on('exit', () => {
   for (const session of activeSessions.values()) {
     session.destroy();
   }
+  skillDiscoveryBridge.destroy().catch(() => {});
   if (portFilePath) {
     deleteDiscoveryFile(portFilePath);
     portFilePath = null;

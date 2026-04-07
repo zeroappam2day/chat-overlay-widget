@@ -443,7 +443,80 @@ server.tool(
   }
 );
 
-// ─── Tool 8: write_terminal (Agent Runtime Phase 1) ──────────────────────────
+// ─── Tool 8: modify_walkthrough ──────────────────────────────────────────────
+
+server.tool(
+  'modify_walkthrough',
+  `Dynamically modify an active walkthrough — append new steps, replace the current step, or update all remaining steps.
+Use this for adaptive real-time guidance when screen observation reveals the user needs different instructions.
+
+Actions:
+- append_steps: Add new steps to the end of the walkthrough. Requires 'steps' array.
+- replace_current_step: Replace the current step with new content and re-render annotations. Requires 'step' object.
+- update_remaining_steps: Replace all steps after the current one. Requires 'steps' array.
+
+Max 50 steps total enforced across all operations.`,
+  {
+    action: z.enum(['append_steps', 'replace_current_step', 'update_remaining_steps']).describe('The modification action to perform'),
+    steps: z.array(z.object({
+      stepId: z.string().min(1).max(200).describe('Unique step identifier'),
+      title: z.string().max(200).describe('Step title'),
+      instruction: z.string().max(1000).describe('What the user should do'),
+      annotations: z.array(z.object({
+        id: z.string().min(1).max(200),
+        type: z.enum(['box', 'arrow', 'text', 'highlight']),
+        x: z.number().int().min(0).max(10000),
+        y: z.number().int().min(0).max(10000),
+        width: z.number().int().min(0).max(10000).optional(),
+        height: z.number().int().min(0).max(10000).optional(),
+        label: z.string().max(500).optional(),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      })).max(50).describe('Visual annotations for this step'),
+      advanceWhen: z.object({
+        type: z.literal('terminal-match'),
+        pattern: z.string().min(1).max(500).describe('Regex pattern to match against terminal output'),
+      }).optional().describe('Auto-advance condition'),
+    })).min(1).max(50).optional().describe('Steps array (required for append_steps and update_remaining_steps)'),
+    step: z.object({
+      stepId: z.string().min(1).max(200).describe('Unique step identifier'),
+      title: z.string().max(200).describe('Step title'),
+      instruction: z.string().max(1000).describe('What the user should do'),
+      annotations: z.array(z.object({
+        id: z.string().min(1).max(200),
+        type: z.enum(['box', 'arrow', 'text', 'highlight']),
+        x: z.number().int().min(0).max(10000),
+        y: z.number().int().min(0).max(10000),
+        width: z.number().int().min(0).max(10000).optional(),
+        height: z.number().int().min(0).max(10000).optional(),
+        label: z.string().max(500).optional(),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      })).max(50).describe('Visual annotations for this step'),
+      advanceWhen: z.object({
+        type: z.literal('terminal-match'),
+        pattern: z.string().min(1).max(500).describe('Regex pattern to match against terminal output'),
+      }).optional().describe('Auto-advance condition'),
+    }).optional().describe('Single step (required for replace_current_step)'),
+  },
+  async ({ action, steps, step }) => {
+    try {
+      const body = JSON.stringify({ action, steps, step });
+      const discovery = readDiscovery();
+      const resp = await sidecarPost('/walkthrough/modify', discovery.token, discovery.port, body);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Walkthrough modify is disabled. Enable the guidedWalkthrough feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString());
+      return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 9: write_terminal (Agent Runtime Phase 1) ──────────────────────────
 
 server.tool(
   'write_terminal',
@@ -1003,6 +1076,163 @@ Gated behind the workflowRecording feature flag.`,
       }
       const parsed = JSON.parse(resp.body.toString());
       return { content: [{ type: 'text' as const, text: JSON.stringify(parsed, null, 2) }] };
+    } catch (err) {
+      return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 20: list_external_windows ──────────────────────────────────────────
+
+server.tool(
+  'list_external_windows',
+  'List all visible windows on the desktop with their titles, process names, and handles. Use this to discover what applications the user has open before capturing a specific window. Gated behind the externalWindowCapture feature flag.',
+  {},
+  async () => {
+    try {
+      const { port, token } = readDiscovery();
+      const resp = await sidecarGet('/list-windows', token, port);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'External window capture is disabled. Enable the externalWindowCapture feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const windows = JSON.parse(resp.body.toString('utf-8')) as Array<{ title: string; processName: string; hwnd: number; pid: number }>;
+      const formatted = windows.map((w, i) => `${i + 1}. [${w.processName}] ${w.title} (hwnd: ${w.hwnd})`).join('\n');
+      return { content: [{ type: 'text' as const, text: `Found ${windows.length} windows:\n${formatted}` }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 21: capture_external_window ────────────────────────────────────────
+
+server.tool(
+  'capture_external_window',
+  'Capture a screenshot of an external application window by title. Returns an optimized image suitable for vision analysis. Use list_external_windows first to discover available windows. Gated behind the externalWindowCapture feature flag.',
+  {
+    title: z.string().min(1).max(500).describe('Window title or substring to match — case-insensitive partial match'),
+  },
+  async ({ title }) => {
+    try {
+      const { port, token } = readDiscovery();
+      const resp = await sidecarPost('/capture/window', token, port, JSON.stringify({ title }));
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'External window capture is disabled. Enable the externalWindowCapture feature flag.' }], isError: true };
+      }
+      if (resp.status === 404) {
+        const err = JSON.parse(resp.body.toString('utf-8'));
+        return { content: [{ type: 'text' as const, text: `Window not found: ${err.error}` }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString('utf-8')) as { path: string };
+      // Read PNG from disk and optimize for vision (same pattern as capture_screenshot)
+      const pngBuffer = fs.readFileSync(result.path);
+      try { fs.unlinkSync(result.path); } catch {} // cleanup temp file
+      const { buffer, width, height } = await optimizeForVision(pngBuffer);
+      const base64 = buffer.toString('base64');
+      const sizeKB = Math.round(buffer.length / 1024);
+      const tokens = Math.ceil((width * height) / 750);
+      return {
+        content: [
+          { type: 'image' as const, data: base64, mimeType: 'image/webp' },
+          { type: 'text' as const, text: `${width}x${height} webp (${sizeKB}KB, ~${tokens} tokens) — captured: ${title}` },
+        ],
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 22: discover_skills (Skill Discovery Bridge) ──────────────────────
+
+server.tool(
+  'discover_skills',
+  `Discover available skills from the Postgres skill index based on context.
+Use this in Work With Me mode to find relevant skills for the user's active application or task.
+Returns ranked skill matches with descriptions, use cases, taxonomy, and instruction summaries.
+Gated behind the skillDiscovery feature flag.`,
+  {
+    query: z.string().min(1).max(500).describe("Natural language description of what you need — e.g., Google Sheets automation, email management, data processing"),
+    windowTitle: z.string().max(200).optional().describe("Title of the user's active window for context-aware matching"),
+  },
+  async ({ query, windowTitle }) => {
+    try {
+      const { port, token } = readDiscovery();
+      const params = new URLSearchParams({ query });
+      if (windowTitle) params.set('windowTitle', windowTitle);
+      const resp = await sidecarGet(`/skill-discovery?${params}`, token, port);
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Skill discovery is disabled. Enable the skillDiscovery feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        const errText = resp.body.toString('utf-8');
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${errText}` }], isError: true };
+      }
+      const skills = JSON.parse(resp.body.toString('utf-8')) as Array<{
+        skillName: string;
+        description: string;
+        usecases: string[];
+        taxonomy: { l1: string; l2: string; l3: string };
+        score: number;
+        instructionsSummary: string;
+      }>;
+      if (skills.length === 0) {
+        return { content: [{ type: 'text' as const, text: 'No matching skills found.' }] };
+      }
+      const formatted = skills.map((s, i) =>
+        `${i + 1}. **${s.skillName}** (${s.taxonomy.l1}/${s.taxonomy.l2}/${s.taxonomy.l3})\n   ${s.description}\n   Use cases: ${s.usecases.slice(0, 3).join(', ')}\n   Instructions: ${s.instructionsSummary}...`
+      ).join('\n\n');
+      return { content: [{ type: 'text' as const, text: `Found ${skills.length} matching skills:\n\n${formatted}` }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: msg }], isError: true };
+    }
+  }
+);
+
+// ─── Tool 23: announce_action (Action Coordinator) ──────────────────────────
+
+server.tool(
+  'announce_action',
+  `Announce an intended action to the user before executing it. Shows a highlighted orange annotation with the action description. The user has the configured delay (default 2 seconds) to cancel via the UI. Use this in Work With Me mode before performing any action that modifies the user's screen or application state.
+
+Returns { cancelled: boolean, actionId: string }. If cancelled is true, do NOT proceed with the action.
+
+Gated behind the batchConsent feature flag.`,
+  {
+    description: z.string().min(1).max(500).describe('Human-readable description of the action you are about to take'),
+    x: z.number().min(0).max(10000).optional().describe('X position for announcement overlay'),
+    y: z.number().min(0).max(10000).optional().describe('Y position for announcement overlay'),
+  },
+  async ({ description, x, y }) => {
+    try {
+      const { port, token } = readDiscovery();
+      const bodyObj: { description: string; position?: { x: number; y: number } } = { description };
+      if (x !== undefined) {
+        bodyObj.position = { x, y: y ?? 100 };
+      }
+      const resp = await sidecarPost('/action/announce', token, port, JSON.stringify(bodyObj));
+      if (resp.status === 403) {
+        return { content: [{ type: 'text' as const, text: 'Action coordination is disabled. Enable the batchConsent feature flag.' }], isError: true };
+      }
+      if (resp.status !== 200) {
+        return { content: [{ type: 'text' as const, text: `HTTP ${resp.status}: ${resp.body.toString()}` }], isError: true };
+      }
+      const result = JSON.parse(resp.body.toString()) as { cancelled: boolean; actionId: string };
+      if (result.cancelled) {
+        return { content: [{ type: 'text' as const, text: `Action CANCELLED by user (actionId: ${result.actionId}). Do NOT proceed with: ${description}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `Action approved (actionId: ${result.actionId}). Proceed with: ${description}` }] };
     } catch (err) {
       return { content: [{ type: 'text' as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
     }
