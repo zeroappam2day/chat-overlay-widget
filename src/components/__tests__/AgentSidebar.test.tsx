@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  useAgentEventStore.setState({ events: [], collapsed: false });
+  useAgentEventStore.setState({ events: [], collapsed: false, activeTab: 'agent' });
 });
 
 function makeEvent(overrides: Partial<AgentEvent> = {}): AgentEvent {
@@ -56,33 +56,37 @@ describe('AgentSidebar: event rendering', () => {
 // Test 3: Status dots
 // ============================================================
 describe('AgentSidebar: status dots', () => {
-  it('renders green status dot (bg-green-500) for event with status="complete"', () => {
+  it('renders green status dot for event with status="complete"', () => {
     useAgentEventStore.setState({
       events: [makeEvent({ status: 'complete' })],
       collapsed: false,
+      activeTab: 'agent',
     });
-    const { container } = render(<AgentSidebar />);
-    const dot = container.querySelector('.bg-green-500');
+    render(<AgentSidebar />);
+    // Portal renders into document.body; Tailwind arbitrary classes need unescaped selector
+    const dot = document.body.querySelector('[class*="bg-[#3fb950]"]');
     expect(dot).toBeInTheDocument();
   });
 
-  it('renders yellow status dot (bg-yellow-500) for event with status="running"', () => {
+  it('renders yellow status dot for event with status="running"', () => {
     useAgentEventStore.setState({
       events: [makeEvent({ status: 'running' })],
       collapsed: false,
+      activeTab: 'agent',
     });
-    const { container } = render(<AgentSidebar />);
-    const dot = container.querySelector('.bg-yellow-500');
+    render(<AgentSidebar />);
+    const dot = document.body.querySelector('[class*="bg-[#d29922]"]');
     expect(dot).toBeInTheDocument();
   });
 
-  it('renders gray status dot (bg-gray-500) for event with no status', () => {
+  it('renders gray status dot for event with no status', () => {
     useAgentEventStore.setState({
       events: [makeEvent({ status: undefined })],
       collapsed: false,
+      activeTab: 'agent',
     });
-    const { container } = render(<AgentSidebar />);
-    const dot = container.querySelector('.bg-gray-500');
+    render(<AgentSidebar />);
+    const dot = document.body.querySelector('[class*="bg-[#484f58]"]');
     expect(dot).toBeInTheDocument();
   });
 });
@@ -95,6 +99,7 @@ describe('AgentSidebar: collapse and expand', () => {
     useAgentEventStore.setState({
       events: [makeEvent({ toolName: 'MyTool' })],
       collapsed: false,
+      activeTab: 'agent',
     });
     render(<AgentSidebar />);
 
@@ -102,8 +107,8 @@ describe('AgentSidebar: collapse and expand', () => {
     const collapseBtn = screen.getByRole('button', { name: /collapse agent sidebar/i });
     fireEvent.click(collapseBtn);
 
-    // Expand (sidebar now shows the collapsed strip with expand button)
-    const expandBtn = screen.getByRole('button', { name: /expand agent sidebar/i });
+    // Expand by clicking the agent activity tab icon
+    const expandBtn = screen.getByRole('button', { name: /open agent activity tab/i });
     fireEvent.click(expandBtn);
 
     // Events should still be visible
@@ -114,6 +119,7 @@ describe('AgentSidebar: collapse and expand', () => {
     useAgentEventStore.setState({
       events: [makeEvent({ toolName: 'HiddenTool' })],
       collapsed: false,
+      activeTab: 'agent',
     });
     render(<AgentSidebar />);
 
