@@ -43,3 +43,7 @@ scripts/tauri-dev.log.prev
 
 # MCP config (machine-specific absolute paths)
 .mcp.json
+00_archive/
+.aidesigner/*
+!.aidesigner/.gitkeep
+.gstack/

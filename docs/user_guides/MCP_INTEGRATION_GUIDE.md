@@ -147,7 +147,7 @@ No network ports need to be opened — the server communicates with the sidecar 
 </configuration>
 
 <tools>
-total-count: 20
+total-count: 22
 
 <tool name="read_terminal_output">
 purpose: read the current terminal buffer from the running Chat Overlay Widget
@@ -408,6 +408,59 @@ parameters:
 use-when: you want to record a sequence of actions for later replay
 flags: workflowRecording
 <note>max 100 workflows, 200 steps each; stored in %APPDATA%/chat-overlay-widget/workflows/</note>
+</tool>
+
+<tool name="modify_walkthrough">
+purpose: dynamically modify an active walkthrough — append new steps, replace the current step, or update all remaining steps
+returns: text — JSON with updated step counts and current step info
+parameters:
+  - action: enum, required, one of: append_steps | replace_current_step | update_remaining_steps
+  - steps: array, required for append_steps and update_remaining_steps — same step schema as start_guided_walkthrough
+  - step: object, required for replace_current_step — single step with stepId, title, instruction, annotations, advanceWhen
+use-when: you need to adapt a walkthrough in real-time based on screen observation or user progress
+flags: guidedWalkthrough
+<note>max 50 steps total across all modifications; replaceCurrentStep re-applies annotations immediately</note>
+</tool>
+
+<tool name="list_external_windows">
+purpose: list all visible windows on the desktop with titles, process names, and handles
+returns: text — formatted numbered list of windows
+parameters: none
+use-when: you need to discover what applications the user has open before capturing a specific window
+flags: externalWindowCapture
+</tool>
+
+<tool name="capture_external_window">
+purpose: capture a screenshot of an external application window by title — returns a vision-optimized WebP image
+returns: image (base64 WebP) + text metadata (dimensions, size, token estimate)
+parameters:
+  - title: string, required, 1-500 chars, window title or substring (case-insensitive partial match)
+use-when: you need to see the visual state of an external application window
+flags: externalWindowCapture
+<note>use list_external_windows first to discover available windows; image optimized for LLM vision (max 1568px long edge, WebP quality 85)</note>
+</tool>
+
+<tool name="discover_skills">
+purpose: discover available skills from the Postgres skill index based on the current context
+returns: text — ranked list of matching skills with taxonomy, use cases, and instruction summaries
+parameters:
+  - query: string, required, 1-500 chars, natural language description of what you need
+  - windowTitle: string, optional, max 200 chars, title of the user's active window for context-aware matching
+use-when: you need to find relevant skills for the user's active application or task (used in Work With Me mode)
+flags: skillDiscovery
+<note>requires Postgres running on localhost:5432 with global_db database; uses full-text search on tsv column</note>
+</tool>
+
+<tool name="announce_action">
+purpose: announce an intended action to the user before executing it — shows a highlighted annotation with a configurable delay
+returns: text — { cancelled: boolean, actionId: string }
+parameters:
+  - description: string, required, 1-500 chars, human-readable description of the action
+  - x: number, optional, 0-10000, X position for announcement overlay
+  - y: number, optional, 0-10000, Y position for announcement overlay
+use-when: you are in Work With Me mode and about to perform an action that modifies the user's screen
+flags: batchConsent
+<note>default 2-second delay; user can cancel via the cancel-pending-action WebSocket message; orange highlight annotation clears after delay</note>
 </tool>
 </tools>
 
