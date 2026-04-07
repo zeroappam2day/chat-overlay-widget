@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: PM Voice Chat
 status: executing
-stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-04-07T16:48:30.100Z"
+stopped_at: "Checkpoint: Task 3 human-verify in 31-02-PLAN.md"
+last_updated: "2026-04-07T16:54:40.442Z"
 last_activity: 2026-04-07
 progress:
   total_phases: 8
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -56,6 +56,8 @@ v1.6 decisions still relevant:
 - [Phase 28]: useAgentEventStore.getState() for non-React WebSocket callbacks (Zustand pattern)
 - [Phase 31-01]: WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS is already authenticated at connection time
 - [Phase 31-01]: Separate pmChat.ts module from server.ts: keeps routing concerns separated, matches askCodeHandler.js pattern
+- [Phase 31]: wsSend stored in Zustand pmChatStore: avoids prop-drilling through portal-rendered AgentSidebar
+- [Phase 31]: setActiveTab sets collapsed:false: tab icon click expands sidebar in one action
 
 ### Todos
 
@@ -69,6 +71,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T16:48:30.095Z
-Stopped at: Completed 31-01-PLAN.md
+Last session: 2026-04-07T16:54:34.802Z
+Stopped at: Checkpoint: Task 3 human-verify in 31-02-PLAN.md
 Next action: `/gsd:plan-phase 30`
