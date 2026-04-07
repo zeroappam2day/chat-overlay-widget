@@ -33,6 +33,10 @@ export interface FeatureFlags {
   screenshotVerification: boolean; // EAC-7 — Screenshot Verification
   enhancedAccessibility: boolean; // EAC-8 — Enhanced Accessibility
   workflowRecording: boolean;    // EAC-9 — Workflow Recording
+  externalWindowCapture: boolean; // External window capture MCP tools
+  skillDiscovery: boolean;       // Skill discovery bridge
+  multiPty: boolean;             // Multi-PTY pane support
+  consentGate: boolean;          // Consent gate for input simulation
 }
 
 const STORAGE_KEY = 'chat-overlay-feature-flags';
@@ -79,11 +83,19 @@ const defaults: FeatureFlags = {
   screenshotVerification: false, // OFF by default — EAC-7
   enhancedAccessibility: false, // OFF by default — EAC-8
   workflowRecording: false,  // OFF by default — EAC-9
+  externalWindowCapture: false, // OFF by default
+  skillDiscovery: false,       // OFF by default
+  multiPty: false,             // OFF by default
+  consentGate: false,          // OFF by default
 };
+
+const SNAPSHOT_KEY = 'chat-overlay-flag-snapshot';
 
 interface FeatureFlagStore extends FeatureFlags {
   setFlag: (key: keyof FeatureFlags, value: boolean) => void;
   resetAll: () => void;
+  saveSnapshot: () => void;
+  restoreSnapshot: () => void;
 }
 
 export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
@@ -126,6 +138,10 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
         screenshotVerification: next.screenshotVerification,
         enhancedAccessibility: next.enhancedAccessibility,
         workflowRecording: next.workflowRecording,
+        externalWindowCapture: next.externalWindowCapture,
+        skillDiscovery: next.skillDiscovery,
+        multiPty: next.multiPty,
+        consentGate: next.consentGate,
       }));
       return { [key]: value };
     }),
@@ -134,5 +150,30 @@ export const useFeatureFlagStore = create<FeatureFlagStore>((set) => ({
     set(() => {
       localStorage.removeItem(STORAGE_KEY);
       return { ...defaults };
+    }),
+
+  saveSnapshot: () => {
+    const state = useFeatureFlagStore.getState();
+    const flagKeys = Object.keys(defaults) as Array<keyof FeatureFlags>;
+    const snapshot: Record<string, boolean> = {};
+    for (const key of flagKeys) {
+      snapshot[key] = state[key];
+    }
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  },
+
+  restoreSnapshot: () =>
+    set(() => {
+      try {
+        const raw = localStorage.getItem(SNAPSHOT_KEY);
+        if (!raw) return {};
+        const snapshot = JSON.parse(raw) as Partial<FeatureFlags>;
+        localStorage.removeItem(SNAPSHOT_KEY);
+        // Persist restored flags
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...defaults, ...snapshot }));
+        return snapshot;
+      } catch {
+        return {};
+      }
     }),
 }));

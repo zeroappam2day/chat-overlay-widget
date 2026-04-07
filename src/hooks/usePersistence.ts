@@ -53,6 +53,10 @@ function gatherState(windowState: WindowState | null): PersistedState {
       screenshotVerification: flags.screenshotVerification,
       enhancedAccessibility: flags.enhancedAccessibility,
       workflowRecording: flags.workflowRecording,
+      externalWindowCapture: flags.externalWindowCapture,
+      skillDiscovery: flags.skillDiscovery,
+      multiPty: flags.multiPty,
+      consentGate: flags.consentGate,
     },
     windowState,
   };

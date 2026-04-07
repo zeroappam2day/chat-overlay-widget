@@ -7,6 +7,7 @@ import type { LayoutNode, SplitNode } from '../store/paneStore';
 import { TerminalPane } from './TerminalPane';
 import { SafePane } from './SafePane';
 import { AppHeader } from './AppHeader';
+import { ModeStatusBar } from './ModePanel';
 import { AgentSidebar } from './AgentSidebar';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { usePaneDimming } from '../hooks/usePaneDimming';
@@ -123,8 +124,8 @@ function renderLayoutPanels(
             <Separator
               className={
                 orientation === 'horizontal'
-                  ? 'w-1 bg-[#404040] hover:bg-[#007acc] transition-colors cursor-col-resize'
-                  : 'h-1 bg-[#404040] hover:bg-[#007acc] transition-colors cursor-row-resize'
+                  ? 'w-px bg-[#30363d] hover:bg-[#58a6ff] hover:shadow-[0_0_10px_rgba(88,166,255,0.5)] transition-all cursor-col-resize resizer-glow'
+                  : 'h-px bg-[#30363d] hover:bg-[#58a6ff] hover:shadow-[0_0_10px_rgba(88,166,255,0.5)] transition-all cursor-row-resize resizer-glow'
               }
             />
           )}
@@ -189,8 +190,9 @@ export function PaneContainer() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-[#1e1e1e]" ref={outerRef}>
+    <div className="flex flex-col h-screen bg-[#0d1117]" ref={outerRef}>
       <AppHeader />
+      <ModeStatusBar />
       <div className="flex flex-row flex-1 min-h-0">
         <AgentSidebar />
         <div className="relative flex-1 min-h-0" ref={layoutContainerRef}>

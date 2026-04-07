@@ -23,6 +23,7 @@ import { EnhancedDiffPanel as DiffPanel } from './EnhancedDiffPanel';
 import { BookmarkBar } from './BookmarkBar';
 import { PromptHistoryPanel } from './PromptHistoryPanel';
 import { usePromptHistoryStore } from '../store/promptHistoryStore';
+import { useModeStore } from '../store/modeStore';
 import { ExitNotifier } from '../lib/exitNotifier';
 import { GitHubUrlBadge } from './GitHubUrlBadge';
 
@@ -182,6 +183,12 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         document.dispatchEvent(new CustomEvent('ask-code-response', { detail: msg }));
         break;
       }
+      case 'mode-status':
+        useModeStore.getState().handleModeStatus(msg);
+        break;
+      case 'mode-crash-recovery':
+        useModeStore.getState().handleCrashRecovery();
+        break;
       default:
         // Delegate history-sessions, history-chunk, history-end, session-start
         handleHistoryMessageRef.current(msg);
@@ -194,6 +201,16 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
   // Sync feature flags to sidecar (Phase 1: output batching)
   useFlagSync(sendMessage, state === 'connected');
+
+  // Wire sendMessage to modeStore so ModePanel can send WebSocket messages
+  useEffect(() => {
+    if (state === 'connected') {
+      useModeStore.getState().setSendMessage(sendMessage);
+    }
+    return () => {
+      useModeStore.getState().setSendMessage(null);
+    };
+  }, [state, sendMessage]);
 
   const {
     sessions,
@@ -412,7 +429,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
 
   return (
     <div
-      className={`flex flex-col h-full bg-[#1e1e1e] ${isActive ? 'border-l-2 border-l-[#007acc]' : 'border-l-2 border-l-transparent'}`}
+      className={`flex flex-col h-full bg-[#0d1117] ${isActive ? 'border-l-2 border-l-[#58a6ff]' : 'border-l-2 border-l-transparent'}`}
       onClick={() => setActivePane(paneId)}
     >
       {/* Collapsible history sidebar (D-05) */}
@@ -475,9 +492,9 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
         <div ref={containerRef} className="h-full" />
       </div>
 
-      {/* Input bar drag handle — INBAR-02 (per D-09) */}
+      {/* Input bar drag handle */}
       <div
-        className="shrink-0 h-1 bg-[#404040] hover:bg-[#007acc] transition-colors cursor-row-resize"
+        className="shrink-0 h-px bg-[#30363d] hover:bg-[#58a6ff] hover:shadow-[0_0_8px_rgba(88,166,255,0.5)] transition-all cursor-row-resize"
         onMouseDown={handleDragStart}
       />
 

@@ -375,30 +375,30 @@ function EnhancedDiffPanelInner() {
         display: 'flex',
         flexDirection: 'column',
       }}
-      className="bg-[#1e1e1e] border-l border-[#404040] shadow-2xl"
+      className="glass-panel border-l border-[#30363d]/80 shadow-[-20px_0_40px_-10px_rgba(0,0,0,0.6)] animate-slide-in-right"
       data-diff-panel=""
       onMouseUp={handleMouseUp}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#404040] shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[#30363d]/50 bg-white/[0.02] backdrop-blur-md shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="#007acc" className="shrink-0">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="#58a6ff" className="shrink-0">
             <path d="M5.5 3.5h5v1h-5zM5.5 6h5v1h-5zM5.5 8.5h5v1h-5zM5.5 11h3v1h-3z" />
             <path d="M3 1h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm0 1v12h10V2H3z" />
           </svg>
-          <span className="text-xs text-gray-300 font-medium">
+          <span className="text-xs text-[#e6edf3] font-medium">
             Diff — {diffs.length} file{diffs.length !== 1 ? 's' : ''}
           </span>
-          <span className="text-[10px] text-gray-500">
-            <span className="text-green-400">+{totalAdd}</span>{' '}
-            <span className="text-red-400">-{totalRemove}</span>
+          <span className="text-[10px] text-[#8b949e]">
+            <span className="text-[#3fb950]">+{totalAdd}</span>{' '}
+            <span className="text-[#f85149]">-{totalRemove}</span>
           </span>
         </div>
         <div className="flex items-center gap-1 ml-2 shrink-0">
           {/* Search toggle button */}
           <button
             onClick={() => setSearchBarOpen((v) => !v)}
-            className="text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-[#8b949e] hover:text-white transition-colors"
             title="Search in diff (Ctrl+F)"
             aria-label="Toggle search"
           >
@@ -409,7 +409,7 @@ function EnhancedDiffPanelInner() {
           {/* Close button */}
           <button
             onClick={toggleVisible}
-            className="text-gray-600 hover:text-gray-300 transition-colors"
+            className="text-[#8b949e] hover:text-[#f85149] hover:bg-[#f85149]/10 rounded transition-all"
             title="Close diff panel"
             aria-label="Close diff panel"
           >
@@ -435,16 +435,16 @@ function EnhancedDiffPanelInner() {
 
       {/* Ask About Code: floating button when text selected */}
       {askAboutCode && askSelection && !askRequestId && (
-        <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-[#252540] border-b border-[#404040]">
-          <span className="text-[10px] text-gray-500 truncate flex-1">
+        <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-[#58a6ff]/5 border-b border-[#30363d]/50">
+          <span className="text-[10px] text-[#8b949e] truncate flex-1">
             Selected {askSelection.startLine === askSelection.endLine
               ? `line ${askSelection.startLine}`
               : `lines ${askSelection.startLine}-${askSelection.endLine}`
-            } in <span className="text-blue-400 font-mono">{askSelection.filePath.split('/').pop()}</span>
+            } in <span className="text-[#58a6ff] font-mono">{askSelection.filePath.split('/').pop()}</span>
           </span>
           <button
             onClick={handleAskStart}
-            className="px-2 py-0.5 text-[10px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded transition-colors"
+            className="px-2 py-0.5 text-[10px] bg-[#58a6ff]/20 hover:bg-[#58a6ff]/30 text-[#58a6ff] rounded border border-[#58a6ff]/30 transition-colors"
           >
             Ask Claude
           </button>
