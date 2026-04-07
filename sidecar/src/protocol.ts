@@ -22,7 +22,10 @@ export type ClientMessage =
   | { type: 'consent-trust-response'; trustId: string; approved: boolean }
   | { type: 'mode-activate'; modeId: 'walkMeThrough' | 'workWithMe' }
   | { type: 'mode-deactivate' }
-  | { type: 'cancel-pending-action'; actionId: string };
+  | { type: 'cancel-pending-action'; actionId: string }
+  | { type: 'pm-chat'; requestId: string; message: string; model: string; temperature: number; systemPrompt: string }
+  | { type: 'pm-chat-cancel'; requestId: string }
+  | { type: 'pm-chat-health-check' };
 
 export interface SessionMeta {
   id: number;
@@ -78,4 +81,8 @@ export type ServerMessage =
   | { type: 'mode-status'; active: boolean; modeId?: string; activatedAt?: number }
   | { type: 'mode-crash-recovery'; previousMode: string; flagsRestored: boolean }
   | { type: 'action-announced'; actionId: string; description: string; delayMs: number }
-  | { type: 'action-cancelled'; actionId: string };
+  | { type: 'action-cancelled'; actionId: string }
+  | { type: 'pm-chat-token'; requestId: string; token: string }
+  | { type: 'pm-chat-done'; requestId: string }
+  | { type: 'pm-chat-error'; requestId: string; error: string }
+  | { type: 'pm-chat-health'; ok: boolean; error?: string };
