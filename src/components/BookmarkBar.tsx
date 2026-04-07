@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useBookmarkStore, type Bookmark } from '../store/bookmarkStore';
 import { useFeatureFlagStore } from '../store/featureFlagStore';
 import { EditableText } from './EditableText';
+import { Tooltip } from './Tooltip';
 
 interface BookmarkBarProps {
   onSendCommand: (command: string) => void;
@@ -18,7 +19,6 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const contextRef = useRef<HTMLDivElement>(null);
 
-  // Close context menu on outside click
   useEffect(() => {
     if (!contextMenu) return;
     const handler = (e: MouseEvent) => {
@@ -32,7 +32,6 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
 
   const handleClick = useCallback(
     (bookmark: Bookmark) => {
-      // Send command + carriage return to PTY
       onSendCommand(bookmark.command + '\r');
     },
     [onSendCommand]
@@ -52,13 +51,13 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
   if (!enabled) return null;
 
   return (
-    <div className="shrink-0 h-8 px-3 bg-[#252525] border-t border-[#404040] flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
+    <div className="shrink-0 h-8 px-3 bg-[#0d1117] border-t border-[#30363d]/50 flex items-center gap-1.5 overflow-x-auto">
       {bookmarks.map((b) => (
         <div
           key={b.id}
           onClick={() => handleClick(b)}
           onContextMenu={(e) => handleContextMenu(e, b.id)}
-          className="shrink-0 px-2.5 py-0.5 text-[11px] rounded-full bg-[#333] text-gray-300 hover:bg-[#444] hover:text-white transition-colors border border-[#555] whitespace-nowrap max-w-[160px] truncate cursor-pointer"
+          className="shrink-0 px-2.5 py-0.5 text-[11px] rounded-full glass-panel text-[#e6edf3]/80 hover:text-white border border-[#30363d] hover:border-[#58a6ff]/40 hover:-translate-y-0.5 hover:shadow-[0_2px_12px_rgba(88,166,255,0.15)] transition-all whitespace-nowrap max-w-[160px] truncate cursor-pointer font-mono"
           title={b.command}
         >
           <EditableText
@@ -69,28 +68,26 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
         </div>
       ))}
 
-      {/* Add bookmark button */}
-      <button
-        onClick={handleAdd}
-        className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-300 hover:bg-[#333] transition-colors"
-        title={currentInput.trim() ? `Bookmark: ${currentInput.trim().slice(0, 40)}` : 'Type a command first, then click to bookmark'}
-        disabled={!currentInput.trim()}
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-          <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-        </svg>
-      </button>
+      <Tooltip text={currentInput.trim() ? `Bookmark: ${currentInput.trim().slice(0, 40)}` : 'Type a command first'}>
+        <button
+          onClick={handleAdd}
+          className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-[#8b949e] hover:text-white border border-dashed border-[#30363d] hover:border-[#8b949e] transition-all"
+          disabled={!currentInput.trim()}
+        >
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          </svg>
+        </button>
+      </Tooltip>
 
       {/* Context menu */}
       {contextMenu && (
         <div
           ref={contextRef}
-          className="fixed bg-[#2d2d2d] border border-[#555] rounded shadow-lg z-[9999] py-1"
+          className="fixed glass-panel border border-[#30363d] rounded-lg shadow-xl z-[9999] py-1 animate-scale-in"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          <div
-            className="w-full text-left px-3 py-1 text-xs text-gray-500"
-          >
+          <div className="w-full text-left px-3 py-1 text-[11px] text-[#8b949e]">
             Double-click to rename
           </div>
           <button
@@ -98,7 +95,7 @@ export function BookmarkBar({ onSendCommand, currentInput }: BookmarkBarProps) {
               removeBookmark(contextMenu.id);
               setContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1 text-xs text-red-400 hover:bg-[#444]"
+            className="w-full text-left px-3 py-1 text-[11px] text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
           >
             Delete
           </button>

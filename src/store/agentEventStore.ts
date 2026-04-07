@@ -10,7 +10,7 @@ interface AgentEventStore {
 
 export const useAgentEventStore = create<AgentEventStore>((set) => ({
   events: [],
-  collapsed: false,
+  collapsed: true,
   pushEvent: (e) => set((s) => ({ events: [...s.events, e] })),
   toggleCollapsed: () => set((s) => ({ collapsed: !s.collapsed })),
 }));

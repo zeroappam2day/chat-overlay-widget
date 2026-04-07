@@ -1,27 +1,80 @@
 /**
- * Fallback CSS custom properties for --co-* vars.
- * Values match the 'default' (Graphite) theme in THEME_PRESETS.
+ * Design system CSS custom properties.
+ * Modern dark theme with glassmorphism accents.
  *
  * These ensure components using var(--co-*) have valid fallbacks
  * even before JS loads or when themePresets flag is OFF.
  */
 
 :root {
-  --co-bg-primary: #1e1e1e;
-  --co-bg-secondary: #252525;
-  --co-bg-tertiary: #2d2d2d;
-  --co-bg-hover: #333333;
-  --co-border: #404040;
-  --co-text-primary: #d4d4d4;
-  --co-text-secondary: #a0a0a0;
-  --co-text-muted: #666666;
-  --co-accent: #007acc;
-  --co-accent-hover: #1a8ad4;
-  --co-success: #4ec9b0;
-  --co-warning: #dcdcaa;
-  --co-error: #f44747;
-  --co-diff-add-bg: #1e3a1e;
-  --co-diff-remove-bg: #3a1e1e;
-  --co-diff-add-text: #86efac;
-  --co-diff-remove-text: #fca5a5;
+  --co-bg-primary: #0d1117;
+  --co-bg-secondary: #161b22;
+  --co-bg-tertiary: #21262d;
+  --co-bg-hover: #30363d;
+  --co-border: #30363d;
+  --co-text-primary: #e6edf3;
+  --co-text-secondary: #8b949e;
+  --co-text-muted: #484f58;
+  --co-accent: #58a6ff;
+  --co-accent-hover: #79c0ff;
+  --co-success: #3fb950;
+  --co-warning: #d29922;
+  --co-error: #f85149;
+  --co-purple: #d2a8ff;
+  --co-diff-add-bg: rgba(63, 185, 80, 0.15);
+  --co-diff-remove-bg: rgba(248, 81, 73, 0.15);
+  --co-diff-add-text: #3fb950;
+  --co-diff-remove-text: #f85149;
+}
+
+/* ── Glassmorphism utility ─────────────────────────────────── */
+.glass-panel {
+  background: rgba(22, 27, 34, 0.75);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+.glass-panel-heavy {
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+}
+
+/* ── Tooltip system ────────────────────────────────────────── */
+.icon-btn {
+  position: relative;
+}
+.icon-btn .tooltip {
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.2s ease;
+  transition-delay: 0.3s;
+  pointer-events: none;
+}
+.icon-btn:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(2px);
+}
+
+/* ── Custom scrollbars ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+/* ── Resizer hit area expansion ────────────────────────────── */
+.resizer-glow {
+  position: relative;
+  transition: all 0.2s ease;
+}
+.resizer-glow::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  z-index: 5;
+}
+.resizer-glow:hover {
+  background-color: var(--co-accent) !important;
+  box-shadow: 0 0 10px rgba(88, 166, 255, 0.5);
 }

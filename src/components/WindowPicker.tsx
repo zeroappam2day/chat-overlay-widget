@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import type { WindowThumbnail } from '../protocol';
+import { Tooltip } from './Tooltip';
 
 interface WindowPickerProps {
   windows: WindowThumbnail[];
   onClose: () => void;
   onRefresh: () => void;
-  onSelect?: (window: WindowThumbnail) => void; // Phase 20 hook — noop for now
+  onSelect?: (window: WindowThumbnail) => void;
 }
 
 const COLS = 3;
@@ -15,12 +16,10 @@ export function WindowPicker({ windows, onClose, onRefresh, onSelect }: WindowPi
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus search input on mount
   useEffect(() => {
     searchRef.current?.focus();
   }, []);
 
-  // Reset selectedIndex when search changes
   useEffect(() => {
     setSelectedIndex(0);
   }, [search]);
@@ -37,7 +36,6 @@ export function WindowPicker({ windows, onClose, onRefresh, onSelect }: WindowPi
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     e.stopPropagation();
-
     if (e.key === 'ArrowRight') {
       setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1));
     } else if (e.key === 'ArrowLeft') {
@@ -58,33 +56,46 @@ export function WindowPicker({ windows, onClose, onRefresh, onSelect }: WindowPi
 
   return (
     <div
-      className="absolute inset-0 z-10 bg-[#1e1e1e]/95 flex flex-col"
+      className="absolute inset-0 z-10 bg-[#0d1117]/90 backdrop-blur-md flex flex-col animate-fade-in"
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
       {/* Header bar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#404040]">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#30363d]/50 bg-white/[0.02]">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="#8b949e" className="shrink-0">
+          <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.406a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z" />
+        </svg>
         <input
           ref={searchRef}
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Filter by title or process..."
-          className="flex-1 bg-[#2d2d2d] text-gray-200 text-sm outline-none rounded px-2 py-1 border border-[#555]"
+          className="flex-1 bg-transparent text-[#e6edf3] text-sm outline-none placeholder-[#484f58]"
         />
-        <button
-          onClick={onRefresh}
-          className="text-gray-400 hover:text-gray-200 text-sm px-2 py-1 rounded border border-[#404040] bg-[#2d2d2d]"
-        >
-          Refresh
-        </button>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-200 text-sm px-2 py-1 rounded border border-[#404040] bg-[#2d2d2d]"
-          aria-label="Close window picker"
-        >
-          X
-        </button>
+        <Tooltip text="Refresh window list">
+          <button
+            onClick={onRefresh}
+            className="p-1.5 text-[#8b949e] hover:text-white rounded hover:bg-[#21262d] transition-all"
+            aria-label="Refresh window list"
+          >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 3a5 5 0 0 0-4.546 2.914.5.5 0 0 1-.908-.418A6 6 0 1 1 2 8a.5.5 0 0 1 1 0 5 5 0 1 0 5-5z" />
+              <path d="M3 2v3h3" fill="none" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+          </button>
+        </Tooltip>
+        <Tooltip text="Close (Escape)">
+          <button
+            onClick={onClose}
+            className="p-1.5 text-[#8b949e] hover:text-[#f85149] rounded hover:bg-[#f85149]/10 transition-all"
+            aria-label="Close window picker"
+          >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
+        </Tooltip>
       </div>
 
       {/* Grid */}
@@ -98,7 +109,7 @@ export function WindowPicker({ windows, onClose, onRefresh, onSelect }: WindowPi
         }}
       >
         {filtered.length === 0 ? (
-          <div className="col-span-full flex items-center justify-center text-gray-500 text-sm py-8">
+          <div className="col-span-full flex items-center justify-center text-[#484f58] text-sm py-8">
             No matching windows
           </div>
         ) : (
@@ -106,34 +117,31 @@ export function WindowPicker({ windows, onClose, onRefresh, onSelect }: WindowPi
             <div
               key={`${w.processName}-${w.title}-${i}`}
               data-testid="picker-card"
-              className={`rounded border p-2 cursor-pointer bg-[#252526] ${
+              className={`rounded-lg border p-2 cursor-pointer bg-[#161b22] hover:bg-[#21262d] transition-all hover:-translate-y-0.5 hover:shadow-lg ${
                 i === selectedIndex
-                  ? 'border-[#007acc]'
-                  : 'border-[#404040]'
+                  ? 'border-[#58a6ff] shadow-[0_0_12px_rgba(88,166,255,0.2)]'
+                  : 'border-[#30363d] hover:border-[#58a6ff]/40'
               }`}
               onClick={() => {
                 setSelectedIndex(i);
                 onSelect?.(w);
               }}
             >
-              {/* Thumbnail or error placeholder */}
               {w.thumbnail ? (
                 <img
                   src={`data:image/png;base64,${w.thumbnail}`}
                   alt={w.title}
-                  className="w-full h-[120px] object-cover rounded mb-1"
+                  className="w-full h-[120px] object-cover rounded mb-1.5"
                 />
               ) : (
-                <div className="w-full h-[120px] flex items-center justify-center bg-[#1e1e1e] rounded mb-1 text-gray-500 text-xs">
+                <div className="w-full h-[120px] flex items-center justify-center bg-[#0d1117] rounded mb-1.5 text-[#484f58] text-xs">
                   {w.error ?? 'No preview'}
                 </div>
               )}
-              {/* Title */}
-              <div className="text-gray-300 text-xs truncate" title={w.title}>
+              <div className="text-[#e6edf3] text-xs truncate" title={w.title}>
                 {w.title}
               </div>
-              {/* Process name */}
-              <div className="text-gray-500 text-xs truncate" title={w.processName}>
+              <div className="text-[#8b949e] text-[11px] truncate font-mono" title={w.processName}>
                 {w.processName}
               </div>
             </div>

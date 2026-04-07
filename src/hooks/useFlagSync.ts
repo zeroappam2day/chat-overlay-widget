@@ -19,6 +19,10 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
   const screenshotVerification = useFeatureFlagStore(s => s.screenshotVerification);
   const enhancedAccessibility = useFeatureFlagStore(s => s.enhancedAccessibility);
   const workflowRecording = useFeatureFlagStore(s => s.workflowRecording);
+  const externalWindowCapture = useFeatureFlagStore(s => s.externalWindowCapture);
+  const skillDiscovery = useFeatureFlagStore(s => s.skillDiscovery);
+  const multiPty = useFeatureFlagStore(s => s.multiPty);
+  const consentGate = useFeatureFlagStore(s => s.consentGate);
   const sentRef = useRef(false);
 
   useEffect(() => {
@@ -26,7 +30,7 @@ export function useFlagSync(sendMessage: (msg: ClientMessage) => void, connected
       sentRef.current = false;
       return;
     }
-    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance, webFetchTool, batchConsent, windowFocusManager, clipboardAccess, agentTaskOrchestrator, screenshotVerification, enhancedAccessibility, workflowRecording } });
+    sendMessage({ type: 'set-flags', flags: { outputBatching, terminalWriteMcp, conditionalAdvance, webFetchTool, batchConsent, windowFocusManager, clipboardAccess, agentTaskOrchestrator, screenshotVerification, enhancedAccessibility, workflowRecording, externalWindowCapture, skillDiscovery, multiPty, consentGate } });
     sentRef.current = true;
-  }, [outputBatching, terminalWriteMcp, conditionalAdvance, webFetchTool, batchConsent, windowFocusManager, clipboardAccess, agentTaskOrchestrator, screenshotVerification, enhancedAccessibility, workflowRecording, connected, sendMessage]);
+  }, [outputBatching, terminalWriteMcp, conditionalAdvance, webFetchTool, batchConsent, windowFocusManager, clipboardAccess, agentTaskOrchestrator, screenshotVerification, enhancedAccessibility, workflowRecording, externalWindowCapture, skillDiscovery, multiPty, consentGate, connected, sendMessage]);
 }

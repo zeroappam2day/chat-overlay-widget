@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useFeatureFlagStore, type FeatureFlags } from '../store/featureFlagStore';
 import { PlanPanel } from './PlanPanel';
 import { ThemeSelector } from './ThemeSelector';
 import { CompletionBadge } from './CompletionBadge';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { Tooltip } from './Tooltip';
 
 const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   outputBatching: 'Output Batching',
@@ -38,20 +40,50 @@ const FLAG_LABELS: Record<keyof FeatureFlags, string> = {
   screenshotVerification: 'Screenshot Verification',
   enhancedAccessibility: 'Enhanced Accessibility',
   workflowRecording: 'Workflow Recording',
+  externalWindowCapture: 'External Window Capture',
+  skillDiscovery: 'Skill Discovery',
+  multiPty: 'Multi-PTY Panes',
+  consentGate: 'Consent Gate',
 };
 
-const FLAG_KEYS = Object.keys(FLAG_LABELS) as (keyof FeatureFlags)[];
+const FLAG_CATEGORIES: { label: string; keys: (keyof FeatureFlags)[] }[] = [
+  {
+    label: 'Core',
+    keys: ['outputBatching', 'autoTrust', 'planWatcher', 'exitNotifications', 'enhancedPersistence', 'errorBoundaries'],
+  },
+  {
+    label: 'Terminal & Input',
+    keys: ['terminalBookmarks', 'promptHistory', 'multiPty', 'keyboardNavigation', 'focusTrap', 'ctrlWheelZoom', 'inactivePaneDimming'],
+  },
+  {
+    label: 'Diff & Code',
+    keys: ['diffViewer', 'diffSearch', 'diffSyntaxHighlight', 'askAboutCode', 'inlineEditing', 'githubUrlDetection'],
+  },
+  {
+    label: 'Agent & Automation',
+    keys: ['agentTaskOrchestrator', 'guidedWalkthrough', 'conditionalAdvance', 'skillDiscovery', 'workflowRecording', 'batchConsent', 'consentGate'],
+  },
+  {
+    label: 'Window & Capture',
+    keys: ['annotationOverlay', 'externalWindowCapture', 'windowFocusManager', 'screenshotVerification', 'clipboardAccess'],
+  },
+  {
+    label: 'Appearance',
+    keys: ['themePresets', 'completionStats', 'enhancedAccessibility', 'terminalWriteMcp', 'webFetchTool'],
+  },
+];
 
 export function FeatureFlagPanel() {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const store = useFeatureFlagStore();
   const focusTrapRef = useFocusTrap(open);
 
+  // Close on outside click
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
@@ -59,55 +91,115 @@ export function FeatureFlagPanel() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
-  return (
-    <div ref={ref} className="relative">
-      <CompletionBadge />
-      <PlanPanel />
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-300 transition-colors"
-        title="Feature flags"
-        aria-label="Feature flags"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M8 0a1.5 1.5 0 0 0-1.5 1.5c0 .33.11.64.3.89L6.12 3.5A5.49 5.49 0 0 0 2.5 7.86l1.12.68c.17-.28.46-.54.88-.54s.71.26.88.54l1.12-.68A3.49 3.49 0 0 1 8 4.5a3.49 3.49 0 0 1 1.5 3.36l1.12.68c.17-.28.46-.54.88-.54s.71.26.88.54l1.12-.68A5.49 5.49 0 0 0 9.88 3.5L9.2 2.39c.19-.25.3-.56.3-.89A1.5 1.5 0 0 0 8 0zM5.5 10a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM8 12a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" />
-        </svg>
-      </button>
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open]);
 
-      {open && (
-        <div ref={focusTrapRef} className="absolute right-0 top-full mt-1 w-64 max-h-80 overflow-y-auto bg-[#2d2d2d] border border-[#404040] rounded shadow-lg z-50">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-[#404040]">
-            <span className="text-xs font-medium text-gray-300">Feature Flags</span>
+  const panel = open ? createPortal(
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[999] animate-fade-in"
+        onClick={() => setOpen(false)}
+      />
+      {/* Slide-out panel */}
+      <div
+        ref={panelRef}
+        className="fixed right-0 top-0 h-full w-[320px] glass-panel border-l border-[#30363d]/80 z-[1000] flex flex-col shadow-[-20px_0_40px_-10px_rgba(0,0,0,0.6)] animate-slide-in-right"
+      >
+        <div ref={focusTrapRef} className="flex flex-col h-full">
+          {/* Frosted header */}
+          <div className="h-12 px-4 border-b border-[#30363d]/50 bg-white/[0.02] backdrop-blur-md flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="#8b949e">
+                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z" />
+                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z" fillOpacity="0.4" />
+              </svg>
+              <span className="text-xs font-semibold text-[#e6edf3] tracking-wide">Settings</span>
+            </div>
             <button
-              onClick={() => store.resetAll()}
-              className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+              onClick={() => setOpen(false)}
+              className="p-1 text-[#8b949e] hover:text-white transition-colors rounded hover:bg-[#21262d]"
+              aria-label="Close settings"
             >
-              Reset All
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
             </button>
           </div>
-          <div className="py-1">
-            {FLAG_KEYS.map((key) => (
-              <div
-                key={key}
-                className="flex items-center justify-between px-3 py-1.5 hover:bg-[#333] cursor-pointer"
-                onClick={() => store.setFlag(key, !store[key])}
+
+          {/* Flag list - categorized */}
+          <div className="flex-1 overflow-y-auto py-2">
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="text-[10px] font-semibold text-[#8b949e] uppercase tracking-wider">Feature Flags</span>
+              <button
+                onClick={() => store.resetAll()}
+                className="text-[10px] text-[#8b949e] hover:text-[#f85149] transition-colors"
               >
-                <span className="text-xs text-gray-400">{FLAG_LABELS[key]}</span>
-                <div
-                  className="relative w-7 h-4 rounded-full transition-colors duration-150"
-                  style={{ backgroundColor: store[key] ? '#007acc' : '#555' }}
-                >
-                  <div
-                    className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-150"
-                    style={{ transform: store[key] ? 'translateX(14px)' : 'translateX(2px)' }}
-                  />
+                Reset All
+              </button>
+            </div>
+            {FLAG_CATEGORIES.map((cat) => (
+              <div key={cat.label}>
+                <div className="px-4 pt-3 pb-1">
+                  <span className="text-[9px] font-bold text-[#58a6ff]/70 uppercase tracking-widest">{cat.label}</span>
                 </div>
+                {cat.keys.map((key) => (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between px-4 py-1.5 hover:bg-white/[0.03] cursor-pointer transition-colors"
+                    onClick={() => store.setFlag(key, !store[key])}
+                  >
+                    <span className="text-[11px] text-[#e6edf3]/80">{FLAG_LABELS[key]}</span>
+                    <div
+                      className="relative w-8 h-[18px] rounded-full transition-colors duration-200"
+                      style={{ backgroundColor: store[key] ? '#58a6ff' : '#30363d' }}
+                    >
+                      <div
+                        className="absolute top-[3px] w-3 h-3 rounded-full bg-white transition-transform duration-200 shadow-sm"
+                        style={{ transform: store[key] ? 'translateX(16px)' : 'translateX(3px)' }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
+
           <ThemeSelector />
         </div>
-      )}
-    </div>
+      </div>
+    </>,
+    document.body,
+  ) : null;
+
+  return (
+    <>
+      <CompletionBadge />
+      <PlanPanel />
+      <Tooltip text="Settings & Feature Flags">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={`p-1.5 rounded transition-all ${
+            open
+              ? 'text-[#58a6ff] bg-[#58a6ff]/10'
+              : 'text-[#8b949e] hover:text-white hover:bg-[#21262d]'
+          }`}
+          aria-label="Feature flags"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z" />
+            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z" fillOpacity="0.4" />
+          </svg>
+        </button>
+      </Tooltip>
+      {panel}
+    </>
   );
 }

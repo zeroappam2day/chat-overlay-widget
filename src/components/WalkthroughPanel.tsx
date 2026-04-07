@@ -22,31 +22,33 @@ export const WalkthroughPanel: React.FC = () => {
   if (!stepInfo) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 20,
-      right: 20,
-      width: 350,
-      background: 'rgba(0, 0, 0, 0.85)',
-      color: '#fff',
-      borderRadius: 8,
-      padding: 16,
-      fontFamily: 'system-ui, sans-serif',
-      pointerEvents: 'auto',
-      zIndex: 9999,
-      border: '1px solid rgba(255, 62, 0, 0.5)',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: '#ff3e00', fontWeight: 'bold' }}>
-          STEP {stepInfo.currentStep} OF {stepInfo.totalSteps}
-        </span>
+    <div
+      className="fixed bottom-5 right-5 w-[350px] glass-panel-heavy rounded-xl z-[9999] overflow-hidden animate-scale-in"
+      style={{
+        border: '1px solid rgba(88, 166, 255, 0.2)',
+        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(88, 166, 255, 0.1)',
+        pointerEvents: 'auto',
+      }}
+    >
+      {/* Progress bar */}
+      <div className="h-0.5 bg-[#30363d]">
+        <div
+          className="h-full bg-gradient-to-r from-[#58a6ff] to-[#d2a8ff] transition-all duration-500"
+          style={{ width: `${(stepInfo.currentStep / stepInfo.totalSteps) * 100}%` }}
+        />
       </div>
-      <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 6 }}>
-        {stepInfo.title}
-      </div>
-      <div style={{ fontSize: 14, color: '#ccc', lineHeight: 1.4 }}>
-        {stepInfo.instruction}
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-[10px] font-semibold text-[#58a6ff] uppercase tracking-wider font-mono">
+            Step {stepInfo.currentStep} of {stepInfo.totalSteps}
+          </span>
+        </div>
+        <div className="text-[14px] font-semibold text-[#e6edf3] mb-1.5">
+          {stepInfo.title}
+        </div>
+        <div className="text-[13px] text-[#8b949e] leading-relaxed">
+          {stepInfo.instruction}
+        </div>
       </div>
     </div>
   );

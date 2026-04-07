@@ -25,44 +25,29 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (value.trim()) {
-        // MUST use \r not \n — ConPTY expects carriage return for command execution
         onSend(value + '\r');
         setValue('');
-        // Preserve focus on input box after send (D-03)
         textareaRef.current?.focus();
       }
     }
-    // Shift+Enter: do nothing special — default textarea behavior inserts newline
   }, [value, onSend]);
 
-  // Handle clipboard paste for images (SCRN-02)
-  // Checks both clipboardData.items (standard) and clipboardData.files (WebView2 fallback)
-  // to support Windows Snipping Tool, PrtScn, and browser copy-image
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     if (!onImagePaste) return;
-
-    // Debug: log what WebView2 exposes in the paste event
     const items = Array.from(e.clipboardData.items);
     const files = Array.from(e.clipboardData.files);
     console.log('[paste] items:', items.map(i => ({ kind: i.kind, type: i.type })));
     console.log('[paste] files:', files.map(f => ({ name: f.name, type: f.type, size: f.size })));
     console.log('[paste] types:', e.clipboardData.types);
-
-    // Strategy 1: Check DataTransferItemList for image items
     const imageItem = items.find(item => item.type.startsWith('image/'));
-
-    // Strategy 2: Check FileList (WebView2 may expose snipping tool images here)
     const imageFile = files.find(f => f.type.startsWith('image/'));
-
     const blob = imageItem?.getAsFile() ?? imageFile ?? null;
     if (!blob) {
       console.log('[paste] no image found in clipboard data');
-      return; // no image found — let normal text paste proceed
+      return;
     }
-
     console.log('[paste] image blob found:', blob.type, blob.size, 'bytes');
-    e.preventDefault(); // block default paste behavior for images
-
+    e.preventDefault();
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
@@ -77,8 +62,6 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
     reader.readAsDataURL(blob);
   }, [onImagePaste]);
 
-  // Inject pending image path into the input box when it changes (SCRN-01, SCRN-02)
-  // Path is shell-quoted at injection time so it executes correctly in the active shell (PATH-01)
   useEffect(() => {
     if (pendingImagePath) {
       setValue(prev => {
@@ -90,8 +73,6 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
     }
   }, [pendingImagePath, onImagePathConsumed, currentShell]);
 
-  // Inject pending capture block into the input box (INTG-03, CAPT-02)
-  // Uses newline separator (not space) because the block is multi-line
   useEffect(() => {
     if (pendingInjection) {
       setValue(prev => {
@@ -105,20 +86,25 @@ export function ChatInputBar({ onSend, disabled, onImagePaste, pendingImagePath,
 
   return (
     <div
-      className="shrink-0 px-3 py-2 bg-[#2d2d2d] border-t border-[#404040] flex flex-col"
+      className="shrink-0 px-3 py-2 bg-[#0d1117] border-t border-[#30363d] flex flex-col"
       style={{ height: height ?? 144 }}
     >
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        disabled={disabled}
-        className="chat-input-textarea w-full h-full bg-[#1e1e1e] text-gray-200 text-sm resize-none outline-none rounded px-3 py-2 overflow-y-auto border border-[#404040] focus:border-[#007acc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        placeholder="Type a command... (Enter to send, Shift+Enter for newline)"
-        autoFocus
-      />
+      {/* Focus glow wrapper */}
+      <div className="relative group flex-1 flex flex-col">
+        {/* Glow underlay */}
+        <div className="absolute -inset-px bg-gradient-to-r from-[#58a6ff]/0 via-[#58a6ff]/20 to-[#d2a8ff]/0 rounded-lg blur-sm opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          disabled={disabled}
+          className="chat-input-textarea relative w-full flex-1 bg-[#161b22] text-[#e6edf3] text-sm resize-none outline-none rounded-lg px-3 py-2 overflow-y-auto border border-[#30363d] focus:border-[#58a6ff]/60 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed placeholder-[#484f58]"
+          placeholder="Type a command... (Enter to send, Shift+Enter for newline)"
+          autoFocus
+        />
+      </div>
     </div>
   );
 }

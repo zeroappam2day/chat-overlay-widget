@@ -19,7 +19,6 @@ export function SearchOverlay({ searchAddon, onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus the input when the overlay mounts
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -76,7 +75,10 @@ export function SearchOverlay({ searchAddon, onClose }: SearchOverlayProps) {
   };
 
   return (
-    <div className="absolute top-0 right-0 z-10 bg-[#3c3c3c] border border-[#555] rounded-bl shadow-lg px-2 py-1 flex items-center gap-1">
+    <div className="absolute top-2 right-2 z-10 glass-panel border border-[#30363d]/80 rounded-full shadow-2xl px-3 py-1.5 flex items-center gap-1.5 animate-slide-down">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="#8b949e" className="shrink-0">
+        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.406a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z" />
+      </svg>
       <input
         ref={inputRef}
         type="text"
@@ -84,38 +86,35 @@ export function SearchOverlay({ searchAddon, onClose }: SearchOverlayProps) {
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         placeholder="Search..."
-        className="bg-[#1e1e1e] text-gray-200 text-sm outline-none rounded px-2 py-1 w-48"
+        className="bg-transparent text-[#e6edf3] text-sm outline-none w-44 placeholder-[#484f58]"
       />
-      {/* Previous match button (up arrow) */}
       <button
         onClick={() => findPrevious(query)}
-        className="text-gray-400 hover:text-gray-200 px-1 py-1"
+        className="p-1 text-[#8b949e] hover:text-white rounded hover:bg-white/10 transition-all"
         title="Previous match (Shift+Enter)"
         aria-label="Previous match"
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
           <path d="M6 2L11 8H1L6 2Z" />
         </svg>
       </button>
-      {/* Next match button (down arrow) */}
       <button
         onClick={() => findNext(query)}
-        className="text-gray-400 hover:text-gray-200 px-1 py-1"
+        className="p-1 text-[#8b949e] hover:text-white rounded hover:bg-white/10 transition-all"
         title="Next match (Enter)"
         aria-label="Next match"
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
           <path d="M6 10L1 4H11L6 10Z" />
         </svg>
       </button>
-      {/* Close button (X) */}
       <button
         onClick={handleClose}
-        className="text-gray-400 hover:text-gray-200 px-1 py-1 ml-1"
+        className="p-1 text-[#8b949e] hover:text-[#f85149] rounded hover:bg-[#f85149]/10 transition-all ml-0.5"
         title="Close search (Escape)"
         aria-label="Close search"
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
           <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       </button>
