@@ -51,6 +51,7 @@ import { WorkflowRecorder } from './workflowRecorder.js';
 import { ModeManager } from './modeManager.js';
 import { ActionCoordinator } from './actionCoordinator.js';
 import { skillDiscoveryBridge } from './skillDiscoveryBridge.js';
+import { streamOllamaChat, cancelOllamaChat, checkOllamaHealth } from './pmChat.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -1365,6 +1366,24 @@ function broadcastWalkthroughStep(step: { stepId: string; title: string; instruc
   }
 }
 
+function broadcastPmChatToken(requestId: string, token: string): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'pm-chat-token', requestId, token });
+  }
+}
+
+function broadcastPmChatDone(requestId: string): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'pm-chat-done', requestId });
+  }
+}
+
+function broadcastPmChatError(requestId: string, error: string): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'pm-chat-error', requestId, error });
+  }
+}
+
 /** Agent Runtime Phase 2: Update watcher pattern on all active sessions */
 function updateWalkthroughWatcherPattern(): void {
   const pattern = walkthroughEngine.getCurrentAdvancePattern();
@@ -1685,6 +1704,32 @@ wss.on('connection', (ws: WebSocket) => {
       case 'cancel-pending-action': {
         const { actionId } = msg as { type: 'cancel-pending-action'; actionId: string };
         actionCoordinator.cancel(actionId);
+        break;
+      }
+      case 'pm-chat': {
+        const pmMsg = msg as { type: 'pm-chat'; requestId: string; message: string; model: string; temperature: number; systemPrompt: string };
+        console.log(`[sidecar] pm-chat request: requestId=${pmMsg.requestId} model=${pmMsg.model}`);
+        streamOllamaChat(pmMsg.requestId, {
+          message: pmMsg.message,
+          model: pmMsg.model,
+          temperature: pmMsg.temperature,
+          systemPrompt: pmMsg.systemPrompt,
+        }, {
+          onToken: (token) => broadcastPmChatToken(pmMsg.requestId, token),
+          onDone: () => broadcastPmChatDone(pmMsg.requestId),
+          onError: (error) => broadcastPmChatError(pmMsg.requestId, error),
+        });
+        break;
+      }
+      case 'pm-chat-cancel': {
+        const cancelMsg = msg as { type: 'pm-chat-cancel'; requestId: string };
+        cancelOllamaChat(cancelMsg.requestId);
+        break;
+      }
+      case 'pm-chat-health-check': {
+        checkOllamaHealth().then(result => {
+          sendMsg(ws, { type: 'pm-chat-health', ok: result.ok, error: result.error });
+        });
         break;
       }
     }
