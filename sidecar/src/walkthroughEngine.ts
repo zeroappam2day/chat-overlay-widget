@@ -124,6 +124,40 @@ class WalkthroughEngine {
       totalSteps: this.active.walkthrough.steps.length,
     };
   }
+
+  appendSteps(steps: WalkthroughStep[]): { totalSteps: number; currentStep: number } {
+    if (!this.active) throw new Error('No active walkthrough');
+    const validated = steps.map(s => WalkthroughStepSchema.parse(s));
+    this.active.walkthrough.steps.push(...validated);
+    if (this.active.walkthrough.steps.length > 50) throw new Error('Max 50 steps');
+    return { totalSteps: this.active.walkthrough.steps.length, currentStep: this.active.currentIndex + 1 };
+  }
+
+  replaceCurrentStep(step: WalkthroughStep): { stepId: string; title: string; instruction: string; totalSteps: number; currentStep: number } {
+    if (!this.active) throw new Error('No active walkthrough');
+    const validated = WalkthroughStepSchema.parse(step);
+    this.active.walkthrough.steps[this.active.currentIndex] = validated;
+    // Re-apply annotations for the replaced step
+    const grouped = validated.annotations.map(a => ({ ...a, group: `walkthrough-${this.active!.walkthrough.id}` }));
+    const current = annotationState.apply({ action: 'set', annotations: grouped });
+    this.onAnnotationsChanged?.(current);
+    return {
+      stepId: validated.stepId,
+      title: validated.title,
+      instruction: validated.instruction,
+      totalSteps: this.active.walkthrough.steps.length,
+      currentStep: this.active.currentIndex + 1,
+    };
+  }
+
+  updateRemainingSteps(steps: WalkthroughStep[]): { totalSteps: number; currentStep: number } {
+    if (!this.active) throw new Error('No active walkthrough');
+    const validated = steps.map(s => WalkthroughStepSchema.parse(s));
+    // Replace everything AFTER current index (keep current step and all before it)
+    this.active.walkthrough.steps.splice(this.active.currentIndex + 1, Infinity, ...validated);
+    if (this.active.walkthrough.steps.length > 50) throw new Error('Max 50 steps');
+    return { totalSteps: this.active.walkthrough.steps.length, currentStep: this.active.currentIndex + 1 };
+  }
 }
 
 export const walkthroughEngine = new WalkthroughEngine();
