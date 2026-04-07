@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Agent Hooks & MCP Integration
+milestone: v1.7
+milestone_name: PM Voice Chat
 status: executing
-stopped_at: Phase 29 context gathered
-last_updated: "2026-04-01T12:13:37.055Z"
-last_activity: 2026-04-01
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-04-07T16:48:30.100Z"
+last_activity: 2026-04-07
 progress:
-  total_phases: 13
-  completed_phases: 11
-  total_plans: 18
-  completed_plans: 20
+  total_phases: 8
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 6
   percent: 0
 ---
 
@@ -18,23 +18,23 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-01)
+See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 28 — adapter-layer-sidebar
+**Current focus:** Phase 31 — Ollama Chat Backend & Sidebar Tab
 
 ## Current Position
 
-Phase: 28 (adapter-layer-sidebar) — EXECUTING
+Phase: 31 (Ollama Chat Backend & Sidebar Tab) — EXECUTING
 Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-04 - Completed quick task 260404-765: Phase 21 Error Boundaries
+Last activity: 2026-04-07
 
-Progress: [░░░░░░░░░░] 0% (v1.6 milestone — 0/4 phases complete)
+Progress: [░░░░░░░░░░] 0% (v1.7)
 
 ## Performance Metrics
 
-Plans executed: 7 (v1.5)
+Plans executed (v1.6): 5
 Plans needing revision: 0
 Revision rate: 0%
 
@@ -44,14 +44,18 @@ Revision rate: 0%
 
 Baseline decisions: see PROJECT.md Key Decisions table.
 
-- [Phase 26-hook-receiver-event-schema]: AgentEvent defined only in agentEvent.ts; protocol.ts imports from there (one-directional, no circular dep)
-- [Phase 26-hook-receiver-event-schema]: hook_event_name takes priority over type in normalizeAgentEvent for Claude Code compatibility
-- [Phase 26-hook-receiver-event-schema]: broadcastAgentEvent defined after sendMsg, AgentEvent imported as type separately from normalizeAgentEvent/agentEventBuffer
-- [Phase 27-mcp-server]: uncaughtException handler swallows server.ts guard throw in mcp-server.ts — prevents native addon loading while preserving async stdio transport event loop
-- [Phase 27-mcp-server]: McpServer at @modelcontextprotocol/sdk/server/mcp.js (not /server/index.js which exports lower-level Server class)
-- [Phase 27-mcp-server]: Discovery file read fresh per MCP tool call — sidecar restarts transparent to MCP clients
-- [Phase 28-adapter-layer-sidebar]: Sidebar inserted as peer to layoutContainerRef div in flex-row wrapper to prevent terminal resize flash on collapse/expand
-- [Phase 28-adapter-layer-sidebar]: useAgentEventStore.getState() used in TerminalPane WebSocket callback — correct Zustand pattern for non-React contexts
+Recent decisions affecting v1.7:
+
+- PowerShell SAPI5 over Python pyttsx3: eliminates Python dependency; persistent process avoids per-utterance cold start
+- Ollama chat over cloud LLM: local-only, no API keys, privacy-preserving
+- LLM output via stdin only (never shell-interpolated): adversarial review found RCE risk otherwise
+
+v1.6 decisions still relevant:
+
+- [Phase 28]: Sidebar as peer flex element to prevent terminal resize flash on collapse/expand
+- [Phase 28]: useAgentEventStore.getState() for non-React WebSocket callbacks (Zustand pattern)
+- [Phase 31-01]: WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS is already authenticated at connection time
+- [Phase 31-01]: Separate pmChat.ts module from server.ts: keeps routing concerns separated, matches askCodeHandler.js pattern
 
 ### Todos
 
@@ -59,36 +63,12 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 27 (MCP) requires Phases 23, 24, 25 all complete (they are — shipped in v1.5).
-- Phase 29 (auto-config) must know the MCP server binary path and hook endpoint URL — settle these in Phase 27 before planning Phase 29.
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260403-g0f | Implement Phase 0 Feature Flag Store foundation | 2026-04-03 | ff7dc13 | [260403-g0f-implement-phase-0-feature-flag-store-fou](./quick/260403-g0f-implement-phase-0-feature-flag-store-fou/) |
-| 260403-gkx | Implement Phase 2 Auto-Trust Dialog Detection | 2026-04-03 | 83b05c4 | [260403-gkx-implement-phase-2-auto-trust-dialog-dete](./quick/260403-gkx-implement-phase-2-auto-trust-dialog-dete/) |
-| 260403-gvd | Implement Phase 3 Plan File Watcher | 2026-04-03 | a6ab2f0 | [260403-gvd-phase-3-plan-file-watcher](./quick/260403-gvd-phase-3-plan-file-watcher/) |
-| 260403-mgs | Implement Phase 13 Ctrl+Wheel Zoom | 2026-04-03 | 7329f9a | [260403-mgs-implement-phase-13-ctrl-wheel-zoom-wheel](./quick/260403-mgs-implement-phase-13-ctrl-wheel-zoom-wheel/) |
-| 260403-msm | Phase 14: Diff Search & Context Collapse | 2026-04-03 | 887fbae | [260403-msm-phase-14-diff-search-context-collapse](./quick/260403-msm-phase-14-diff-search-context-collapse/) |
-| 260404-6no | Phase 19: GitHub URL Detection | 2026-04-04 | 725ed80 | [260404-6no-phase-19-github-url-detection](./quick/260404-6no-phase-19-github-url-detection/) |
-| 260404-6yd | Phase 20: Inline Editable Text | 2026-04-04 | db1c6cb | [260404-6yd-phase-20-inline-editable-text-create-edi](./quick/260404-6yd-phase-20-inline-editable-text-create-edi/) |
-| 260404-765 | Phase 21: Error Boundaries | 2026-04-04 | 3c8ed74 | [260404-765-phase-21-error-boundaries](./quick/260404-765-phase-21-error-boundaries/) |
-
-### Untested Assumptions (validate via spike or during early phases)
-
-| # | Assumption | Affects Phases | Risk if Wrong | Validation Method |
-|---|-----------|----------------|---------------|-------------------|
-| A1 | Claude Code hooks fire SubagentStart/SubagentStop on this machine (requires v2.0.41+) | 26, 28, 29 | Agent visibility track needs complete redesign | Check `claude --version`, fire a test hook |
-| A2 | MCP stdio server launched by Claude Code can connect back to the sidecar HTTP API (no circular dependency) | 27, 29 | MCP architecture may need SSE or different process model | Register a stub MCP server, call a tool that hits localhost sidecar |
-
-**Recommendation:** Validate A1 and A2 via a 30-min spike before Phase 26 planning.
-| Phase 26-hook-receiver-event-schema P01 | 2 | 2 tasks | 4 files |
-| Phase 27-mcp-server P01 | 5 | 2 tasks | 3 files |
-| Phase 28-adapter-layer-sidebar P02 | 15 | 2 tasks | 5 files |
+- Phase 29 (auto-config, v1.6) is unstarted and deferred — not a blocker for v1.7 phases.
+- TTS voice availability (Hazel/Zira) depends on Windows language packs installed on the user's machine — validate early in Phase 33 planning.
+- Ollama must be running locally for Phase 31 health check to show "healthy" — document in phase success criteria.
 
 ## Session Continuity
 
-Last session: 2026-04-03T10:31:43.440Z
-Stopped at: Quick task 260403-g0f complete
-Next action: Continue Phase 0 features or `/gsd:quick` for next task
+Last session: 2026-04-07T16:48:30.095Z
+Stopped at: Completed 31-01-PLAN.md
+Next action: `/gsd:plan-phase 30`
