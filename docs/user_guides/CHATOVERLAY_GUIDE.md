@@ -1,6 +1,6 @@
 # Chat Overlay Widget — End User Guide
 
-> **What this is:** A Tauri desktop app that wraps Claude Code's CLI in a GUI with an MCP-powered agent toolkit. The LLM can see your screen, read your terminal, draw annotations, focus windows, type text, click buttons, manage tasks across multiple terminals, fetch documentation, record workflows, and more — all through 20 MCP tools gated behind feature flags you control.
+> **What this is:** A Tauri desktop app that wraps Claude Code's CLI in a GUI with an MCP-powered agent toolkit. The LLM can see your screen, read your terminal, draw annotations, focus windows, type text, click buttons, manage tasks across multiple terminals, fetch documentation, discover skills, record workflows, and more — all through 22 MCP tools gated behind feature flags you control. Two interactive modes — **Walk Me Through** (guided observation) and **Work With Me** (collaborative action) — let you activate the right capabilities with a single click.
 
 ---
 
@@ -67,9 +67,19 @@ Every agent capability is behind a feature flag (default OFF for safety-critical
 | **Enhanced Accessibility** | Deeper UI tree search + native Invoke/SetValue (no SendInput needed) | UI Accessibility Tree |
 | **Workflow Recording** | Record, save, and replay sequences of agent actions as workflow files | None (uses all above) |
 
+### Interactive Mode Flags (OFF by default)
+| Flag | What it unlocks |
+|------|----------------|
+| **External Window Capture** | LLM can list and screenshot external application windows (not just the overlay) |
+| **Skill Discovery** | LLM can query the Postgres skill index to find relevant skills for the current task |
+| **Multi-PTY Panes** | LLM can spawn up to 4 terminal sessions |
+| **Consent Gate** | Every simulated input requires your approval via modal dialog |
+
+> **Tip:** You rarely need to toggle these individually. Use the **Walk Me Through** or **Work With Me** buttons in the header bar instead — they activate the right flags automatically and restore your settings when you stop.
+
 ---
 
-## 3. The 20 MCP Tools
+## 3. The 22 MCP Tools
 
 | # | Tool | What it does | Required flags |
 |---|------|-------------|----------------|
@@ -80,25 +90,79 @@ Every agent capability is behind a feature flag (default OFF for safety-critical
 | 5 | `start_guided_walkthrough` | Start a multi-step guided walkthrough | guidedWalkthrough |
 | 6 | `advance_walkthrough` | Move to the next walkthrough step | guidedWalkthrough |
 | 7 | `stop_walkthrough` | Stop walkthrough and clear annotations | guidedWalkthrough |
-| 8 | `write_terminal` | Type text into the terminal | terminalWriteMcp |
-| 9 | `get_ui_elements` | Discover UI elements on screen | uiAccessibility |
-| 10 | `send_input` | Simulate mouse/keyboard input | osInputSimulation + uiAccessibility + consentGate |
-| 11 | `bind_annotation_to_element` | Bind annotation to a UI element so it tracks position | elementBoundAnnotations + uiAccessibility |
-| 12 | `submit_action_plan` | Submit a batch of N actions for one-click approval | batchConsent + consentGate |
-| 13 | `request_trust_window` | Request time-limited trust (up to 120s) for a target window | batchConsent + consentGate |
-| 14 | `focus_window` | Focus a specific window by handle or title | windowFocusManager |
-| 15 | `clipboard` | Read, write, or paste clipboard text | clipboardAccess |
-| 16 | `web_fetch` | Fetch a web page and extract readable text | webFetchTool |
-| 17 | `manage_tasks` | Submit/list/cancel named tasks across PTY sessions | agentTaskOrchestrator + multiPty + terminalWriteMcp |
-| 18 | `verify_walkthrough_step` | Verify walkthrough step via pixel sampling or screenshot diff | screenshotVerification + guidedWalkthrough |
-| 19 | `interact_with_element` | Search/invoke/set value on UI elements natively | enhancedAccessibility + uiAccessibility |
-| 20 | `workflow` | Record, save, replay sequences of actions | workflowRecording |
+| 8 | `modify_walkthrough` | Dynamically append/replace/update walkthrough steps | guidedWalkthrough |
+| 9 | `write_terminal` | Type text into the terminal | terminalWriteMcp |
+| 10 | `submit_action_plan` | Submit a batch of N actions for one-click approval | batchConsent |
+| 11 | `request_trust_window` | Request time-limited trust (up to 120s) for a target window | batchConsent |
+| 12 | `focus_window` | Focus a specific window by handle or title | windowFocusManager |
+| 13 | `clipboard` | Read, write, or paste clipboard text | clipboardAccess |
+| 14 | `web_fetch` | Fetch a web page and extract readable text | webFetchTool |
+| 15 | `manage_tasks` | Submit/list/cancel named tasks across PTY sessions | agentTaskOrchestrator |
+| 16 | `verify_walkthrough_step` | Verify walkthrough step via pixel sampling or screenshot diff | screenshotVerification + guidedWalkthrough |
+| 17 | `interact_with_element` | Search/invoke/set value on UI elements natively | enhancedAccessibility |
+| 18 | `workflow` | Record, save, replay sequences of actions | workflowRecording |
+| 19 | `list_external_windows` | List all visible desktop windows with titles and handles | externalWindowCapture |
+| 20 | `capture_external_window` | Capture screenshot of an external app window (vision-optimized) | externalWindowCapture |
+| 21 | `discover_skills` | Query the Postgres skill index for relevant skills by context | skillDiscovery |
+| 22 | `announce_action` | Announce an intended action to the user before executing (2s delay) | batchConsent |
 
 ---
 
-## 4. Real-World Scenarios
+## 4. Interactive Modes
 
-### Scenario 1: Multi-Step GUI Task (e.g., Create a Google Sheets Macro)
+Instead of toggling individual flags, use the two interactive modes in the header bar. Each mode activates the right flags, and restores your previous settings when you stop.
+
+### Walk Me Through (observation-only)
+
+> *The LLM watches your screen and guides you step-by-step. It does NOT take any actions on your behalf.*
+
+**Activate:** Click the **Walk Me Through** button in the header bar, or press **Alt+Shift+W**.
+
+**What gets enabled:** Annotation Overlay, Guided Walkthrough, Conditional Advance, Screenshot Verification, Web Fetch, External Window Capture (6 flags).
+
+**What the LLM can do during this mode:**
+- See your screen via `list_external_windows` and `capture_external_window`
+- Create adaptive walkthroughs with `start_guided_walkthrough` and `modify_walkthrough`
+- Draw annotations and highlights via `send_annotation`
+- Research documentation via `web_fetch`
+- Verify step completion via `verify_walkthrough_step`
+
+**What the LLM cannot do:** Type in your terminal, click buttons, paste text, or take any action.
+
+**Stop:** Click the red **Stop** button in the status bar, or press **Alt+Shift+W** again. All annotations clear, walkthroughs stop, and your flags return to their previous state.
+
+### Work With Me (collaborative action)
+
+> *The LLM works alongside you — it can interact with applications, discover skills, and coordinate actions with you.*
+
+**Activate:** Click the **Work With Me** button in the header bar, or press **Alt+Shift+M**.
+
+**What gets enabled:** All 14 agent flags — everything from Walk Me Through plus Terminal Write, Batch Consent, Window Focus Manager, Clipboard Access, Agent Task Orchestrator, Enhanced Accessibility, Workflow Recording, and Skill Discovery.
+
+**What the LLM can do during this mode:**
+- Everything from Walk Me Through, plus:
+- Discover relevant skills via `discover_skills` (queries the Postgres skill index)
+- Announce intended actions via `announce_action` (shows an orange highlight for 2 seconds — you can cancel)
+- Type terminal commands, paste clipboard text, focus windows, invoke UI elements
+- Record and replay workflows
+
+**Action coordination:** Before the LLM acts on your screen, it calls `announce_action` which shows an orange annotation describing what it's about to do. You have 2 seconds to cancel via the overlay. This prevents the LLM and you from acting on the same window simultaneously.
+
+**Stop:** Click **Stop** or press **Alt+Shift+M**. All consent grants are revoked, pending actions are cancelled, walkthroughs stop, and flags restore.
+
+### Crash recovery
+
+If the app crashes or is force-killed during an active mode, a recovery marker file at `%APPDATA%/chat-overlay-widget/active-mode.json` preserves your pre-mode flag settings. On next startup, the sidecar detects this file, restores your flags, and deletes the marker.
+
+### Mutual exclusion
+
+Only one mode can be active at a time. While Walk Me Through is active, the Work With Me button is disabled (and vice versa). Attempting to activate a second mode via WebSocket returns an error.
+
+---
+
+## 5. Real-World Scenarios
+
+### Scenario A: Multi-Step GUI Task (e.g., Create a Google Sheets Macro)
 
 > *"Create a macro in Google Sheets that auto-formats my data table"*
 
@@ -144,7 +208,7 @@ Every agent capability is behind a feature flag (default OFF for safety-critical
 
 ---
 
-### Scenario 2: LLM Needs Documentation (e.g., Google Sheets API, Windows COM)
+### Scenario B: LLM Needs Documentation (e.g., Google Sheets API, Windows COM)
 
 > *"How do I use the Google Sheets API to create a pivot table?"*
 
@@ -173,7 +237,7 @@ Every agent capability is behind a feature flag (default OFF for safety-critical
 
 ---
 
-### Scenario 3: LLM Needs to Build Something (e.g., User's Custom App)
+### Scenario C: LLM Needs to Build Something (e.g., User's Custom App)
 
 > *"Add a dark mode toggle to my React app"*
 
@@ -218,7 +282,7 @@ Every agent capability is behind a feature flag (default OFF for safety-critical
 
 ---
 
-### Scenario 4: LLM Interacts with a Live Application (e.g., Google Sheets Dashboard)
+### Scenario D: LLM Interacts with a Live Application (e.g., Google Sheets Dashboard)
 
 > *"Build me a sales dashboard in Google Sheets with charts and formatting"*
 
@@ -271,7 +335,7 @@ Every agent capability is behind a feature flag (default OFF for safety-critical
 
 ---
 
-## 5. Consent & Safety Model
+## 6. Consent & Safety Model
 
 ### Three consent modes
 
@@ -293,7 +357,7 @@ Every agent capability is behind a feature flag (default OFF for safety-critical
 
 ---
 
-## 6. Workflow Recording & Replay
+## 7. Workflow Recording & Replay
 
 Record any sequence of agent actions for later replay:
 
@@ -321,7 +385,7 @@ Record any sequence of agent actions for later replay:
 
 ---
 
-## 7. Task Orchestration Across Multiple Terminals
+## 8. Task Orchestration Across Multiple Terminals
 
 With Multi-PTY + Agent Task Orchestrator:
 
@@ -348,7 +412,7 @@ The LLM can:
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
@@ -362,28 +426,32 @@ The LLM can:
 | Clipboard paste failed | Enable Clipboard Access + OS Input Simulation + Action Consent Gate |
 | Web fetch rejected | Only HTTPS URLs are allowed. HTTP, file://, and private IPs are blocked. |
 | Task stuck in "running" | Use `manage_tasks(action: 'cancel')` to send Ctrl+C, or wait for timeout (default 5 min) |
+| Mode won't activate | Another mode is already active. Stop the current mode first. |
+| Flags didn't restore after crash | Check `%APPDATA%/chat-overlay-widget/active-mode.json` — delete it manually if it's stuck |
+| Skill discovery returns no results | Postgres must be running on localhost:5432 with the `global_db` database |
+| "External window capture disabled" | Enable the External Window Capture flag, or activate Walk Me Through / Work With Me mode |
+| Announce action not showing | Batch Consent flag must be enabled (activated automatically by Work With Me mode) |
 | MCP tool returns 401 | Auth token mismatch. Restart the app. |
 | "Cannot find module" | Sidecar not built. Run `cd sidecar && npm install && npm run build` |
 
 ---
 
-## 9. Quick Reference: Flag Combinations by Use Case
+## 10. Quick Reference: Flag Combinations by Use Case
 
-| I want the LLM to... | Enable these flags |
-|-----------------------|-------------------|
-| Read my terminal | (none — always available) |
-| Draw annotations on screen | Annotation Overlay |
-| Guide me step-by-step | Annotation Overlay + Guided Walkthrough |
-| Type commands in my terminal | Terminal Write (MCP) |
-| Run tasks in multiple terminals | Terminal Write + Multi-PTY + Agent Task Orchestrator |
-| See UI elements on screen | UI Accessibility Tree |
-| Click buttons and type in apps | UI Accessibility + OS Input Simulation + Action Consent Gate |
-| Click buttons without coordinates | UI Accessibility + Enhanced Accessibility + Action Consent Gate |
-| Approve many actions at once | (above) + Batch Consent |
-| Auto-focus the right window | (above) + Window Focus Manager |
-| Copy/paste text into apps | (above) + Clipboard Access |
-| Look up documentation online | Web Fetch Tool |
-| Track annotations as I scroll | Annotation Overlay + UI Accessibility + Element-Bound Annotations |
-| Verify steps visually | Guided Walkthrough + Screenshot Verification |
-| Record and replay workflows | Workflow Recording + (whatever the workflow uses) |
-| Full autonomous agent mode | ALL flags ON |
+| I want the LLM to... | Easiest way | Manual flags |
+|-----------------------|-------------|-------------|
+| Read my terminal | (always available) | (none) |
+| Guide me step-by-step | **Walk Me Through** mode | Annotation Overlay + Guided Walkthrough + Conditional Advance + Screenshot Verification + Web Fetch + External Window Capture |
+| Watch my screen and advise | **Walk Me Through** mode | External Window Capture |
+| Work alongside me on any app | **Work With Me** mode | All 14 agent flags |
+| Draw annotations on screen | — | Annotation Overlay |
+| Type commands in my terminal | — | Terminal Write (MCP) |
+| Run tasks in multiple terminals | — | Terminal Write + Multi-PTY + Agent Task Orchestrator |
+| See external app windows | — | External Window Capture |
+| Find skills for the current task | — | Skill Discovery |
+| Look up documentation online | — | Web Fetch Tool |
+| Click buttons without coordinates | — | Enhanced Accessibility |
+| Copy/paste text into apps | — | Clipboard Access |
+| Verify steps visually | — | Guided Walkthrough + Screenshot Verification |
+| Record and replay workflows | — | Workflow Recording |
+| Full autonomous agent mode | **Work With Me** mode | ALL flags ON |

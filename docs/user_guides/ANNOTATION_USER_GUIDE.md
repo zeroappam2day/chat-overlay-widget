@@ -160,8 +160,30 @@ When an LLM agent is connected via MCP, these tools are available:
 | `start_guided_walkthrough` | Start a multi-step walkthrough |
 | `advance_walkthrough` | Move to the next step |
 | `stop_walkthrough` | Stop the walkthrough and clear annotations |
+| `modify_walkthrough` | Dynamically modify an active walkthrough (append, replace, or update steps) |
 
 These work with any MCP-compatible agent (Claude Code, Cursor, Windsurf, etc.).
+
+### Adaptive Walkthroughs
+
+The `modify_walkthrough` tool enables real-time walkthrough adaptation. Instead of defining all steps upfront, the LLM can:
+
+- **`append_steps`** — Add new steps to the end of an active walkthrough
+- **`replace_current_step`** — Replace the current step's title, instruction, and annotations (useful when screen observation shows the user needs different guidance)
+- **`update_remaining_steps`** — Replace all future steps while keeping the current and prior steps intact
+
+This is particularly useful in **Walk Me Through** mode, where the LLM observes the screen via `capture_external_window` and adapts guidance based on what it sees.
+
+---
+
+## Interactive Modes & Annotations
+
+The annotation and walkthrough systems are central to both interactive modes:
+
+- **Walk Me Through** mode automatically enables Annotation Overlay, Guided Walkthrough, Conditional Advance, and Screenshot Verification. The LLM uses these to guide you through processes in real-time.
+- **Work With Me** mode enables all of the above plus action tools. The `announce_action` tool uses the annotation system to show orange highlight annotations before the LLM acts on your screen.
+
+When either mode is deactivated, all annotations are cleared and any active walkthrough is stopped automatically.
 
 ---
 
