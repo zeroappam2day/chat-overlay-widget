@@ -464,6 +464,161 @@ flags: batchConsent
 </tool>
 </tools>
 
+<screen-recording>
+<overview>
+Screen recording is available via the `screenrec` CLI tool, invoked through `write_terminal`.
+The LLM can record screens, windows, and optionally capture system audio and/or microphone.
+tool-path: C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py
+runtime: Python 3.11 (already on PATH)
+dependencies: dxcam, pywin32, numpy, pyaudiowpatch (already installed)
+encoder: h264_nvenc (RTX 4080 GPU) with libx264 CPU fallback
+output-format: H.264 MP4 with optional AAC audio
+output-location: C:/Users/anujd/Videos/Screen Recordings/
+naming-convention: auto-generated from foreground window title — <5char>_<5char>_<5char>_<ddmmm>.mp4
+  --output flag overrides auto-naming when provided
+</overview>
+
+<workflow name="list-capture-targets">
+purpose: discover available screens and windows before recording
+steps:
+  1. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py list --format json\n"
+  2. call read_terminal_output to capture the JSON result
+  3. parse the JSON array — each element has: name, id, type (display/window), width, height
+use-when: you need to know what targets are available before starting a recording
+output-schema:
+```json
+[
+  {"name": "\\\\.\\DISPLAY1", "id": "display:0:0", "type": "display", "width": 2560, "height": 1600},
+  {"name": "Visual Studio Code", "id": 12345, "type": "window", "width": 1920, "height": 1080}
+]
+```
+</workflow>
+
+<workflow name="record-screen-video-only">
+purpose: record a display or window to MP4 (video only, no audio)
+steps:
+  1. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --duration 30 --fps 30\n"
+  2. wait for duration to elapse (or use --stop-file for manual stop)
+  3. call read_terminal_output to confirm "Recording saved:" message — output path is printed to stderr
+parameters:
+  --target: "display:0" for primary display, or window name like "Visual Studio Code" (substring match)
+  --output: optional — omit to auto-generate filename in C:/Users/anujd/Videos/Screen Recordings/
+  --duration: seconds (omit for indefinite, stop via --stop-file or Ctrl+C)
+  --fps: frame rate, default 30
+use-when: you need a silent screen recording — demos, bug captures, UI walkthroughs
+</workflow>
+
+<workflow name="record-screen-with-system-audio">
+purpose: record display/window with system audio (what the user hears from speakers)
+steps:
+  1. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --duration 30 --fps 30 --audio\n"
+  2. wait for duration to elapse
+  3. call read_terminal_output to confirm "Recording saved:" with "encoder=h264_nvenc+aac"
+parameters: same as video-only plus --audio flag
+audio-source: WASAPI loopback — captures all system audio (YouTube, music, apps, notifications)
+audio-format: AAC 128kbps stereo 48kHz
+use-when: recording tutorials with app sounds, capturing video calls, preserving audio context
+</workflow>
+
+<workflow name="record-screen-with-microphone">
+purpose: record display/window with microphone input (user's voice)
+steps:
+  1. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --duration 30 --fps 30 --mic\n"
+  2. wait for duration to elapse
+  3. call read_terminal_output to confirm recording saved
+parameters: same as video-only plus --mic flag
+audio-source: WASAPI default input device (Microphone Array)
+use-when: recording narrated walkthroughs, voice annotations over screen capture
+</workflow>
+
+<workflow name="record-screen-with-all-audio">
+purpose: record display/window with BOTH system audio and microphone mixed together
+steps:
+  1. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --duration 30 --fps 30 --audio --mic\n"
+  2. wait for duration to elapse
+  3. call read_terminal_output to confirm recording saved
+parameters: same as video-only plus --audio --mic flags
+audio-mixing: both streams mixed via ffmpeg amix filter into single AAC track
+use-when: recording video calls with user commentary, full-context screen captures
+</workflow>
+
+<workflow name="record-with-agent-stop">
+purpose: start an indefinite recording that the LLM can stop programmatically
+steps:
+  1. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --stop-file C:/Users/anujd/Videos/Screen\ Recordings/.stop_rec --audio\n"
+  2. recording runs indefinitely in the terminal — output path is printed to stderr
+  3. when ready to stop, call write_terminal in another pane (or use manage_tasks): "echo. > \"C:/Users/anujd/Videos/Screen Recordings/.stop_rec\"\n"
+  4. recording stops cleanly, stop file is auto-deleted
+  5. call read_terminal_output to confirm "Recording saved:"
+use-when: recording duration is unknown upfront — the LLM decides when to stop based on context
+<note>the stop file can be created from any terminal pane or process — it is just a filesystem sentinel</note>
+</workflow>
+
+<workflow name="record-specific-window">
+purpose: record only a specific application window (not the full display)
+steps:
+  1. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py list --format json\n"
+  2. call read_terminal_output, parse JSON, find the target window name
+  3. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target \"Window Title Here\" --duration 30 --audio\n"
+  4. call read_terminal_output to confirm window matched and recording saved
+targeting: substring match (case-insensitive) — "Visual Studio" matches "main.py - Visual Studio Code"
+limitation: window region is fixed at recording start — moving/resizing the window during recording captures the wrong area
+use-when: recording a specific app for a focused demo or bug report
+</workflow>
+
+<workflow name="compress-for-sharing">
+purpose: compress a recorded MP4 for a target platform
+steps:
+  1. call write_terminal with text: "python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py compress --input \"C:/Users/anujd/Videos/Screen Recordings/source_file.mp4\" --preset whatsapp\n"
+  2. call read_terminal_output to confirm "Compressed:" message with file size savings
+presets:
+  whatsapp: <=16MB, 960px wide, H.264 Main, mono 64k audio — output tagged _wa
+  youtube: high quality, H.264 High, stereo 320k audio, native resolution — output tagged _yt
+  small: HEVC 1080p, aggressive compression, mono 64k — output tagged _sm
+  archive: HEVC native resolution, best quality/size ratio, mono 96k — output tagged _ar
+output: auto-named next to source file with preset tag (e.g. sourc_words_wa_08apr.mp4)
+  --output flag overrides auto-naming when provided
+use-when: you need to share a recording via WhatsApp, upload to YouTube, or reduce file size
+</workflow>
+
+<quick-reference>
+<critical>
+The screenrec tool is at: C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py
+Output saves to: C:/Users/anujd/Videos/Screen Recordings/
+Filenames auto-generated: <5char>_<5char>_<5char>_<ddmmm>.mp4
+
+Common invocations via write_terminal (--output is optional, omit for auto-naming):
+
+list targets:
+  python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py list --format json
+
+record display (video only):
+  python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --duration {N} --fps 30
+
+record display (with system audio):
+  python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --duration {N} --fps 30 --audio
+
+record display (with mic):
+  python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --duration {N} --fps 30 --mic
+
+record display (system audio + mic):
+  python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --duration {N} --fps 30 --audio --mic
+
+record with agent stop:
+  python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py record --target display:0 --stop-file "C:/Users/anujd/Videos/Screen Recordings/.stop_rec" --audio
+
+stop a recording:
+  echo. > "C:/Users/anujd/Videos/Screen Recordings/.stop_rec"
+
+compress for whatsapp:
+  python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py compress --input "{recorded_file}" --preset whatsapp
+
+compress for youtube:
+  python C:/Users/anujd/Documents/01_AI/218_screenrec/screenrec.py compress --input "{recorded_file}" --preset youtube
+</critical>
+</quick-reference>
+</screen-recording>
+
 <verification>
 <critical>
 After configuring your MCP client, verify the connection works with this sequence:
