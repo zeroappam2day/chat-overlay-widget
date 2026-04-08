@@ -69,8 +69,8 @@ describe('PICK-02: Keyboard navigation', () => {
     const picker = container.firstChild as HTMLElement;
     fireEvent.keyDown(picker, { key: 'ArrowRight' });
     const cards = screen.getAllByTestId('picker-card');
-    expect(cards[1].className).toContain('border-[#007acc]');
-    expect(cards[0].className).not.toContain('border-[#007acc]');
+    expect(cards[1].className).toContain('shadow-[0_0_12px');
+    expect(cards[0].className).not.toContain('shadow-[0_0_12px');
   });
 
   it('ArrowLeft at index 0 stays at 0 (does not go negative)', () => {
@@ -80,7 +80,7 @@ describe('PICK-02: Keyboard navigation', () => {
     const picker = container.firstChild as HTMLElement;
     fireEvent.keyDown(picker, { key: 'ArrowLeft' });
     const cards = screen.getAllByTestId('picker-card');
-    expect(cards[0].className).toContain('border-[#007acc]');
+    expect(cards[0].className).toContain('border-[#58a6ff]');
   });
 
   it('ArrowDown moves selectedIndex by cols (3) — from 0 to 3', () => {
@@ -90,7 +90,7 @@ describe('PICK-02: Keyboard navigation', () => {
     const picker = container.firstChild as HTMLElement;
     fireEvent.keyDown(picker, { key: 'ArrowDown' });
     const cards = screen.getAllByTestId('picker-card');
-    expect(cards[3].className).toContain('border-[#007acc]');
+    expect(cards[3].className).toContain('border-[#58a6ff]');
   });
 
   it('ArrowUp from index 3 moves back to index 0', () => {
@@ -103,7 +103,7 @@ describe('PICK-02: Keyboard navigation', () => {
     // Then go back up
     fireEvent.keyDown(picker, { key: 'ArrowUp' });
     const cards = screen.getAllByTestId('picker-card');
-    expect(cards[0].className).toContain('border-[#007acc]');
+    expect(cards[0].className).toContain('border-[#58a6ff]');
   });
 
   it('Escape calls onClose mock', () => {
@@ -140,7 +140,7 @@ describe('PICK-03: Refresh button', () => {
       <WindowPicker windows={mockWindows} onClose={vi.fn()} onRefresh={onRefresh} />
     );
     const user = userEvent.setup();
-    await user.click(screen.getByText('Refresh'));
+    await user.click(screen.getByRole('button', { name: /refresh window list/i }));
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
@@ -151,7 +151,7 @@ describe('PICK-03: Refresh button', () => {
       <WindowPicker windows={mockWindows} onClose={onClose} onRefresh={onRefresh} />
     );
     const user = userEvent.setup();
-    await user.click(screen.getByText('Refresh'));
+    await user.click(screen.getByRole('button', { name: /refresh window list/i }));
     expect(onClose).not.toHaveBeenCalled();
   });
 });
