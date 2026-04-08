@@ -41,27 +41,30 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 - Cursor-paginated terminal buffer with ANSI/OSC stripping, exposed via HTTP — v1.5 (Phase 23)
 - Best-effort secret scrubbing with provider trust tiers (local unscrubbed, cloud scrubbed) — v1.5 (Phase 24)
 - Screenshot self-capture with secret-region blurring before cloud transmission — v1.5 (Phase 25)
+- Hook receiver normalizing Claude Code/Windsurf/Cursor events into shared AgentEvent schema — v1.6 (Phase 26)
+- MCP server (stdio) wrapping HTTP APIs for autonomous LLM tool access — v1.6 (Phase 27)
+- Adapter layer for LLM-specific integrations with sidebar event panel — v1.6 (Phase 28)
 
 ### Active
 
-- [ ] Hook receiver normalizing Claude Code/Windsurf/Cursor events into shared AgentEvent schema
-- [ ] MCP server (stdio) wrapping HTTP APIs for autonomous LLM tool access
-- [ ] Adapter layer for LLM-specific integrations (ClaudeCode, Windsurf, Cursor, Fallback)
-- [ ] Sidebar event panel showing structured agent activity (tool name, file, status)
-- [ ] Auto-configuration: app injects hook config + MCP registration on startup
+- [ ] PM Chat sidebar tab with streaming Ollama LLM responses
+- [ ] Windows SAPI5 TTS via persistent PowerShell process
+- [ ] LLM settings UI: model dropdown, system prompt, temperature — persisted
+- [ ] Conversational follow-up with terminal context injection
+- [ ] Ollama health check and graceful error states
 
-## Current Milestone: v1.6 Agent Hooks & MCP Integration
+## Current Milestone: v1.7 PM Voice Chat
 
-**Goal:** Let any MCP-capable LLM running in the app autonomously read the terminal, observe agent activity, and capture screenshots — with a layered adapter architecture that degrades gracefully for non-MCP LLMs.
+**Goal:** A conversational PM assistant that reads terminal state, summarizes it via local Ollama LLM in non-technical CEO-friendly language, and speaks it via Windows SAPI5 — with persistent LLM settings and follow-up chat.
 
 **Target features:**
-- Hook receiver normalizing Claude Code/Windsurf/Cursor lifecycle events
-- MCP server (stdio) wrapping HTTP APIs for autonomous LLM tool access
-- Adapter layer with typed adapters per tool + fallback
-- Sidebar event panel with structured agent activity display
-- Auto-configuration (zero manual setup for hooks + MCP)
+- PM Chat sidebar tab with streaming LLM responses from local Ollama
+- Windows SAPI5 TTS via persistent PowerShell process (no Python dependency)
+- Configurable LLM settings: model selection (from Ollama /api/tags), system prompt, temperature — persisted to localStorage
+- Conversational follow-up with terminal context injection
+- Ollama health check and graceful error states
 
-## Previous Milestone: v1.5 Self-Observation & Agent Visibility (shipped 2026-04-01)
+## Previous Milestone: v1.6 Agent Hooks & MCP Integration (shipped 2026-04-07)
 
 **Goal:** The app can observe its own terminal output and capture its own window — with secret scrubbing, trust tiers, and HTTP APIs.
 
@@ -88,7 +91,8 @@ v1.3 shipped: protocol extension, batch thumbnails, enriched capture, window pic
 v1.4 shipped: HWND+PID protocol threading, direct HWND capture, stale detection, blank-bitmap warning, fallback (Phases 21-22)
 Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 25 phases shipped across 5 milestones.
 v1.5 shipped: Terminal buffer, secret scrubbing, self-screenshot — HTTP APIs for any caller. 3 phases, 7 plans, 140 sidecar tests, 9/9 requirements verified. Phases 23-25.
-v1.6 scope: Hook receiver, MCP server, adapter layer, sidebar, auto-config — Phases 26-29. Stress-tested from 5 adversarial views. Virtual xterm.js agent panes rejected — sidebar panel chosen. MCP broadly adopted (Claude, Cursor, Windsurf, Cline, GPT-4, Gemini). Hook systems fragmented across tools — adapter layer required. Secret scrubber is best-effort, not a security boundary.
+v1.6 shipped: Hook receiver, MCP server, adapter layer, sidebar — Phases 26-28 (Phase 29 auto-config deferred).
+v1.7 scope: PM Voice Chat — local Ollama LLM summarization + Windows SAPI5 TTS via persistent PowerShell process. Stress-tested from 5 adversarial views (security, UX, perf, reliability, architecture). Key mitigations: no shell injection (stdin piping), persistent TTS process, Ollama health check, concurrent request guards.
 
 ## Key Decisions
 
@@ -115,7 +119,10 @@ v1.6 scope: Hook receiver, MCP server, adapter layer, sidebar, auto-config — P
 | Provider trust tiers (local unscrubbed, cloud scrubbed) | Multi-LLM data leakage: same content to all providers defeats purpose of local models for sensitive work | Validated (Phase 24) |
 | Cursor-paginated terminal reads over full buffer dump | 64KB raw dump = 16K-20K tokens; catastrophic for small-context models (Haiku, local Llama) | Validated (Phase 23) |
 | Sidebar over virtual terminal panes for agent visibility | Stress test: raw JSONL in xterm.js is unreadable; panes accumulate; category error (terminal for log data) | — Pending (v1.6) |
-| Layered architecture (HTTP → MCP → Adapters) | LLM portability: HTTP is universal, MCP is broadly adopted, adapters handle fragmented hooks | — Pending (v1.6) |
+| Layered architecture (HTTP → MCP → Adapters) | LLM portability: HTTP is universal, MCP is broadly adopted, adapters handle fragmented hooks | Validated (Phase 26-28) |
+| PowerShell SAPI5 over Python pyttsx3 for TTS | Eliminates Python dependency; app already spawns PowerShell for captures; persistent process avoids per-utterance cold start | — Pending (v1.7) |
+| Ollama chat over cloud LLM for PM summaries | Local-only, no API keys, privacy-preserving, user already runs Ollama | — Pending (v1.7) |
+| LLM output piped via stdin (never shell-interpolated) | Adversarial review found RCE via shell injection if LLM text embedded in command strings | — Pending (v1.7) |
 
 ## Evolution
 
@@ -123,4 +130,4 @@ Updates at phase transitions: invalidate/validate requirements, log decisions, c
 Updates at milestones: full review, core value check, out-of-scope audit.
 
 ---
-*Last updated: 2026-04-01 after v1.5 milestone*
+*Last updated: 2026-04-07 after v1.7 milestone start*
