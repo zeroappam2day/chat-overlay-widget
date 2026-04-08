@@ -217,3 +217,30 @@ ollama list          :: verify models are pulled
 ollama ps            :: verify a model is loaded
 curl localhost:11434 :: verify Ollama is running
 ```
+
+### Dashboard chat/search with Ollama (instead of OpenAI API key)
+
+Repowise dashboard uses a separate embedder from the MCP server. By default it prompts
+for OpenAI or Gemini. To use Ollama's OpenAI-compatible API instead:
+
+```batch
+:: Set these env vars BEFORE running repowise serve
+set REPOWISE_EMBEDDER=openai
+set REPOWISE_EMBEDDING_MODEL=nomic-embed-text
+set OPENAI_API_KEY=ollama
+set OPENAI_BASE_URL=http://localhost:11434/v1
+```
+
+How it works:
+- `REPOWISE_EMBEDDER=openai` tells the dashboard to use the OpenAI embedder class
+- `REPOWISE_EMBEDDING_MODEL=nomic-embed-text` overrides the default `text-embedding-3-small`
+  (which Ollama doesn't have) with `nomic-embed-text` (already pulled locally)
+- `OPENAI_BASE_URL=http://localhost:11434/v1` redirects the OpenAI SDK to Ollama's
+  OpenAI-compatible endpoint
+- `OPENAI_API_KEY=ollama` satisfies the API key check (Ollama ignores the value)
+
+After first launch with embedder enabled, trigger a full resync via the dashboard UI
+or API (`POST /api/repos/<id>/full-resync`) to build the vector search index.
+
+Source: discovered in `repowise/server/app.py` lines 55-75 (`_build_embedder` function)
+and `repowise/core/providers/embedding/openai.py` line 72 (`REPOWISE_EMBEDDING_MODEL` env var).

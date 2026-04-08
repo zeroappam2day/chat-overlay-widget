@@ -12,6 +12,14 @@ set REPOWISE=C:\Users\anujd\miniconda3\envs\repowise\Scripts\repowise.exe
 set API_PORT=8000
 set UI_PORT=8001
 
+:: Ollama as OpenAI-compatible embedder for dashboard chat/search
+:: Ollama serves OpenAI-compatible API at localhost:11434/v1
+:: nomic-embed-text replaces OpenAI's text-embedding-3-small
+set REPOWISE_EMBEDDER=openai
+set REPOWISE_EMBEDDING_MODEL=nomic-embed-text
+set OPENAI_API_KEY=ollama
+set OPENAI_BASE_URL=http://localhost:11434/v1
+
 echo ============================================
 echo   Repowise Dashboard
 echo ============================================
@@ -36,10 +44,9 @@ if not exist ".repowise\wiki.db" (
     exit /b 1
 )
 
-:: Auto-select embedder: skip (option 3) to avoid interactive prompt
-:: Chat/search in dashboard won't work without embedder, but all other features do
-:: To enable chat/search: change "3" to "2" (requires OPENAI_API_KEY) or "1" (requires GEMINI_API_KEY)
-echo 3| "%REPOWISE%" serve --port %API_PORT% --ui-port %UI_PORT% --host localhost
+:: Embedder is configured via env vars above (Ollama as OpenAI-compatible)
+:: The interactive prompt is bypassed by selecting option 2 (openai)
+echo 2| "%REPOWISE%" serve --port %API_PORT% --ui-port %UI_PORT% --host localhost
 
 :: Cleanup after exit (Ctrl+C or window close)
 echo.
