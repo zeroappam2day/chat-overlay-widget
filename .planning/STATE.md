@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Ship & Harden
-status: defining_requirements
-stopped_at: ""
+status: ready_to_plan
+stopped_at: "Roadmap created for v1.8 — 5 phases (34-38), 13/13 requirements mapped"
 last_updated: "2026-04-09"
 last_activity: 2026-04-09
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-09)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Defining requirements for v1.8
+**Current focus:** Phase 34 — Orphan & Dead Code Cleanup
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-09 — Milestone v1.8 started (v1.7 abandoned)
+Phase: 34 of 38 (Orphan & Dead Code Cleanup)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-04-09 — v1.8 roadmap created (5 phases, 13/13 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed (v1.8): 0
+- Prior milestone velocity: ~2-3 plans/day
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
@@ -37,11 +47,10 @@ Last activity: 2026-04-09 — Milestone v1.8 started (v1.7 abandoned)
 Baseline decisions: see PROJECT.md Key Decisions table.
 
 v1.8 milestone decisions:
-- Hybrid direction selected via 4-direction stress test (6 perspectives each): finish PM Chat + test foundation + keyboard discoverability
-- TTS cut to backlog (deferred twice, zero implementation, unanimous across all stress-test perspectives)
-- Playwright CDP over tauri-driver for E2E testing (WebView2 supports --remote-debugging-port; v1.59.1 confirmed)
-- Midscene.js AI layer deferred (beta quality, no Tauri-specific evidence)
-- Phase 29 auto-config remains deferred
+- Cleanup before building: Phase 34 resolves half-wired v1.7 state before PM Chat phases build on it
+- Settings before context: Phase 35 (settings store) must wire the frontend before Phase 36 can inject terminal context
+- Discoverability independent: Phase 37 does not block or depend on PM Chat phases
+- Tests last: Phase 38 verifies final shipped state of all features
 
 Carried from v1.7:
 - WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS already authenticated
@@ -55,12 +64,12 @@ None.
 
 ### Blockers/Concerns
 
+- PMChatTab.tsx and pmChatStore.ts exist but are half-wired — Phase 34 must resolve before Phase 35 builds on them
+- Playwright CDP to WebView2 is "likely compatible" not "battle-tested with Tauri v1" — validate in Phase 38 early
 - Ollama must be running locally for PM Chat health check to show "healthy"
-- Playwright CDP to WebView2 is "likely compatible" not "battle-tested with Tauri v1" — validate early
-- pmChat.ts sidecar code exists and is imported at runtime but frontend is half-wired — finish or remove, don't leave half-state
 
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: Milestone v1.8 initialization — defining requirements
-Next action: Define REQUIREMENTS.md
+Stopped at: v1.8 roadmap written — ROADMAP.md, STATE.md, REQUIREMENTS.md updated
+Next action: `/gsd-plan-phase 34`

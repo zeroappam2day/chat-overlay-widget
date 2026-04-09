@@ -109,27 +109,27 @@ Deferred to future milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CHAT-02 | TBD | Pending |
-| CHAT-03 | TBD | Pending |
-| SET-01 | TBD | Pending |
-| SET-02 | TBD | Pending |
-| SET-03 | TBD | Pending |
-| SET-04 | TBD | Pending |
-| TEST-01 | TBD | Pending |
-| TEST-02 | TBD | Pending |
-| TEST-03 | TBD | Pending |
-| DISC-01 | TBD | Pending |
-| DISC-02 | TBD | Pending |
-| CLEAN-01 | TBD | Pending |
-| CLEAN-02 | TBD | Pending |
+| CLEAN-01 | Phase 34 | Pending |
+| CLEAN-02 | Phase 34 | Pending |
+| SET-01 | Phase 35 | Pending |
+| SET-02 | Phase 35 | Pending |
+| SET-03 | Phase 35 | Pending |
+| SET-04 | Phase 35 | Pending |
+| CHAT-02 | Phase 36 | Pending |
+| CHAT-03 | Phase 36 | Pending |
+| DISC-01 | Phase 37 | Pending |
+| DISC-02 | Phase 37 | Pending |
+| TEST-01 | Phase 38 | Pending |
+| TEST-02 | Phase 38 | Pending |
+| TEST-03 | Phase 38 | Pending |
 
 **Coverage:**
 - v1.8 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 (pending roadmap)
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *v1.6 requirements archived inline (shipped phases 26-28)*
 *v1.7 requirements: CHAT-01/CHAT-04 shipped, CHAT-02/03/SET-01-04 carried to v1.8, TTS-01-04 moved to backlog*
 *Requirements defined: 2026-04-09*
-*Last updated: 2026-04-09 after v1.8 milestone definition*
+*Last updated: 2026-04-09 — v1.8 roadmap created, all 13 requirements mapped to phases 34-38*
