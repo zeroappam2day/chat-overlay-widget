@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Ship & Harden
-status: ready_to_plan
-stopped_at: "Roadmap created for v1.8 — 5 phases (34-38), 13/13 requirements mapped"
-last_updated: "2026-04-09"
-last_activity: 2026-04-09
+status: executing
+stopped_at: Phase 34 complete — moving to Phase 35
+last_updated: "2026-04-09T15:19:59.961Z"
+last_activity: 2026-04-09 -- Phase 35 planning complete
 progress:
-  total_phases: 5
+  total_phases: 1
   completed_phases: 0
-  total_plans: 0
+  total_plans: 2
   completed_plans: 0
   percent: 0
 ---
@@ -27,14 +27,15 @@ See: .planning/PROJECT.md (updated 2026-04-09)
 
 Phase: 35 of 38 (PM Chat Settings UI)
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-09 — Phase 34 complete (no changes needed — audit clean)
+Status: Ready to execute
+Last activity: 2026-04-09 -- Phase 35 planning complete
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed (v1.8): 0
 - Prior milestone velocity: ~2-3 plans/day
 
@@ -47,12 +48,14 @@ Progress: [░░░░░░░░░░] 0%
 Baseline decisions: see PROJECT.md Key Decisions table.
 
 v1.8 milestone decisions:
+
 - Cleanup before building: Phase 34 resolves half-wired v1.7 state before PM Chat phases build on it
 - Settings before context: Phase 35 (settings store) must wire the frontend before Phase 36 can inject terminal context
 - Discoverability independent: Phase 37 does not block or depend on PM Chat phases
 - Tests last: Phase 38 verifies final shipped state of all features
 
 Carried from v1.7:
+
 - WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS already authenticated
 - Separate pmChat.ts module from server.ts: keeps routing concerns separated
 - wsSend stored in Zustand pmChatStore: avoids prop-drilling through portal-rendered AgentSidebar

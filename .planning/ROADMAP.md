@@ -236,7 +236,10 @@ Plans:
   2. User can edit the PM system prompt in a textarea and the edited text is present after restarting the app
   3. User can drag the temperature slider (0.0–1.0, default 0.0) and the value is present after restarting the app
   4. User can enter a custom Ollama endpoint URL and the value is present after restarting the app
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 35-01-PLAN.md — pmChatSettingsStore (localStorage persistence) + PMChatSettings collapsible panel
+- [ ] 35-02-PLAN.md — Protocol endpoint? threading, sidecar server wiring, PMChatTab integration
 **UI hint**: yes
 
 ### Phase 36: PM Chat Conversational Context
@@ -292,7 +295,7 @@ Plans:
 | 32. Conversational Context | v1.7 | 0/TBD | Abandoned | - |
 | 33. TTS Voice Engine | v1.7 | 0/TBD | Moved to backlog | - |
 | 34. Orphan & Dead Code Cleanup | v1.8 | 0/TBD | Not started | - |
-| 35. PM Chat Settings UI | v1.8 | 0/TBD | Not started | - |
+| 35. PM Chat Settings UI | v1.8 | 0/2 | Ready to execute | - |
 | 36. PM Chat Conversational Context | v1.8 | 0/TBD | Not started | - |
 | 37. Keyboard Shortcut Discoverability | v1.8 | 0/TBD | Not started | - |
 | 38. Test Infrastructure | v1.8 | 0/TBD | Not started | - |
