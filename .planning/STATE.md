@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Ship & Harden
 status: executing
-stopped_at: Phase 34 complete — moving to Phase 35
-last_updated: "2026-04-09T15:19:59.961Z"
-last_activity: 2026-04-09 -- Phase 35 planning complete
+stopped_at: Completed 35-01-PLAN.md
+last_updated: "2026-04-09T15:44:36.942Z"
+last_activity: 2026-04-09
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 50
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-09)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 34 — Orphan & Dead Code Cleanup
+**Current focus:** Phase 35 — pm-chat-settings-ui
 
 ## Current Position
 
-Phase: 35 of 38 (PM Chat Settings UI)
-Plan: Not started
+Phase: 35 (pm-chat-settings-ui) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-09 -- Phase 35 planning complete
+Last activity: 2026-04-09
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -60,6 +60,7 @@ Carried from v1.7:
 - Separate pmChat.ts module from server.ts: keeps routing concerns separated
 - wsSend stored in Zustand pmChatStore: avoids prop-drilling through portal-rendered AgentSidebar
 - setActiveTab sets collapsed:false: tab icon click expands sidebar in one action
+- [Phase 35]: loadSettings() at create() time for instant hydration; setSetting serializes only data fields; useEffect deps [open, endpoint] for model re-fetch
 
 ### Todos
 
@@ -70,6 +71,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260409-ly6 | Phase 34: Orphan & Dead Code Cleanup | 2026-04-09 | (audit clean — no changes) | [260409-ly6-phase-34-orphan-and-dead-code-cleanup](./quick/260409-ly6-phase-34-orphan-and-dead-code-cleanup/) |
+| Phase 35 P01 | 6min | 2 tasks | 4 files |
 
 ### Blockers/Concerns
 
@@ -78,6 +80,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-09
-Stopped at: Phase 34 complete — moving to Phase 35
+Last session: 2026-04-09T15:44:36.938Z
+Stopped at: Completed 35-01-PLAN.md
 Next action: `/gsd:plan-phase 35`

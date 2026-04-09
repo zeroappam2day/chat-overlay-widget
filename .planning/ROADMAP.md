@@ -238,7 +238,7 @@ Plans:
   4. User can enter a custom Ollama endpoint URL and the value is present after restarting the app
 **Plans**: 2 plans
 Plans:
-- [ ] 35-01-PLAN.md — pmChatSettingsStore (localStorage persistence) + PMChatSettings collapsible panel
+- [x] 35-01-PLAN.md — pmChatSettingsStore (localStorage persistence) + PMChatSettings collapsible panel
 - [ ] 35-02-PLAN.md — Protocol endpoint? threading, sidecar server wiring, PMChatTab integration
 **UI hint**: yes
 
@@ -295,7 +295,7 @@ Plans:
 | 32. Conversational Context | v1.7 | 0/TBD | Abandoned | - |
 | 33. TTS Voice Engine | v1.7 | 0/TBD | Moved to backlog | - |
 | 34. Orphan & Dead Code Cleanup | v1.8 | 0/TBD | Not started | - |
-| 35. PM Chat Settings UI | v1.8 | 0/2 | Ready to execute | - |
+| 35. PM Chat Settings UI | v1.8 | 1/2 | In Progress|  |
 | 36. PM Chat Conversational Context | v1.8 | 0/TBD | Not started | - |
 | 37. Keyboard Shortcut Discoverability | v1.8 | 0/TBD | Not started | - |
 | 38. Test Infrastructure | v1.8 | 0/TBD | Not started | - |

@@ -13,9 +13,9 @@ Requirements for v1.8 Ship & Harden milestone. Each maps to roadmap phases.
 - [ ] **CHAT-02**: Each message automatically includes the last N lines of terminal output as context for the LLM
 - [ ] **CHAT-03**: User can ask follow-up questions with conversation history maintained (capped at 20 turns)
 - [x] **CHAT-04**: App checks Ollama availability on sidebar open and shows clear status if Ollama is not running (shipped v1.7 Phase 31)
-- [ ] **SET-01**: User can select from available Ollama models via dropdown populated from /api/tags
-- [ ] **SET-02**: User can edit the PM system prompt in a textarea, persisted to localStorage
-- [ ] **SET-03**: User can adjust LLM temperature via slider (default 0.0), persisted to localStorage
+- [x] **SET-01**: User can select from available Ollama models via dropdown populated from /api/tags
+- [x] **SET-02**: User can edit the PM system prompt in a textarea, persisted to localStorage
+- [x] **SET-03**: User can adjust LLM temperature via slider (default 0.0), persisted to localStorage
 - [ ] **SET-04**: User can configure custom Ollama endpoint URL, persisted to localStorage
 
 ### Test Infrastructure
@@ -111,9 +111,9 @@ Deferred to future milestones. Tracked but not in current roadmap.
 |-------------|-------|--------|
 | CLEAN-01 | Phase 34 | Pending |
 | CLEAN-02 | Phase 34 | Pending |
-| SET-01 | Phase 35 | Pending |
-| SET-02 | Phase 35 | Pending |
-| SET-03 | Phase 35 | Pending |
+| SET-01 | Phase 35 | Complete |
+| SET-02 | Phase 35 | Complete |
+| SET-03 | Phase 35 | Complete |
 | SET-04 | Phase 35 | Pending |
 | CHAT-02 | Phase 36 | Pending |
 | CHAT-03 | Phase 36 | Pending |
