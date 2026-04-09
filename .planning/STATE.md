@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-09)
 
 ## Current Position
 
-Phase: 34 of 38 (Orphan & Dead Code Cleanup)
+Phase: 35 of 38 (PM Chat Settings UI)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-04-09 — v1.8 roadmap created (5 phases, 13/13 requirements mapped)
+Last activity: 2026-04-09 — Phase 34 complete (no changes needed — audit clean)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -62,14 +62,19 @@ Carried from v1.7:
 
 None.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260409-ly6 | Phase 34: Orphan & Dead Code Cleanup | 2026-04-09 | (audit clean — no changes) | [260409-ly6-phase-34-orphan-and-dead-code-cleanup](./quick/260409-ly6-phase-34-orphan-and-dead-code-cleanup/) |
+
 ### Blockers/Concerns
 
-- PMChatTab.tsx and pmChatStore.ts exist but are half-wired — Phase 34 must resolve before Phase 35 builds on them
 - Playwright CDP to WebView2 is "likely compatible" not "battle-tested with Tauri v1" — validate in Phase 38 early
 - Ollama must be running locally for PM Chat health check to show "healthy"
 
 ## Session Continuity
 
 Last session: 2026-04-09
-Stopped at: v1.8 roadmap written — ROADMAP.md, STATE.md, REQUIREMENTS.md updated
-Next action: `/gsd-plan-phase 34`
+Stopped at: Phase 34 complete — moving to Phase 35
+Next action: `/gsd:plan-phase 35`
