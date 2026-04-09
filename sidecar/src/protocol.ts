@@ -23,7 +23,7 @@ export type ClientMessage =
   | { type: 'mode-activate'; modeId: 'walkMeThrough' | 'workWithMe' }
   | { type: 'mode-deactivate' }
   | { type: 'cancel-pending-action'; actionId: string }
-  | { type: 'pm-chat'; requestId: string; message: string; model: string; temperature: number; systemPrompt: string }
+  | { type: 'pm-chat'; requestId: string; message: string; model: string; temperature: number; systemPrompt: string; endpoint?: string }
   | { type: 'pm-chat-cancel'; requestId: string }
   | { type: 'pm-chat-health-check' };
 

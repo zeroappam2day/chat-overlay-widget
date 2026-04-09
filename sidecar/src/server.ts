@@ -1707,13 +1707,14 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       }
       case 'pm-chat': {
-        const pmMsg = msg as { type: 'pm-chat'; requestId: string; message: string; model: string; temperature: number; systemPrompt: string };
+        const pmMsg = msg as { type: 'pm-chat'; requestId: string; message: string; model: string; temperature: number; systemPrompt: string; endpoint?: string };
         console.log(`[sidecar] pm-chat request: requestId=${pmMsg.requestId} model=${pmMsg.model}`);
         streamOllamaChat(pmMsg.requestId, {
           message: pmMsg.message,
           model: pmMsg.model,
           temperature: pmMsg.temperature,
           systemPrompt: pmMsg.systemPrompt,
+          endpoint: pmMsg.endpoint,
         }, {
           onToken: (token) => broadcastPmChatToken(pmMsg.requestId, token),
           onDone: () => broadcastPmChatDone(pmMsg.requestId),
