@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: PM Voice Chat
-status: executing
-stopped_at: "Checkpoint: Task 3 human-verify in 31-02-PLAN.md"
-last_updated: "2026-04-07T16:54:40.442Z"
-last_activity: 2026-04-07
+milestone: v1.8
+milestone_name: Ship & Harden
+status: defining_requirements
+stopped_at: ""
+last_updated: "2026-04-09"
+last_activity: 2026-04-09
 progress:
-  total_phases: 8
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -18,25 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-07)
+See: .planning/PROJECT.md (updated 2026-04-09)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 31 — Ollama Chat Backend & Sidebar Tab
+**Current focus:** Defining requirements for v1.8
 
 ## Current Position
 
-Phase: 31 (Ollama Chat Backend & Sidebar Tab) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-04-07
-
-Progress: [░░░░░░░░░░] 0% (v1.7)
-
-## Performance Metrics
-
-Plans executed (v1.6): 5
-Plans needing revision: 0
-Revision rate: 0%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-09 — Milestone v1.8 started (v1.7 abandoned)
 
 ## Accumulated Context
 
@@ -44,20 +36,18 @@ Revision rate: 0%
 
 Baseline decisions: see PROJECT.md Key Decisions table.
 
-Recent decisions affecting v1.7:
+v1.8 milestone decisions:
+- Hybrid direction selected via 4-direction stress test (6 perspectives each): finish PM Chat + test foundation + keyboard discoverability
+- TTS cut to backlog (deferred twice, zero implementation, unanimous across all stress-test perspectives)
+- Playwright CDP over tauri-driver for E2E testing (WebView2 supports --remote-debugging-port; v1.59.1 confirmed)
+- Midscene.js AI layer deferred (beta quality, no Tauri-specific evidence)
+- Phase 29 auto-config remains deferred
 
-- PowerShell SAPI5 over Python pyttsx3: eliminates Python dependency; persistent process avoids per-utterance cold start
-- Ollama chat over cloud LLM: local-only, no API keys, privacy-preserving
-- LLM output via stdin only (never shell-interpolated): adversarial review found RCE risk otherwise
-
-v1.6 decisions still relevant:
-
-- [Phase 28]: Sidebar as peer flex element to prevent terminal resize flash on collapse/expand
-- [Phase 28]: useAgentEventStore.getState() for non-React WebSocket callbacks (Zustand pattern)
-- [Phase 31-01]: WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS is already authenticated at connection time
-- [Phase 31-01]: Separate pmChat.ts module from server.ts: keeps routing concerns separated, matches askCodeHandler.js pattern
-- [Phase 31]: wsSend stored in Zustand pmChatStore: avoids prop-drilling through portal-rendered AgentSidebar
-- [Phase 31]: setActiveTab sets collapsed:false: tab icon click expands sidebar in one action
+Carried from v1.7:
+- WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS already authenticated
+- Separate pmChat.ts module from server.ts: keeps routing concerns separated
+- wsSend stored in Zustand pmChatStore: avoids prop-drilling through portal-rendered AgentSidebar
+- setActiveTab sets collapsed:false: tab icon click expands sidebar in one action
 
 ### Todos
 
@@ -65,12 +55,12 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 29 (auto-config, v1.6) is unstarted and deferred — not a blocker for v1.7 phases.
-- TTS voice availability (Hazel/Zira) depends on Windows language packs installed on the user's machine — validate early in Phase 33 planning.
-- Ollama must be running locally for Phase 31 health check to show "healthy" — document in phase success criteria.
+- Ollama must be running locally for PM Chat health check to show "healthy"
+- Playwright CDP to WebView2 is "likely compatible" not "battle-tested with Tauri v1" — validate early
+- pmChat.ts sidecar code exists and is imported at runtime but frontend is half-wired — finish or remove, don't leave half-state
 
 ## Session Continuity
 
-Last session: 2026-04-07T16:54:34.802Z
-Stopped at: Checkpoint: Task 3 human-verify in 31-02-PLAN.md
-Next action: `/gsd:plan-phase 30`
+Last session: 2026-04-09
+Stopped at: Milestone v1.8 initialization — defining requirements
+Next action: Define REQUIREMENTS.md
