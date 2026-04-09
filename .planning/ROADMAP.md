@@ -98,7 +98,7 @@
 ### 🚧 v1.8 Ship & Harden (Active)
 
 - [ ] **Phase 34: Orphan & Dead Code Cleanup** - Wire or remove all half-imported v1.7 modules; remove repowise-confirmed dead code
-- [ ] **Phase 35: PM Chat Settings UI** - Model dropdown, system prompt, temperature, endpoint — all persisted to localStorage
+- [x] **Phase 35: PM Chat Settings UI** - Model dropdown, system prompt, temperature, endpoint — all persisted to localStorage (completed 2026-04-09)
 - [ ] **Phase 36: PM Chat Conversational Context** - Terminal context injection per message, 20-turn history cap, multi-turn flow
 - [ ] **Phase 37: Keyboard Shortcut Discoverability** - Ctrl+/ shortcut help overlay grouped by category
 - [ ] **Phase 38: Test Infrastructure** - Playwright CDP connection to WebView2, component tests for high-churn files, E2E smoke test
@@ -239,7 +239,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 35-01-PLAN.md — pmChatSettingsStore (localStorage persistence) + PMChatSettings collapsible panel
-- [ ] 35-02-PLAN.md — Protocol endpoint? threading, sidecar server wiring, PMChatTab integration
+- [x] 35-02-PLAN.md — Protocol endpoint? threading, sidecar server wiring, PMChatTab integration
 **UI hint**: yes
 
 ### Phase 36: PM Chat Conversational Context
@@ -295,7 +295,7 @@ Plans:
 | 32. Conversational Context | v1.7 | 0/TBD | Abandoned | - |
 | 33. TTS Voice Engine | v1.7 | 0/TBD | Moved to backlog | - |
 | 34. Orphan & Dead Code Cleanup | v1.8 | 0/TBD | Not started | - |
-| 35. PM Chat Settings UI | v1.8 | 1/2 | In Progress|  |
+| 35. PM Chat Settings UI | v1.8 | 2/2 | Complete   | 2026-04-09 |
 | 36. PM Chat Conversational Context | v1.8 | 0/TBD | Not started | - |
 | 37. Keyboard Shortcut Discoverability | v1.8 | 0/TBD | Not started | - |
 | 38. Test Infrastructure | v1.8 | 0/TBD | Not started | - |
