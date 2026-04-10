@@ -147,21 +147,13 @@ test.describe('Smoke: Core PTY Flow', () => {
       (window as any).__testState.outputBuffer = '';
     });
 
-    // Step 4: Send command via ChatInputBar (D-10)
-    await page.evaluate(() => {
-      const textarea = document.querySelector('textarea');
-      if (textarea) {
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          window.HTMLTextAreaElement.prototype, 'value'
-        )?.set;
-        nativeInputValueSetter?.call(textarea, 'echo __PLAYWRIGHT_SMOKE__');
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        textarea.dispatchEvent(new Event('change', { bubbles: true }));
-        textarea.dispatchEvent(new KeyboardEvent('keydown', {
-          key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
-        }));
-      }
-    });
+    // Step 4: Send command via ChatInputBar using Playwright's native API
+    // React controlled textarea ignores native value setters — must use
+    // Playwright fill() + keyboard.press() which fire real browser events
+    const textarea = page.locator('textarea');
+    await textarea.waitFor({ state: 'visible', timeout: 5000 });
+    await textarea.fill('echo __PLAYWRIGHT_SMOKE__');
+    await textarea.press('Enter');
 
     // Step 5: Accumulate output — ConPTY echoes input AND output (D-12)
     await page.waitForFunction(
