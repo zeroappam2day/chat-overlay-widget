@@ -40,7 +40,7 @@ describe('PMChatSettings', () => {
 
   it('clicking the gear button toggles the panel open', async () => {
     // Mock fetch for model loading
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ models: [{ name: 'qwen3:0.6b' }] }),
     });
     render(<PMChatSettings />);
@@ -53,7 +53,7 @@ describe('PMChatSettings', () => {
   });
 
   it('when open and fetch resolves with models, the select has option elements', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ models: [{ name: 'qwen3:0.6b' }, { name: 'llama3:8b' }] }),
     });
     render(<PMChatSettings />);
@@ -67,7 +67,7 @@ describe('PMChatSettings', () => {
   });
 
   it('when open and fetch rejects (Ollama offline), select shows "No models found"', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Connection refused'));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Connection refused'));
     render(<PMChatSettings />);
     fireEvent.click(screen.getByLabelText('PM Chat Settings'));
     await waitFor(() => {
@@ -77,7 +77,7 @@ describe('PMChatSettings', () => {
   });
 
   it('changing the temperature slider calls setSetting with a number', () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ models: [] }),
     });
     render(<PMChatSettings />);
@@ -91,7 +91,7 @@ describe('PMChatSettings', () => {
   });
 
   it('typing in the system prompt textarea calls setSetting', () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ models: [] }),
     });
     render(<PMChatSettings />);
@@ -102,7 +102,7 @@ describe('PMChatSettings', () => {
   });
 
   it('typing in the endpoint input calls setSetting', () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ models: [] }),
     });
     render(<PMChatSettings />);
@@ -113,7 +113,7 @@ describe('PMChatSettings', () => {
   });
 
   it('changing the model select calls setSetting', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ models: [{ name: 'qwen3:0.6b' }, { name: 'llama3:8b' }] }),
     });
     render(<PMChatSettings />);

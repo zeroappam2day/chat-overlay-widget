@@ -10,12 +10,25 @@ interface StreamCallbacks {
 
 const activeRequests = new Map<string, AbortController>();
 
+function isLocalhostEndpoint(endpoint: string): boolean {
+  try {
+    const url = new URL(endpoint);
+    return ['127.0.0.1', 'localhost', '::1'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function streamOllamaChat(
   requestId: string,
   opts: { message: string; model: string; temperature: number; systemPrompt: string; endpoint?: string },
   callbacks: StreamCallbacks
 ): void {
   const endpoint = opts.endpoint ?? OLLAMA_DEFAULT_ENDPOINT;
+  if (!isLocalhostEndpoint(endpoint)) {
+    callbacks.onError('Endpoint must be a localhost URL (127.0.0.1, localhost, or ::1)');
+    return;
+  }
   const url = new URL(endpoint);
   const hostname = url.hostname;
   const port = url.port ? parseInt(url.port, 10) : (url.protocol === 'https:' ? 443 : 80);
@@ -115,6 +128,9 @@ export function cancelOllamaChat(requestId: string): void {
 
 export async function checkOllamaHealth(endpoint?: string): Promise<{ ok: boolean; error?: string }> {
   const base = endpoint ?? OLLAMA_DEFAULT_ENDPOINT;
+  if (!isLocalhostEndpoint(base)) {
+    return { ok: false, error: 'Endpoint must be a localhost URL' };
+  }
   const url = new URL(base);
   const hostname = url.hostname;
   const port = url.port ? parseInt(url.port, 10) : (url.protocol === 'https:' ? 443 : 80);
