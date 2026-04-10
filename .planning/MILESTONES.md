@@ -1,5 +1,27 @@
 # Milestones
 
+## v1.8 Ship & Harden (Shipped: 2026-04-10)
+
+**Phases completed:** 4 phases, 8 plans, 14 tasks
+
+**Timeline:** 2 days (2026-04-09 → 2026-04-10)
+**Files changed:** 44 | **Lines:** +4,081 / -455
+
+**Delivered:** Finished the half-built PM Chat assistant with multi-turn conversation, terminal context injection, and full LLM settings UI. Added keyboard shortcut discoverability and established Playwright CDP + Vitest test infrastructure.
+
+**Key accomplishments:**
+
+- PM Chat Settings UI — Zustand store with localStorage persistence, gear-toggled collapsible panel (model dropdown, temperature slider, system prompt, endpoint)
+- Conversational context — multi-turn Ollama chat with 20-turn FIFO cap, automatic terminal context injection per message, streaming guard
+- Endpoint threading — custom Ollama endpoint threaded through protocol, sidecar, and UI; PMChatTab reads all 4 settings with no hardcoded values
+- Keyboard shortcut overlay — Ctrl+/ toggles categorized shortcut help with Escape/click-outside dismiss
+- Test infrastructure — Playwright CDP connection to WebView2, Vitest component tests for ChatInputBar/PaneContainer/TerminalPane, E2E PTY smoke test
+- Dead code cleanup — orphaned v1.7 modules wired end-to-end organically during phases 35-36
+
+**Requirements:** 13/13 v1.8 requirements complete (SET-01–04, CHAT-02–03, DISC-01–02, TEST-01–03, CLEAN-01–02)
+
+---
+
 ## v1.5 Self-Observation & Agent Visibility (Shipped: 2026-04-01)
 
 **Phases:** 23-25 (3 phases, 7 plans)
