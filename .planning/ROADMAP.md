@@ -98,7 +98,8 @@
 ### 🚧 v1.8 Ship & Harden (Active)
 
 - [ ] **Phase 34: Orphan & Dead Code Cleanup** - Wire or remove all half-imported v1.7 modules; remove repowise-confirmed dead code
-- [x] **Phase 35: PM Chat Settings UI** - Model dropdown, system prompt, temperature, endpoint — all persisted to localStorage (completed 2026-04-09)
+- [x] **Phase 35: PM Chat Settings UI** - Model dropdown, system prompt, temperature, endpoint — all persisted to localStorage
+ (completed 2026-04-09)
 - [ ] **Phase 36: PM Chat Conversational Context** - Terminal context injection per message, 20-turn history cap, multi-turn flow
 - [ ] **Phase 37: Keyboard Shortcut Discoverability** - Ctrl+/ shortcut help overlay grouped by category
 - [ ] **Phase 38: Test Infrastructure** - Playwright CDP connection to WebView2, component tests for high-churn files, E2E smoke test
@@ -251,7 +252,10 @@ Plans:
   2. After receiving a response, the user can type a follow-up question and the LLM answers with awareness of the prior exchange
   3. Conversation history caps at 20 turns — the oldest turn drops and new messages continue to work without errors
   4. Sending a message while a response is still streaming is blocked — only one request is in flight at a time
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 36-01-PLAN.md — Protocol history field, FIFO cap, terminalLines setting, PMChatTab wiring
+- [ ] 36-02-PLAN.md — Sidecar multi-turn construction + terminal context injection
 **UI hint**: yes
 
 ### Phase 37: Keyboard Shortcut Discoverability
@@ -295,8 +299,8 @@ Plans:
 | 32. Conversational Context | v1.7 | 0/TBD | Abandoned | - |
 | 33. TTS Voice Engine | v1.7 | 0/TBD | Moved to backlog | - |
 | 34. Orphan & Dead Code Cleanup | v1.8 | 0/TBD | Not started | - |
-| 35. PM Chat Settings UI | v1.8 | 2/2 | Complete   | 2026-04-09 |
-| 36. PM Chat Conversational Context | v1.8 | 0/TBD | Not started | - |
+| 35. PM Chat Settings UI | v1.8 | 2/2 | Complete    | 2026-04-10 |
+| 36. PM Chat Conversational Context | v1.8 | 0/2 | Planning complete | - |
 | 37. Keyboard Shortcut Discoverability | v1.8 | 0/TBD | Not started | - |
 | 38. Test Infrastructure | v1.8 | 0/TBD | Not started | - |
 

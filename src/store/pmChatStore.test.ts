@@ -75,3 +75,83 @@ describe('pmChatStore', () => {
     expect(usePmChatStore.getState().streaming).toBe(true);
   });
 });
+
+describe('pmChatStore — FIFO cap (MAX_MESSAGES = 40)', () => {
+  it('Test 1: 39 existing messages + 1 new → total 40 (no eviction)', () => {
+    const existing = Array.from({ length: 39 }, (_, i) => ({
+      role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: `message-${i}`,
+    }));
+    usePmChatStore.setState({ messages: existing });
+
+    usePmChatStore.getState().addUserMessage('new-message');
+
+    const { messages } = usePmChatStore.getState();
+    expect(messages.length).toBe(40);
+    expect(messages[39].content).toBe('new-message');
+    expect(messages[39].role).toBe('user');
+  });
+
+  it('Test 2: 40 existing messages + 1 new → total stays 40 (oldest evicted)', () => {
+    const existing = Array.from({ length: 40 }, (_, i) => ({
+      role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: `message-${i}`,
+    }));
+    usePmChatStore.setState({ messages: existing });
+
+    usePmChatStore.getState().addUserMessage('new-message-41');
+
+    const { messages } = usePmChatStore.getState();
+    expect(messages.length).toBe(40);
+    expect(messages[0].content).toBe('message-1');
+    expect(messages[39].content).toBe('new-message-41');
+  });
+
+  it('Test 3: 42 existing messages + 1 new → total capped to 40', () => {
+    const existing = Array.from({ length: 42 }, (_, i) => ({
+      role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: `message-${i}`,
+    }));
+    usePmChatStore.setState({ messages: existing });
+
+    usePmChatStore.getState().addUserMessage('capped-message');
+
+    const { messages } = usePmChatStore.getState();
+    expect(messages.length).toBe(40);
+    expect(messages[39].content).toBe('capped-message');
+  });
+
+  it('Test 4: FIFO eviction removes from front regardless of role', () => {
+    const existing = Array.from({ length: 40 }, (_, i) => ({
+      role: (i % 2 === 0 ? 'assistant' : 'user') as 'user' | 'assistant',
+      content: `msg-${i}`,
+    }));
+    usePmChatStore.setState({ messages: existing });
+
+    usePmChatStore.getState().addUserMessage('evict-front');
+
+    const { messages } = usePmChatStore.getState();
+    expect(messages.length).toBe(40);
+    expect(messages[0].content).toBe('msg-1');
+    expect(messages[0].role).toBe('user');
+    expect(messages[39].content).toBe('evict-front');
+  });
+
+  it('appendToken still works after cap applies', () => {
+    const existing = Array.from({ length: 40 }, (_, i) => ({
+      role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: `msg-${i}`,
+    }));
+    usePmChatStore.setState({ messages: existing });
+
+    usePmChatStore.getState().addUserMessage('after-cap');
+    expect(usePmChatStore.getState().messages.length).toBe(40);
+
+    usePmChatStore.getState().appendToken('req-123', 'hello');
+    const { messages } = usePmChatStore.getState();
+    expect(messages.length).toBe(41);
+    expect(messages[40].role).toBe('assistant');
+    expect(messages[40].content).toBe('hello');
+    expect(messages[40].requestId).toBe('req-123');
+  });
+});

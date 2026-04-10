@@ -7,6 +7,7 @@ export interface PMChatSettingsState {
   systemPrompt: string;
   temperature: number;
   endpoint: string;
+  terminalLines: number;
 }
 
 interface PMChatSettingsStore extends PMChatSettingsState {
@@ -19,6 +20,7 @@ export const DEFAULT_SETTINGS: PMChatSettingsState = {
   systemPrompt: 'You are a helpful PM assistant. Summarize technical context in plain, non-technical language suitable for a CEO.',
   temperature: 0.0,
   endpoint: 'http://127.0.0.1:11434',
+  terminalLines: 30,
 };
 
 function loadSettings(): Partial<PMChatSettingsState> {
@@ -43,6 +45,7 @@ export const usePmChatSettingsStore = create<PMChatSettingsStore>((set) => ({
           systemPrompt: next.systemPrompt,
           temperature: next.temperature,
           endpoint: next.endpoint,
+          terminalLines: next.terminalLines,
         })
       );
       return { [key]: value };

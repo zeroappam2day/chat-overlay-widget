@@ -27,9 +27,11 @@ export const usePmChatStore = create<PMChatStore>((set) => ({
   health: 'unknown',
   healthError: null,
   wsSend: null,
-  addUserMessage: (content) => set((s) => ({
-    messages: [...s.messages, { role: 'user', content }],
-  })),
+  addUserMessage: (content) => set((s) => {
+    const next = [...s.messages, { role: 'user' as const, content }];
+    const MAX_MESSAGES = 40;
+    return { messages: next.length > MAX_MESSAGES ? next.slice(next.length - MAX_MESSAGES) : next };
+  }),
   appendToken: (requestId, token) => set((s) => {
     const msgs = [...s.messages];
     const lastIdx = msgs.length - 1;
