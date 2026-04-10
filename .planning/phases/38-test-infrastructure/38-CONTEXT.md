@@ -14,10 +14,11 @@ Playwright E2E connection to the running app, Vitest component tests for the 3 h
 ## Implementation Decisions
 
 ### CDP Connection Strategy (TEST-01)
-- **D-01:** Time-boxed CDP spike (2 hours max) to attempt real WebView2 connection via `--remote-debugging-port`. If it works, use it. If it fails, fall back to the proven mock-Tauri + Vite dev server approach.
-- **D-02:** The mock-Tauri approach is the primary plan. `uat-phase35.spec.ts` already proves this pattern: `mockTauriAndConnect()` handles `get_sidecar_port`, `plugin:event|listen/unlisten`, `plugin:window|manage` — covering the entire Tauri IPC surface the app uses.
-- **D-03:** The WebSocket connection path is identical in both approaches (`ws://127.0.0.1:{port}` — see `useWebSocket.ts` line 20). The sidecar doesn't know whether its client is WebView2 or Chromium. The delta between testing via Vite dev server vs real WebView2 is ~5% (WebView2 CSS quirks and Tauri IPC transport only).
-- **D-04:** If CDP spike fails, document the gap in CONTEXT.md/SUMMARY.md with specific failure reason. TEST-01 success criterion ("can programmatically interact with the UI") is met by mock-Tauri approach — the requirement's mention of `--remote-debugging-port` becomes an implementation detail that was proven infeasible.
+- **D-01:** Real WebView2 CDP connection is the primary approach — web research confirms this is a proven pattern, not a risky spike. Set `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` environment variable before launching the Tauri app. This is a standard WebView2 feature (Microsoft docs) that works through wry (Tauri's WebView2 wrapper). No Rust code changes needed.
+- **D-02:** Playwright connects via `chromium.connectOverCDP('http://localhost:9222')`. The Haprog/playwright-cdp GitHub repo provides a complete working example specifically for Tauri 2 + WebView2. Tauri v1 uses the same wry WebView2 backend, so the env var approach applies.
+- **D-03:** For parallel test isolation, set `WEBVIEW2_USER_DATA_FOLDER` to a temp directory per test run (Playwright docs recommendation). Not critical for single-test smoke test but good practice.
+- **D-04:** Fallback: if CDP connection fails for any Tauri v1-specific reason, fall back to the proven mock-Tauri + Vite dev server approach (`uat-phase35.spec.ts` pattern). The WebSocket path is identical in both approaches (`ws://127.0.0.1:{port}`). The sidecar doesn't know whether its client is WebView2 or Chromium.
+- **D-04b:** The E2E test launch sequence: (1) set env vars, (2) start sidecar, (3) launch `npx tauri dev`, (4) wait for app window, (5) `connectOverCDP('http://localhost:9222')`, (6) run tests. Modify `tauri-dev.sh` or create a test-specific launcher script.
 
 ### Component Test Strategy (TEST-02)
 - **D-05:** ChatInputBar — full component test. Pure controlled component (110 lines, 0 stores, simple props). Test: render with default props, Enter sends, Shift+Enter doesn't send, image paste handler fires, pending injection appends to textarea, disabled state.
@@ -28,7 +29,7 @@ Playwright E2E connection to the running app, Vitest component tests for the 3 h
 
 ### E2E Smoke Test Strategy (TEST-03)
 - **D-10:** Protocol-level verification, NOT canvas OCR. Intercept WebSocket messages via `page.evaluate()` hook. Flow: send `spawn` → wait for `pty-ready` → send `input` with `echo hello\r` → accumulate `output` messages into buffer → assert buffer contains "hello". This tests the core PTY bridge directly and deterministically.
-- **D-11:** Build on the `uat-phase35.spec.ts` pattern: read sidecar port from discovery file, mock Tauri APIs via `addInitScript`, connect to Vite dev server on localhost:1420.
+- **D-11:** Primary E2E approach: use CDP connection to real Tauri WebView2 (per D-01/D-02). Fallback: build on `uat-phase35.spec.ts` pattern (mock Tauri APIs via `addInitScript`, connect to Vite dev server on localhost:1420).
 - **D-12:** Handle ConPTY output chunking by accumulating all `output` type WebSocket messages into a string buffer over a 5-second window, then asserting the buffer contains the expected output. ConPTY splits output non-deterministically and echoes input — the accumulation pattern handles both.
 - **D-13:** Prerequisites: running Vite dev server + running sidecar (same as uat-phase35). No Ollama dependency for the smoke test.
 
@@ -113,7 +114,7 @@ Playwright E2E connection to the running app, Vitest component tests for the 3 h
 <deferred>
 ## Deferred Ideas
 
-- Real WebView2 CDP connection — spike may prove it works, but the plan doesn't depend on it. If feasible, can be added as a follow-up enhancement.
+- Real WebView2 CDP connection — RESOLVED: web research confirmed this is a proven pattern via `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` env var + `connectOverCDP()`. Promoted to primary approach (D-01/D-02).
 - `@xterm/addon-serialize` for terminal buffer text extraction — listed in REQUIREMENTS.md as XTERM-01 (deferred). Would enable DOM-level terminal content assertions in future tests.
 - CI pipeline integration — single-user project has no CI. Tests are developer-run only.
 - Visual regression testing — screenshot comparison for UI components. Needs baseline infrastructure not in scope.
