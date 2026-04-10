@@ -10,7 +10,7 @@
 - ✅ **v1.5 Self-Observation & Agent Visibility** — Phases 23-25 (shipped 2026-04-01)
 - ✅ **v1.6 Agent Hooks & MCP Integration** — Phases 26-29 (shipped 2026-04-07)
 - ❌ **v1.7 PM Voice Chat** — Phases 30-33 (abandoned 2026-04-09; Phase 31 sidecar backend shipped)
-- 🚧 **v1.8 Ship & Harden** — Phases 34-38 (active)
+- ✅ **v1.8 Ship & Harden** — Phases 34-38 (shipped 2026-04-10)
 
 ## Phases
 
@@ -95,7 +95,7 @@
 
 </details>
 
-### 🚧 v1.8 Ship & Harden (Active)
+### ✅ v1.8 Ship & Harden (Shipped 2026-04-10)
 
 - [x] **Phase 34: Orphan & Dead Code Cleanup** - Wire or remove all half-imported v1.7 modules; remove repowise-confirmed dead code (completed 2026-04-10 — criteria met organically during phases 35-36)
 - [x] **Phase 35: PM Chat Settings UI** - Model dropdown, system prompt, temperature, endpoint — all persisted to localStorage
@@ -159,11 +159,7 @@ Plans:
   1. On first launch after v1.6, the app writes hook configuration into `~/.claude/settings.json` (or equivalent) pointing to `POST /hook-event` without requiring any manual edit
   2. The MCP server entry is injected into the user's MCP config on startup so Claude Code discovers the tools automatically
   3. If the config files already contain the correct entries, startup does not duplicate or corrupt them
-**Plans**: 3 plans
-Plans:
-- [x] 38-01-PLAN.md � ChatInputBar + PaneContainer component tests
-- [x] 38-02-PLAN.md � TerminalPane dispatcher extraction + unit tests + smoke test
-- [x] 38-03-PLAN.md � Playwright CDP config + E2E PTY smoke test
+**Plans**: 0/TBD (never started)
 
 ## v1.7 Phase Details
 
@@ -230,11 +226,7 @@ Plans:
   1. The app starts without console errors caused by missing imports or unresolved module references from v1.7 partial work
   2. PMChatTab.tsx and pmChatStore.ts are either wired into the sidebar (rendering without errors) or removed — no half-import state remains
   3. Every file flagged by `repowise get_dead_code()` is either deleted or has an inline comment explaining why it is retained
-**Plans**: 3 plans
-Plans:
-- [x] 38-01-PLAN.md � ChatInputBar + PaneContainer component tests
-- [x] 38-02-PLAN.md � TerminalPane dispatcher extraction + unit tests + smoke test
-- [x] 38-03-PLAN.md � Playwright CDP config + E2E PTY smoke test
+**Plans**: 0/0 (criteria met organically during phases 35-36)
 
 ### Phase 35: PM Chat Settings UI
 **Goal**: User can configure all LLM settings from a dedicated settings panel in the PM Chat sidebar, and every setting persists across app restarts
@@ -291,7 +283,7 @@ Plans:
 Plans:
 - [x] 38-01-PLAN.md � ChatInputBar + PaneContainer component tests
 - [x] 38-02-PLAN.md � TerminalPane dispatcher extraction + unit tests + smoke test
-- [ ] 38-03-PLAN.md � Playwright CDP config + E2E PTY smoke test
+- [x] 38-03-PLAN.md — Playwright CDP config + E2E PTY smoke test
 
 ## Progress
 
