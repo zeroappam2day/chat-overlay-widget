@@ -97,10 +97,10 @@
 
 ### 🚧 v1.8 Ship & Harden (Active)
 
-- [ ] **Phase 34: Orphan & Dead Code Cleanup** - Wire or remove all half-imported v1.7 modules; remove repowise-confirmed dead code
+- [x] **Phase 34: Orphan & Dead Code Cleanup** - Wire or remove all half-imported v1.7 modules; remove repowise-confirmed dead code (completed 2026-04-10 — criteria met organically during phases 35-36)
 - [x] **Phase 35: PM Chat Settings UI** - Model dropdown, system prompt, temperature, endpoint — all persisted to localStorage
  (completed 2026-04-09)
-- [ ] **Phase 36: PM Chat Conversational Context** - Terminal context injection per message, 20-turn history cap, multi-turn flow
+- [x] **Phase 36: PM Chat Conversational Context** - Terminal context injection per message, 20-turn history cap, multi-turn flow (completed 2026-04-10)
 - [ ] **Phase 37: Keyboard Shortcut Discoverability** - Ctrl+/ shortcut help overlay grouped by category
 - [ ] **Phase 38: Test Infrastructure** - Playwright CDP connection to WebView2, component tests for high-churn files, E2E smoke test
 
@@ -252,10 +252,10 @@ Plans:
   2. After receiving a response, the user can type a follow-up question and the LLM answers with awareness of the prior exchange
   3. Conversation history caps at 20 turns — the oldest turn drops and new messages continue to work without errors
   4. Sending a message while a response is still streaming is blocked — only one request is in flight at a time
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 36-01-PLAN.md — Protocol history field, FIFO cap, terminalLines setting, PMChatTab wiring
-- [ ] 36-02-PLAN.md — Sidecar multi-turn construction + terminal context injection
+- [x] 36-01-PLAN.md — Protocol history field, FIFO cap, terminalLines setting, PMChatTab wiring
+- [x] 36-02-PLAN.md — Sidecar multi-turn construction + terminal context injection
 **UI hint**: yes
 
 ### Phase 37: Keyboard Shortcut Discoverability
@@ -266,7 +266,9 @@ Plans:
   1. Pressing Ctrl+/ while the app is focused opens a shortcut help overlay without navigating away or losing the current terminal state
   2. The overlay lists all shortcuts grouped into categories (navigation, features, editing) with the current key binding displayed for each
   3. Pressing Ctrl+/, Escape, or clicking outside the overlay closes it cleanly
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 37-01-PLAN.md -- Static shortcut data, help overlay component, Ctrl+/ registration� Static shortcut data, help overlay component, Ctrl+/ registration
 **UI hint**: yes
 
 ### Phase 38: Test Infrastructure
@@ -298,9 +300,9 @@ Plans:
 | 31. Ollama Chat Backend & Sidebar Tab | v1.7 | 1/2 | Partial (sidecar only) | - |
 | 32. Conversational Context | v1.7 | 0/TBD | Abandoned | - |
 | 33. TTS Voice Engine | v1.7 | 0/TBD | Moved to backlog | - |
-| 34. Orphan & Dead Code Cleanup | v1.8 | 0/TBD | Not started | - |
+| 34. Orphan & Dead Code Cleanup | v1.8 | 0/0 | Complete (organic) | 2026-04-10 |
 | 35. PM Chat Settings UI | v1.8 | 2/2 | Complete    | 2026-04-10 |
-| 36. PM Chat Conversational Context | v1.8 | 0/2 | Planning complete | - |
+| 36. PM Chat Conversational Context | v1.8 | 2/2 | Complete    | 2026-04-10 |
 | 37. Keyboard Shortcut Discoverability | v1.8 | 0/TBD | Not started | - |
 | 38. Test Infrastructure | v1.8 | 0/TBD | Not started | - |
 
