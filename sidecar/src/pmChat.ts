@@ -59,6 +59,7 @@ export function streamOllamaChat(
       { role: 'user', content: opts.message },
     ],
     stream: true,
+    think: false, // Disable extended thinking (qwen3.5 thinks by default, causing streaming hangs)
     options: { temperature: opts.temperature, num_ctx: numCtx },
     keep_alive: '5m',
   });
