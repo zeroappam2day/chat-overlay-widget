@@ -10,7 +10,7 @@ import { HistorySidebar } from './HistorySidebar';
 import { HistoryViewer } from './HistoryViewer';
 import { WindowPicker } from './WindowPicker';
 import type { ServerMessage, WindowThumbnail } from '../protocol';
-import { formatCaptureBlock } from '../utils/formatCaptureBlock';
+import { dispatchServerMessage } from './terminalMessageDispatcher';
 import { useAgentEventStore } from '../store/agentEventStore';
 import { usePmChatStore } from '../store/pmChatStore';
 import { useAnnotationBridgeStore } from '../store/annotationBridgeStore';
@@ -100,33 +100,33 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
   const handleHistoryMessageRef = useRef<(msg: ServerMessage) => boolean>(() => false);
 
   const handleServerMessage = useCallback((msg: ServerMessage) => {
-    switch (msg.type) {
-      case 'output':
-        writeRef.current(msg.data);
-        break;
-      case 'pty-ready': {
-        console.log(`[terminal:${paneId}] PTY ready: pid=${msg.pid}, shell=${msg.shell}`);
-        // Match full exe path back to short name from shell-list
-        // pty-ready sends full path (e.g. C:\Windows\...\powershell.exe)
-        // but dropdown options use short names (e.g. powershell.exe)
-        const shortName = shells.find(s => msg.shell.toLowerCase().endsWith(s.toLowerCase())) ?? msg.shell;
-        console.log(`[terminal:${paneId}] resolved shell name: ${shortName}`);
-        setCurrentShell(shortName);
-        break;
-      }
-      case 'pty-exit':
-        writeRef.current(`\r\n[Process exited with code ${msg.exitCode}]\r\n`);
-        // Completion stats (Phase 17) — record successful session completions
-        if (useFeatureFlagStore.getState().completionStats && msg.exitCode === 0) {
-          useCompletionStore.getState().recordCompleted();
-        }
-        // Desktop notification (Phase 7) — fires only when window not focused and flag ON
-        exitNotifierRef.current.notify({
-          exitCode: msg.exitCode,
-          shell: currentShellRef.current ?? 'unknown',
-          paneId,
-        });
-        // Auto-respawn after 1 second (D-07) — reset spawnedRef so the effect can re-trigger
+    dispatchServerMessage(msg, {
+      write: (data) => writeRef.current(data),
+      setCurrentShell,
+      setShells,
+      setPendingImagePath,
+      setPickerWindows,
+      setPendingInjection: (block) => setPendingInjection(block),
+      pushAgentEvent: (event) => useAgentEventStore.getState().pushEvent(event),
+      appendPmChatToken: (rid, token) => usePmChatStore.getState().appendToken(rid, token),
+      finalizePmChatResponse: (rid) => usePmChatStore.getState().finalizeResponse(rid),
+      setPmChatStreaming: (s) => usePmChatStore.getState().setStreaming(s),
+      setPmChatHealth: (ok, err) => usePmChatStore.getState().setHealth(ok, err),
+      setAnnotations: (a) => useAnnotationBridgeStore.getState().setAnnotations(a),
+      setWalkthroughStep: (s) => useAnnotationBridgeStore.getState().setWalkthroughStep(s),
+      setPlanContent: (c, f) => usePlanStore.getState().setContent(c, f),
+      setDiffs: (raw) => { const parsed = parseUnifiedDiff(raw); useDiffStore.getState().setDiffs(parsed, raw); },
+      dispatchAskCodeResponse: (m) => document.dispatchEvent(new CustomEvent('ask-code-response', { detail: m })),
+      handleModeStatus: (m) => useModeStore.getState().handleModeStatus(m),
+      handleCrashRecovery: () => useModeStore.getState().handleCrashRecovery(),
+      handleHistoryMessage: (m) => handleHistoryMessageRef.current(m),
+      currentShell: currentShellRef.current,
+      paneId,
+      shells,
+      recordCompleted: () => useCompletionStore.getState().recordCompleted(),
+      completionStatsEnabled: useFeatureFlagStore.getState().completionStats,
+      notifyExit: (info) => exitNotifierRef.current.notify(info),
+      scheduleRespawn: () => {
         spawnedRef.current = false;
         setTimeout(() => {
           if (shells.length > 0) {
@@ -134,89 +134,8 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
             sendMessageRef.current({ type: 'spawn', shell: shells[0], cols: dims.cols, rows: dims.rows });
           }
         }, 1000);
-        break;
-      case 'shell-list':
-        console.log(`[terminal:${paneId}] shell-list received:`, msg.shells);
-        setShells(msg.shells);
-        break;
-      case 'error':
-        console.error(`[terminal:${paneId}] server error: ${msg.message}`);
-        writeRef.current(`\r\n[Error: ${msg.message}]\r\n`);
-        break;
-      case 'save-image-result':
-        // Clipboard paste flow: sidecar saved the temp file, inject its path into input box
-        setPendingImagePath(msg.path);
-        break;
-      case 'window-thumbnails':
-        setPickerWindows(msg.windows);
-        break;
-      case 'capture-result-with-metadata': {
-        const block = formatCaptureBlock({
-          path: msg.path,
-          title: msg.title,
-          bounds: msg.bounds,
-          captureSize: msg.captureSize,
-          dpiScale: msg.dpiScale,
-          shell: currentShellRef.current,
-        });
-        setPendingInjection(block);
-        break;
-      }
-      case 'agent-event':
-        useAgentEventStore.getState().pushEvent(msg.event);
-        break;
-      case 'pm-chat-token': {
-        const pmMsg = msg as { type: 'pm-chat-token'; requestId: string; token: string };
-        usePmChatStore.getState().appendToken(pmMsg.requestId, pmMsg.token);
-        break;
-      }
-      case 'pm-chat-done': {
-        const pmMsg = msg as { type: 'pm-chat-done'; requestId: string };
-        usePmChatStore.getState().finalizeResponse(pmMsg.requestId);
-        break;
-      }
-      case 'pm-chat-error': {
-        const pmMsg = msg as { type: 'pm-chat-error'; requestId: string; error: string };
-        usePmChatStore.getState().setStreaming(false);
-        usePmChatStore.getState().appendToken(pmMsg.requestId, `\n[Error: ${pmMsg.error}]`);
-        usePmChatStore.getState().finalizeResponse(pmMsg.requestId);
-        break;
-      }
-      case 'pm-chat-health': {
-        const pmMsg = msg as { type: 'pm-chat-health'; ok: boolean; error?: string };
-        usePmChatStore.getState().setHealth(pmMsg.ok, pmMsg.error);
-        break;
-      }
-      case 'annotation-update':
-        useAnnotationBridgeStore.getState().setAnnotations(msg.annotations);
-        break;
-      case 'walkthrough-step':
-        useAnnotationBridgeStore.getState().setWalkthroughStep(msg.step);
-        break;
-      case 'plan-update':
-        usePlanStore.getState().setContent(msg.content, msg.fileName);
-        break;
-      case 'diff-result': {
-        const parsed = parseUnifiedDiff(msg.raw);
-        useDiffStore.getState().setDiffs(parsed, msg.raw);
-        break;
-      }
-      case 'ask-code-response': {
-        // Forward to AskCodeCard via custom event (Phase 16)
-        document.dispatchEvent(new CustomEvent('ask-code-response', { detail: msg }));
-        break;
-      }
-      case 'mode-status':
-        useModeStore.getState().handleModeStatus(msg);
-        break;
-      case 'mode-crash-recovery':
-        useModeStore.getState().handleCrashRecovery();
-        break;
-      default:
-        // Delegate history-sessions, history-chunk, history-end, session-start
-        handleHistoryMessageRef.current(msg);
-        break;
-    }
+      },
+    });
   }, [shells, paneId]);
 
   const { state, sendMessage } = useWebSocket({ onMessage: handleServerMessage });
