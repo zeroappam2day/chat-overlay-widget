@@ -101,7 +101,7 @@
 - [x] **Phase 35: PM Chat Settings UI** - Model dropdown, system prompt, temperature, endpoint â€” all persisted to localStorage
  (completed 2026-04-09)
 - [x] **Phase 36: PM Chat Conversational Context** - Terminal context injection per message, 20-turn history cap, multi-turn flow (completed 2026-04-10)
-- [ ] **Phase 37: Keyboard Shortcut Discoverability** - Ctrl+/ shortcut help overlay grouped by category
+- [x] **Phase 37: Keyboard Shortcut Discoverability** - Ctrl+/ shortcut help overlay grouped by category (completed 2026-04-10)
 - [ ] **Phase 38: Test Infrastructure** - Playwright CDP connection to WebView2, component tests for high-churn files, E2E smoke test
 
 ## Phase Details
@@ -159,7 +159,11 @@ Plans:
   1. On first launch after v1.6, the app writes hook configuration into `~/.claude/settings.json` (or equivalent) pointing to `POST /hook-event` without requiring any manual edit
   2. The MCP server entry is injected into the user's MCP config on startup so Claude Code discovers the tools automatically
   3. If the config files already contain the correct entries, startup does not duplicate or corrupt them
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 38-01-PLAN.md — ChatInputBar + PaneContainer component tests
+- [ ] 38-02-PLAN.md — TerminalPane dispatcher extraction + unit tests + smoke test
+- [ ] 38-03-PLAN.md — Playwright CDP config + E2E PTY smoke test
 
 ## v1.7 Phase Details
 
@@ -226,7 +230,11 @@ Plans:
   1. The app starts without console errors caused by missing imports or unresolved module references from v1.7 partial work
   2. PMChatTab.tsx and pmChatStore.ts are either wired into the sidebar (rendering without errors) or removed â€” no half-import state remains
   3. Every file flagged by `repowise get_dead_code()` is either deleted or has an inline comment explaining why it is retained
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 38-01-PLAN.md — ChatInputBar + PaneContainer component tests
+- [ ] 38-02-PLAN.md — TerminalPane dispatcher extraction + unit tests + smoke test
+- [ ] 38-03-PLAN.md — Playwright CDP config + E2E PTY smoke test
 
 ### Phase 35: PM Chat Settings UI
 **Goal**: User can configure all LLM settings from a dedicated settings panel in the PM Chat sidebar, and every setting persists across app restarts
@@ -268,7 +276,7 @@ Plans:
   3. Pressing Ctrl+/, Escape, or clicking outside the overlay closes it cleanly
 **Plans**: 1 plan
 Plans:
-- [ ] 37-01-PLAN.md -- Static shortcut data, help overlay component, Ctrl+/ registration— Static shortcut data, help overlay component, Ctrl+/ registration
+- [x] 37-01-PLAN.md -- Static shortcut data, help overlay component, Ctrl+/ registrationï¿½ Static shortcut data, help overlay component, Ctrl+/ registration
 **UI hint**: yes
 
 ### Phase 38: Test Infrastructure
@@ -279,7 +287,11 @@ Plans:
   1. Running `npx playwright test` against a running Tauri app connects via CDP to WebView2 and can programmatically interact with the UI â€” confirmed by a test that reads a visible DOM element
   2. Vitest component tests exist for TerminalPane, ChatInputBar, and PaneContainer â€” each file has at least one passing test covering its primary render path
   3. An E2E smoke test completes the core flow end-to-end: app launches, terminal connects, a command is sent, and output renders in the xterm.js pane â€” test passes on the local machine
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 38-01-PLAN.md — ChatInputBar + PaneContainer component tests
+- [ ] 38-02-PLAN.md — TerminalPane dispatcher extraction + unit tests + smoke test
+- [ ] 38-03-PLAN.md — Playwright CDP config + E2E PTY smoke test
 
 ## Progress
 
@@ -303,8 +315,8 @@ Plans:
 | 34. Orphan & Dead Code Cleanup | v1.8 | 0/0 | Complete (organic) | 2026-04-10 |
 | 35. PM Chat Settings UI | v1.8 | 2/2 | Complete    | 2026-04-10 |
 | 36. PM Chat Conversational Context | v1.8 | 2/2 | Complete    | 2026-04-10 |
-| 37. Keyboard Shortcut Discoverability | v1.8 | 0/TBD | Not started | - |
-| 38. Test Infrastructure | v1.8 | 0/TBD | Not started | - |
+| 37. Keyboard Shortcut Discoverability | v1.8 | 1/1 | Complete    | 2026-04-10 |
+| 38. Test Infrastructure | v1.8 | 0/3 | Planning complete | - |
 
 ---
 *Full phase details archived in `.planning/milestones/`*
