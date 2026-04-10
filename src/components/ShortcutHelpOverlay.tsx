@@ -17,14 +17,16 @@ export function ShortcutHelpOverlay({ isOpen, onClose }: ShortcutHelpOverlayProp
       onClick={onClose}
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
-          onClose();
+          e.preventDefault();
           e.stopPropagation();
+          onClose();
         }
       }}
     >
       <div
         ref={containerRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Keyboard shortcuts"
         className="relative bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl max-w-lg w-full mx-4 p-6 max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -54,8 +56,8 @@ export function ShortcutHelpOverlay({ isOpen, onClose }: ShortcutHelpOverlayProp
               {group.title}
             </h3>
             <div className="space-y-1">
-              {group.shortcuts.map((entry) => (
-                <div key={entry.label} className="flex items-center justify-between py-0.5">
+              {group.shortcuts.map((entry, entryIndex) => (
+                <div key={`${groupIndex}-${entryIndex}`} className="flex items-center justify-between py-0.5">
                   <span className="text-[#e6edf3] text-sm">{entry.label}</span>
                   <kbd className="bg-[#21262d] border border-[#30363d] rounded px-2 py-0.5 text-xs text-[#8b949e] font-mono">
                     {entry.keys}

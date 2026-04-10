@@ -1,4 +1,4 @@
-// MAINTENANCE: Update this list whenever shortcuts are added or removed from useShortcuts.ts
+// MAINTENANCE: Update this list whenever shortcuts are added or removed from useShortcuts.ts or useTerminal.ts
 
 export interface ShortcutEntry {
   label: string;       // Human-friendly action name
