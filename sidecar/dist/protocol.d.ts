@@ -65,6 +65,24 @@ export type ClientMessage = {
 } | {
     type: 'cancel-pending-action';
     actionId: string;
+} | {
+    type: 'pm-chat';
+    requestId: string;
+    message: string;
+    model: string;
+    temperature: number;
+    systemPrompt: string;
+    endpoint?: string;
+    history?: Array<{
+        role: 'user' | 'assistant';
+        content: string;
+    }>;
+    terminalLines?: number;
+} | {
+    type: 'pm-chat-cancel';
+    requestId: string;
+} | {
+    type: 'pm-chat-health-check';
 };
 export interface SessionMeta {
     id: number;
@@ -234,4 +252,19 @@ export type ServerMessage = {
 } | {
     type: 'action-cancelled';
     actionId: string;
+} | {
+    type: 'pm-chat-token';
+    requestId: string;
+    token: string;
+} | {
+    type: 'pm-chat-done';
+    requestId: string;
+} | {
+    type: 'pm-chat-error';
+    requestId: string;
+    error: string;
+} | {
+    type: 'pm-chat-health';
+    ok: boolean;
+    error?: string;
 };

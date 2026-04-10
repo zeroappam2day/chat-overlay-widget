@@ -1717,8 +1717,9 @@ wss.on('connection', (ws: WebSocket) => {
           endpoint?: string;
           history?: Array<{role: 'user' | 'assistant'; content: string}>;
           terminalLines?: number;
+          numCtx?: number;
         };
-        console.log(`[sidecar] pm-chat request: requestId=${pmMsg.requestId} model=${pmMsg.model} historyLen=${pmMsg.history?.length ?? 0}`);
+        console.log(`[sidecar] pm-chat request: requestId=${pmMsg.requestId} model=${pmMsg.model} historyLen=${pmMsg.history?.length ?? 0} numCtx=${pmMsg.numCtx ?? 'default'}`);
 
         // D-04: Inject terminal context from sidecar (same process, no HTTP)
         // D-08: Skip if no PTY session or empty buffer
@@ -1748,6 +1749,7 @@ wss.on('connection', (ws: WebSocket) => {
           systemPrompt: pmMsg.systemPrompt,
           endpoint: pmMsg.endpoint,
           history: pmMsg.history,
+          numCtx: pmMsg.numCtx,
         }, {
           onToken: (token) => broadcastPmChatToken(pmMsg.requestId, token),
           onDone: () => broadcastPmChatDone(pmMsg.requestId),
