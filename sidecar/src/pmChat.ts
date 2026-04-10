@@ -21,7 +21,14 @@ function isLocalhostEndpoint(endpoint: string): boolean {
 
 export function streamOllamaChat(
   requestId: string,
-  opts: { message: string; model: string; temperature: number; systemPrompt: string; endpoint?: string },
+  opts: {
+    message: string;
+    model: string;
+    temperature: number;
+    systemPrompt: string;
+    endpoint?: string;
+    history?: Array<{role: 'user' | 'assistant'; content: string}>;
+  },
   callbacks: StreamCallbacks
 ): void {
   const endpoint = opts.endpoint ?? OLLAMA_DEFAULT_ENDPOINT;
@@ -37,6 +44,7 @@ export function streamOllamaChat(
     model: opts.model,
     messages: [
       { role: 'system', content: opts.systemPrompt },
+      ...(opts.history ?? []),
       { role: 'user', content: opts.message },
     ],
     stream: true,

@@ -181,6 +181,100 @@ describe('streamOllamaChat', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Multi-turn history tests
+// ---------------------------------------------------------------------------
+
+describe('streamOllamaChat — multi-turn history', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function captureWrittenBody(): { mockReq: ReturnType<typeof makeMockReq> } {
+    const mockReq = makeMockReq();
+    vi.mocked(http.request).mockImplementation((_opts: any, _callback: any) => {
+      return mockReq;
+    });
+    return { mockReq };
+  }
+
+  it('Test 1: empty history constructs messages as [system, user] (backward compatible)', () => {
+    const { mockReq } = captureWrittenBody();
+
+    streamOllamaChat(
+      'req-h1',
+      { message: 'what is 2+2?', model: 'qwen3', temperature: 0, systemPrompt: 'You are helpful', history: [] },
+      { onToken: vi.fn(), onDone: vi.fn(), onError: vi.fn() }
+    );
+
+    const body = JSON.parse(mockReq.write.mock.calls[0][0]);
+    expect(body.messages).toHaveLength(2);
+    expect(body.messages[0].role).toBe('system');
+    expect(body.messages[1].role).toBe('user');
+  });
+
+  it('Test 2: history with two turns constructs messages as [system, history_user, history_assistant, user]', () => {
+    const { mockReq } = captureWrittenBody();
+
+    streamOllamaChat(
+      'req-h2',
+      {
+        message: 'what about 3+3?',
+        model: 'qwen3',
+        temperature: 0,
+        systemPrompt: 'You are helpful',
+        history: [
+          { role: 'user', content: 'hi' },
+          { role: 'assistant', content: 'hello' },
+        ],
+      },
+      { onToken: vi.fn(), onDone: vi.fn(), onError: vi.fn() }
+    );
+
+    const body = JSON.parse(mockReq.write.mock.calls[0][0]);
+    expect(body.messages).toHaveLength(4);
+    expect(body.messages[0].role).toBe('system');
+    expect(body.messages[1].role).toBe('user');
+    expect(body.messages[1].content).toBe('hi');
+    expect(body.messages[2].role).toBe('assistant');
+    expect(body.messages[2].content).toBe('hello');
+    expect(body.messages[3].role).toBe('user');
+    expect(body.messages[3].content).toBe('what about 3+3?');
+  });
+
+  it('Test 3: undefined history constructs messages as [system, user] (backward compatible)', () => {
+    const { mockReq } = captureWrittenBody();
+
+    streamOllamaChat(
+      'req-h3',
+      { message: 'hello', model: 'qwen3', temperature: 0, systemPrompt: 'You are helpful' },
+      { onToken: vi.fn(), onDone: vi.fn(), onError: vi.fn() }
+    );
+
+    const body = JSON.parse(mockReq.write.mock.calls[0][0]);
+    expect(body.messages).toHaveLength(2);
+    expect(body.messages[0].role).toBe('system');
+    expect(body.messages[1].role).toBe('user');
+  });
+
+  it('Test 4: enriched message (terminal context + user text) passes combined content as final user message', () => {
+    const { mockReq } = captureWrittenBody();
+
+    const enrichedMessage = '--- Terminal Output (last 3 lines) ---\nsome output\n---\n\nwhat did that do?';
+
+    streamOllamaChat(
+      'req-h4',
+      { message: enrichedMessage, model: 'qwen3', temperature: 0, systemPrompt: 'You are helpful', history: [] },
+      { onToken: vi.fn(), onDone: vi.fn(), onError: vi.fn() }
+    );
+
+    const body = JSON.parse(mockReq.write.mock.calls[0][0]);
+    const lastMsg = body.messages[body.messages.length - 1];
+    expect(lastMsg.role).toBe('user');
+    expect(lastMsg.content).toMatch(/^--- Terminal Output/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // checkOllamaHealth tests
 // ---------------------------------------------------------------------------
 
