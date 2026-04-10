@@ -9,6 +9,7 @@ import { SafePane } from './SafePane';
 import { AppHeader } from './AppHeader';
 import { ModeStatusBar } from './ModePanel';
 import { AgentSidebar } from './AgentSidebar';
+import { ShortcutHelpOverlay } from './ShortcutHelpOverlay';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { usePaneDimming } from '../hooks/usePaneDimming';
 import { usePersistence } from '../hooks/usePersistence';
@@ -145,6 +146,9 @@ export function PaneContainer() {
   const activePaneId = usePaneStore((state) => state.activePaneId);
   const setSizes = usePaneStore((state) => state.setSizes);
 
+  // Phase 37: shortcut help overlay toggle state
+  const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
+
   // SCRN-01: dropped image path state for file-drop
   const [droppedImagePath, setDroppedImagePath] = useState<string | null>(null);
   const clearDroppedPath = useCallback(() => setDroppedImagePath(null), []);
@@ -189,6 +193,13 @@ export function PaneContainer() {
     return () => observer.disconnect();
   }, []);
 
+  // Phase 37: listen for Ctrl+/ toggle-shortcut-help DOM event
+  useEffect(() => {
+    const handler = () => setShortcutHelpOpen((prev) => !prev);
+    document.addEventListener('toggle-shortcut-help', handler);
+    return () => document.removeEventListener('toggle-shortcut-help', handler);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-[#0d1117]" ref={outerRef}>
       <AppHeader />
@@ -226,6 +237,7 @@ export function PaneContainer() {
           ))}
         </div>
       </div>
+      <ShortcutHelpOverlay isOpen={shortcutHelpOpen} onClose={() => setShortcutHelpOpen(false)} />
     </div>
   );
 }
