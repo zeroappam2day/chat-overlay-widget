@@ -150,7 +150,8 @@ test.describe('Smoke: Core PTY Flow', () => {
     // Step 4: Send command via ChatInputBar using Playwright's native API
     // React controlled textarea ignores native value setters — must use
     // Playwright fill() + keyboard.press() which fire real browser events
-    const textarea = page.locator('textarea');
+    // Target ChatInputBar's textarea specifically (xterm has its own hidden textarea)
+    const textarea = page.locator('textarea.chat-input-textarea');
     await textarea.waitFor({ state: 'visible', timeout: 5000 });
     await textarea.fill('echo __PLAYWRIGHT_SMOKE__');
     await textarea.press('Enter');
