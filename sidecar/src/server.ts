@@ -1707,14 +1707,47 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       }
       case 'pm-chat': {
-        const pmMsg = msg as { type: 'pm-chat'; requestId: string; message: string; model: string; temperature: number; systemPrompt: string; endpoint?: string };
-        console.log(`[sidecar] pm-chat request: requestId=${pmMsg.requestId} model=${pmMsg.model}`);
+        const pmMsg = msg as {
+          type: 'pm-chat';
+          requestId: string;
+          message: string;
+          model: string;
+          temperature: number;
+          systemPrompt: string;
+          endpoint?: string;
+          history?: Array<{role: 'user' | 'assistant'; content: string}>;
+          terminalLines?: number;
+        };
+        console.log(`[sidecar] pm-chat request: requestId=${pmMsg.requestId} model=${pmMsg.model} historyLen=${pmMsg.history?.length ?? 0}`);
+
+        // D-04: Inject terminal context from sidecar (same process, no HTTP)
+        // D-08: Skip if no PTY session or empty buffer
+        let terminalContext = '';
+        const session = activeSessions.get(ws);
+        if (session) {
+          const nLines = pmMsg.terminalLines ?? 30;
+          const { lines } = session.terminalBuffer.getLines(nLines);
+          if (lines.length > 0) {
+            // D-07: Scrub terminal context before injection
+            const rawContext = lines.join('\n');
+            const cleanContext = scrub(rawContext);
+            terminalContext = `--- Terminal Output (last ${lines.length} lines) ---\n${cleanContext}\n---`;
+          }
+        }
+
+        // D-05: Terminal context prepended to latest user message
+        const enrichedMessage = terminalContext
+          ? `${terminalContext}\n\n${pmMsg.message}`
+          : pmMsg.message;
+
+        // D-10: Pass history and enriched message to streamOllamaChat
         streamOllamaChat(pmMsg.requestId, {
-          message: pmMsg.message,
+          message: enrichedMessage,
           model: pmMsg.model,
           temperature: pmMsg.temperature,
           systemPrompt: pmMsg.systemPrompt,
           endpoint: pmMsg.endpoint,
+          history: pmMsg.history,
         }, {
           onToken: (token) => broadcastPmChatToken(pmMsg.requestId, token),
           onDone: () => broadcastPmChatDone(pmMsg.requestId),
