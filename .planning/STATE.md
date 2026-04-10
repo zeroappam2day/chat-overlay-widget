@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Ship & Harden
-status: verifying
-stopped_at: Completed 35-02-PLAN.md
-last_updated: "2026-04-09T15:53:29.673Z"
-last_activity: 2026-04-09
+status: executing
+stopped_at: Phase 38 context gathered
+last_updated: "2026-04-10T11:22:23.930Z"
+last_activity: 2026-04-10
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_phases: 4
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-09)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 35 — pm-chat-settings-ui
+**Current focus:** Phase 37 — keyboard-shortcut-discoverability
 
 ## Current Position
 
-Phase: 35 (pm-chat-settings-ui) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
-Last activity: 2026-04-09
+Phase: 37
+Plan: Not started
+Status: Executing Phase 37
+Last activity: 2026-04-10
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -82,6 +82,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-09T15:53:29.669Z
-Stopped at: Completed 35-02-PLAN.md
+Last session: 2026-04-10T11:22:23.927Z
+Stopped at: Phase 38 context gathered
 Next action: `/gsd:plan-phase 35`
