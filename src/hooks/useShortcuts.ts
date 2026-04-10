@@ -187,6 +187,19 @@ export function useShortcuts(): void {
       }),
     );
 
+    // Ctrl+/: toggle shortcut help overlay (Phase 37)
+    unregisters.push(
+      registerShortcut({
+        key: '/',
+        ctrl: true,
+        global: true,
+        dialogSafe: true,
+        handler: () => {
+          document.dispatchEvent(new Event('toggle-shortcut-help'));
+        },
+      }),
+    );
+
     return () => {
       unregisters.forEach((fn) => fn());
       cleanupListener();

@@ -1,42 +1,45 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: PM Voice Chat
+milestone: v1.8
+milestone_name: Ship & Harden
 status: executing
-stopped_at: "Checkpoint: Task 3 human-verify in 31-02-PLAN.md"
-last_updated: "2026-04-07T16:54:40.442Z"
-last_activity: 2026-04-07
+stopped_at: Phase 38 context gathered
+last_updated: "2026-04-10T17:41:36.613Z"
+last_activity: 2026-04-10
 progress:
-  total_phases: 8
+  total_phases: 4
   completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
-  percent: 0
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-07)
+See: .planning/PROJECT.md (updated 2026-04-09)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 31 — Ollama Chat Backend & Sidebar Tab
+**Current focus:** Phase 38 — test-infrastructure
 
 ## Current Position
 
-Phase: 31 (Ollama Chat Backend & Sidebar Tab) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-04-07
+Phase: 38
+Plan: Not started
+Status: Executing Phase 38
+Last activity: 2026-04-10
 
-Progress: [░░░░░░░░░░] 0% (v1.7)
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-Plans executed (v1.6): 5
-Plans needing revision: 0
-Revision rate: 0%
+**Velocity:**
+
+- Total plans completed (v1.8): 0
+- Prior milestone velocity: ~2-3 plans/day
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
@@ -44,33 +47,41 @@ Revision rate: 0%
 
 Baseline decisions: see PROJECT.md Key Decisions table.
 
-Recent decisions affecting v1.7:
+v1.8 milestone decisions:
 
-- PowerShell SAPI5 over Python pyttsx3: eliminates Python dependency; persistent process avoids per-utterance cold start
-- Ollama chat over cloud LLM: local-only, no API keys, privacy-preserving
-- LLM output via stdin only (never shell-interpolated): adversarial review found RCE risk otherwise
+- Cleanup before building: Phase 34 resolves half-wired v1.7 state before PM Chat phases build on it
+- Settings before context: Phase 35 (settings store) must wire the frontend before Phase 36 can inject terminal context
+- Discoverability independent: Phase 37 does not block or depend on PM Chat phases
+- Tests last: Phase 38 verifies final shipped state of all features
 
-v1.6 decisions still relevant:
+Carried from v1.7:
 
-- [Phase 28]: Sidebar as peer flex element to prevent terminal resize flash on collapse/expand
-- [Phase 28]: useAgentEventStore.getState() for non-React WebSocket callbacks (Zustand pattern)
-- [Phase 31-01]: WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS is already authenticated at connection time
-- [Phase 31-01]: Separate pmChat.ts module from server.ts: keeps routing concerns separated, matches askCodeHandler.js pattern
-- [Phase 31]: wsSend stored in Zustand pmChatStore: avoids prop-drilling through portal-rendered AgentSidebar
-- [Phase 31]: setActiveTab sets collapsed:false: tab icon click expands sidebar in one action
+- WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS already authenticated
+- Separate pmChat.ts module from server.ts: keeps routing concerns separated
+- wsSend stored in Zustand pmChatStore: avoids prop-drilling through portal-rendered AgentSidebar
+- setActiveTab sets collapsed:false: tab icon click expands sidebar in one action
+- [Phase 35]: loadSettings() at create() time for instant hydration; setSetting serializes only data fields; useEffect deps [open, endpoint] for model re-fetch
+- [Phase 35]: Plan 02 wiring was pre-completed during plan 01 — plan 02 served as verification-only pass
 
 ### Todos
 
 None.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260409-ly6 | Phase 34: Orphan & Dead Code Cleanup | 2026-04-09 | (audit clean — no changes) | [260409-ly6-phase-34-orphan-and-dead-code-cleanup](./quick/260409-ly6-phase-34-orphan-and-dead-code-cleanup/) |
+| Phase 35 P01 | 6min | 2 tasks | 4 files |
+| Phase 35 P02 | 1min | 2 tasks | 4 files |
+
 ### Blockers/Concerns
 
-- Phase 29 (auto-config, v1.6) is unstarted and deferred — not a blocker for v1.7 phases.
-- TTS voice availability (Hazel/Zira) depends on Windows language packs installed on the user's machine — validate early in Phase 33 planning.
-- Ollama must be running locally for Phase 31 health check to show "healthy" — document in phase success criteria.
+- Playwright CDP to WebView2 is "likely compatible" not "battle-tested with Tauri v1" — validate in Phase 38 early
+- Ollama must be running locally for PM Chat health check to show "healthy"
 
 ## Session Continuity
 
-Last session: 2026-04-07T16:54:34.802Z
-Stopped at: Checkpoint: Task 3 human-verify in 31-02-PLAN.md
-Next action: `/gsd:plan-phase 30`
+Last session: 2026-04-10T11:22:23.927Z
+Stopped at: Phase 38 context gathered
+Next action: `/gsd:plan-phase 35`

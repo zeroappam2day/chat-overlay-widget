@@ -77,7 +77,9 @@ const screenshotVerifier_js_1 = require("./screenshotVerifier.js");
 const enhancedAccessibility_js_1 = require("./enhancedAccessibility.js");
 const workflowRecorder_js_1 = require("./workflowRecorder.js");
 const modeManager_js_1 = require("./modeManager.js");
+const actionCoordinator_js_1 = require("./actionCoordinator.js");
 const skillDiscoveryBridge_js_1 = require("./skillDiscoveryBridge.js");
+const pmChat_js_1 = require("./pmChat.js");
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 (0, historyStore_js_1.openDb)();
 (0, historyStore_js_1.markOrphans)();
@@ -1159,6 +1161,34 @@ function handleHttpRequest(req, res) {
             return;
         }
     }
+    // Action Coordinator — announce an intended action before executing
+    if (req.method === 'POST' && url.pathname === '/action/announce') {
+        if (!sidecarFlags.batchConsent) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Action coordination is disabled. Enable the batchConsent feature flag.' }));
+            return;
+        }
+        let body = '';
+        req.on('data', (chunk) => { body += chunk.toString(); });
+        req.on('end', async () => {
+            try {
+                const parsed = JSON.parse(body);
+                if (!parsed.description || typeof parsed.description !== 'string') {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'description is required' }));
+                    return;
+                }
+                const result = await actionCoordinator.announce(parsed.description, parsed.position);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+            }
+            catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+            }
+        });
+        return;
+    }
     // Skill Discovery Bridge — Postgres full-text search (flag-gated)
     if (req.method === 'GET' && url.pathname === '/skill-discovery') {
         if (!sidecarFlags.skillDiscovery) {
@@ -1291,6 +1321,18 @@ const modeManager = new modeManager_js_1.ModeManager({
             }
             console.log(`[modeManager] walkMeThrough activated — walkthrough watcher enabled on ${activeSessions.size} session(s)`);
         }
+        if (state && state.modeId === 'workWithMe') {
+            // Work With Me activated: enable action coordinator + walkthrough watcher
+            actionCoordinator.enabled = true;
+            // Enable walkthrough watcher on all active PTY sessions (same as walkMeThrough)
+            const pattern = walkthroughEngine_js_1.walkthroughEngine.getCurrentAdvancePattern();
+            for (const session of activeSessions.values()) {
+                if (session instanceof batchedPtySession_js_1.BatchedPTYSession) {
+                    session.walkthroughWatcherInstance.setPattern(pattern);
+                }
+            }
+            console.log(`[modeManager] workWithMe activated — actionCoordinator enabled, walkthrough watcher enabled on ${activeSessions.size} session(s)`);
+        }
         if (!state) {
             // Mode deactivated: clean up any active walkthrough
             if (walkthroughEngine_js_1.walkthroughEngine.getStatus().active) {
@@ -1302,8 +1344,24 @@ const modeManager = new modeManager_js_1.ModeManager({
             }
             // Broadcast walkthrough-step null to clear the walkthrough panel in frontend
             broadcastWalkthroughStep(null);
+            // Work With Me cleanup: disable action coordinator and cancel pending actions
+            actionCoordinator.enabled = false;
+            actionCoordinator.cancelAll();
+            // Revoke all batch consent grants so no stale trust windows remain
+            batchConsentMgr.revokeAll();
+            console.log('[modeManager] mode deactivated — actionCoordinator disabled, pending actions cancelled, batch consent revoked');
         }
     },
+});
+// Action Coordinator — announce-then-act protocol for Work With Me mode
+const actionCoordinator = new actionCoordinator_js_1.ActionCoordinator({
+    annotationState: annotationStore_js_1.annotationState,
+    onBroadcast: (msg) => {
+        for (const client of wss.clients) {
+            sendMsg(client, msg);
+        }
+    },
+    defaultDelayMs: 2000,
 });
 function broadcastAgentEvent(event) {
     for (const client of wss.clients) {
@@ -1332,6 +1390,21 @@ function broadcastTaskStateChange(task) {
 function broadcastWalkthroughStep(step) {
     for (const client of wss.clients) {
         sendMsg(client, { type: 'walkthrough-step', step });
+    }
+}
+function broadcastPmChatToken(requestId, token) {
+    for (const client of wss.clients) {
+        sendMsg(client, { type: 'pm-chat-token', requestId, token });
+    }
+}
+function broadcastPmChatDone(requestId) {
+    for (const client of wss.clients) {
+        sendMsg(client, { type: 'pm-chat-done', requestId });
+    }
+}
+function broadcastPmChatError(requestId, error) {
+    for (const client of wss.clients) {
+        sendMsg(client, { type: 'pm-chat-error', requestId, error });
     }
 }
 /** Agent Runtime Phase 2: Update watcher pattern on all active sessions */
@@ -1651,7 +1724,56 @@ wss.on('connection', (ws) => {
                 break;
             }
             case 'cancel-pending-action': {
-                // Placeholder — handled by ActionCoordinator in phase_7
+                const { actionId } = msg;
+                actionCoordinator.cancel(actionId);
+                break;
+            }
+            case 'pm-chat': {
+                const pmMsg = msg;
+                console.log(`[sidecar] pm-chat request: requestId=${pmMsg.requestId} model=${pmMsg.model} historyLen=${pmMsg.history?.length ?? 0} numCtx=${pmMsg.numCtx ?? 'default'}`);
+                // D-04: Inject terminal context from sidecar (same process, no HTTP)
+                // D-08: Skip if no PTY session or empty buffer
+                let terminalContext = '';
+                const session = activeSessions.get(ws);
+                if (session) {
+                    const nLines = pmMsg.terminalLines ?? 30;
+                    const { lines } = session.terminalBuffer.getLines(nLines);
+                    if (lines.length > 0) {
+                        // D-07: Scrub terminal context before injection
+                        const rawContext = lines.join('\n');
+                        const cleanContext = (0, secretScrubber_js_1.scrub)(rawContext);
+                        terminalContext = `--- Terminal Output (last ${lines.length} lines) ---\n${cleanContext}\n---`;
+                    }
+                }
+                // D-05: Terminal context prepended to latest user message
+                const enrichedMessage = terminalContext
+                    ? `${terminalContext}\n\n${pmMsg.message}`
+                    : pmMsg.message;
+                // D-10: Pass history and enriched message to streamOllamaChat
+                (0, pmChat_js_1.streamOllamaChat)(pmMsg.requestId, {
+                    message: enrichedMessage,
+                    model: pmMsg.model,
+                    temperature: pmMsg.temperature,
+                    systemPrompt: pmMsg.systemPrompt,
+                    endpoint: pmMsg.endpoint,
+                    history: pmMsg.history,
+                    numCtx: pmMsg.numCtx,
+                }, {
+                    onToken: (token) => broadcastPmChatToken(pmMsg.requestId, token),
+                    onDone: () => broadcastPmChatDone(pmMsg.requestId),
+                    onError: (error) => broadcastPmChatError(pmMsg.requestId, error),
+                });
+                break;
+            }
+            case 'pm-chat-cancel': {
+                const cancelMsg = msg;
+                (0, pmChat_js_1.cancelOllamaChat)(cancelMsg.requestId);
+                break;
+            }
+            case 'pm-chat-health-check': {
+                (0, pmChat_js_1.checkOllamaHealth)().then(result => {
+                    sendMsg(ws, { type: 'pm-chat-health', ok: result.ok, error: result.error });
+                });
                 break;
             }
         }

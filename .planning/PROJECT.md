@@ -47,22 +47,27 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 
 ### Active
 
-- [ ] PM Chat sidebar tab with streaming Ollama LLM responses
-- [ ] Windows SAPI5 TTS via persistent PowerShell process
+- [ ] PM Chat multi-turn conversation with terminal context injection
 - [ ] LLM settings UI: model dropdown, system prompt, temperature — persisted
-- [ ] Conversational follow-up with terminal context injection
-- [ ] Ollama health check and graceful error states
+- [ ] Playwright CDP test foundation for WebView2 + component tests
+- [ ] Keyboard shortcut help overlay for discoverability
+- [ ] Orphaned v1.7 code cleanup and dead code removal
 
-## Current Milestone: v1.7 PM Voice Chat
+## Current Milestone: v1.8 Ship & Harden
 
-**Goal:** A conversational PM assistant that reads terminal state, summarizes it via local Ollama LLM in non-technical CEO-friendly language, and speaks it via Windows SAPI5 — with persistent LLM settings and follow-up chat.
+**Goal:** Finish the half-built PM Chat assistant, establish frontend test infrastructure, and add keyboard shortcut discoverability — shipping what's 80% done while hardening what's already shipped.
 
 **Target features:**
-- PM Chat sidebar tab with streaming LLM responses from local Ollama
-- Windows SAPI5 TTS via persistent PowerShell process (no Python dependency)
-- Configurable LLM settings: model selection (from Ollama /api/tags), system prompt, temperature — persisted to localStorage
-- Conversational follow-up with terminal context injection
-- Ollama health check and graceful error states
+- Complete PM Chat sidebar (multi-turn conversation with terminal context, LLM settings UI)
+- Playwright CDP test foundation for WebView2 + component tests for high-churn files
+- Keyboard shortcut help overlay for discoverability
+- Clean orphaned v1.7 state and dead code
+
+## Previous Milestone: v1.7 PM Voice Chat (abandoned 2026-04-09)
+
+**Goal:** PM assistant with local Ollama LLM summarization + Windows SAPI5 TTS.
+
+**Outcome:** Abandoned. Phase 31 sidecar backend completed (pmChat.ts streaming proxy, health check, abort). Frontend partially wired (PMChatTab, pmChatStore exist). Phases 30, 32, 33 never started. TTS had zero implementation. PM Chat completion carried forward to v1.8; TTS moved to backlog.
 
 ## Previous Milestone: v1.6 Agent Hooks & MCP Integration (shipped 2026-04-07)
 
@@ -92,7 +97,8 @@ v1.4 shipped: HWND+PID protocol threading, direct HWND capture, stale detection,
 Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 25 phases shipped across 5 milestones.
 v1.5 shipped: Terminal buffer, secret scrubbing, self-screenshot — HTTP APIs for any caller. 3 phases, 7 plans, 140 sidecar tests, 9/9 requirements verified. Phases 23-25.
 v1.6 shipped: Hook receiver, MCP server, adapter layer, sidebar — Phases 26-28 (Phase 29 auto-config deferred).
-v1.7 scope: PM Voice Chat — local Ollama LLM summarization + Windows SAPI5 TTS via persistent PowerShell process. Stress-tested from 5 adversarial views (security, UX, perf, reliability, architecture). Key mitigations: no shell injection (stdin piping), persistent TTS process, Ollama health check, concurrent request guards.
+v1.7 abandoned: PM Voice Chat scope was too broad. Phase 31 sidecar backend shipped (pmChat.ts). Frontend partially wired. TTS never started. Carried PM Chat forward to v1.8; TTS moved to backlog.
+v1.8 scope: Ship & Harden — finish PM Chat (multi-turn + settings), Playwright CDP test foundation, keyboard shortcut discoverability, orphan cleanup. Evidence: 4-direction stress test (6 perspectives each) selected Hybrid as Strong For (highest confidence).
 
 ## Key Decisions
 
@@ -120,9 +126,12 @@ v1.7 scope: PM Voice Chat — local Ollama LLM summarization + Windows SAPI5 TTS
 | Cursor-paginated terminal reads over full buffer dump | 64KB raw dump = 16K-20K tokens; catastrophic for small-context models (Haiku, local Llama) | Validated (Phase 23) |
 | Sidebar over virtual terminal panes for agent visibility | Stress test: raw JSONL in xterm.js is unreadable; panes accumulate; category error (terminal for log data) | — Pending (v1.6) |
 | Layered architecture (HTTP → MCP → Adapters) | LLM portability: HTTP is universal, MCP is broadly adopted, adapters handle fragmented hooks | Validated (Phase 26-28) |
-| PowerShell SAPI5 over Python pyttsx3 for TTS | Eliminates Python dependency; app already spawns PowerShell for captures; persistent process avoids per-utterance cold start | — Pending (v1.7) |
-| Ollama chat over cloud LLM for PM summaries | Local-only, no API keys, privacy-preserving, user already runs Ollama | — Pending (v1.7) |
-| LLM output piped via stdin (never shell-interpolated) | Adversarial review found RCE via shell injection if LLM text embedded in command strings | — Pending (v1.7) |
+| PowerShell SAPI5 over Python pyttsx3 for TTS | Eliminates Python dependency; persistent process avoids per-utterance cold start | Deferred to backlog (v1.7 abandoned, zero implementation) |
+| Ollama chat over cloud LLM for PM summaries | Local-only, no API keys, privacy-preserving, user already runs Ollama | Validated (v1.7 Phase 31 backend) |
+| LLM output piped via stdin (never shell-interpolated) | Adversarial review found RCE via shell injection if LLM text embedded in command strings | Validated (v1.7 Phase 31 backend) |
+| Playwright CDP over tauri-driver for E2E testing | WebView2 supports --remote-debugging-port; Playwright v1.59.1 confirmed compatible; tauri-driver is minimally maintained | — Pending (v1.8) |
+| Defer Midscene.js AI layer | Beta quality (v1.7.3), no Tauri-specific usage evidence; Playwright CDP sufficient for smoke tests | — Pending (v1.8) |
+| Cut TTS to backlog after 4-direction stress test | Zero implementation, deferred twice, high risk (persistent PS subprocess); 4 agents × 6 perspectives unanimously agreed | — Decided (v1.8) |
 
 ## Evolution
 
@@ -130,4 +139,4 @@ Updates at phase transitions: invalidate/validate requirements, log decisions, c
 Updates at milestones: full review, core value check, out-of-scope audit.
 
 ---
-*Last updated: 2026-04-07 after v1.7 milestone start*
+*Last updated: 2026-04-09 after v1.8 milestone start (v1.7 abandoned)*
