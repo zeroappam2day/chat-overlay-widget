@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePmChatStore } from '../store/pmChatStore';
+import { usePmChatSettingsStore } from '../store/pmChatSettingsStore';
+import { PMChatSettings } from './PMChatSettings';
 
 export function PMChatTab() {
   const messages = usePmChatStore((s) => s.messages);
@@ -25,17 +27,28 @@ export function PMChatTab() {
   }, [messages]);
 
   const handleSend = () => {
-    if (!input.trim() || streaming || !wsSend) return;
+    if (!input.trim() || usePmChatStore.getState().streaming || !wsSend) return;
     const requestId = crypto.randomUUID();
     usePmChatStore.getState().addUserMessage(input.trim());
     usePmChatStore.getState().setStreaming(true);
+    // History = all messages except the one just added (last element)
+    // Per D-01: frontend sends full history array, sidecar is stateless
+    const { messages } = usePmChatStore.getState();
+    const history = messages.slice(0, -1).map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+    const { model, temperature, systemPrompt, endpoint, terminalLines } = usePmChatSettingsStore.getState();
     wsSend({
       type: 'pm-chat',
       requestId,
       message: input.trim(),
-      model: 'qwen3:0.6b',
-      temperature: 0.0,
-      systemPrompt: 'You are a helpful PM assistant. Summarize technical context in plain, non-technical language suitable for a CEO.',
+      model,
+      temperature,
+      systemPrompt,
+      endpoint,
+      history,
+      terminalLines,
     });
     setInput('');
   };
@@ -74,6 +87,8 @@ export function PMChatTab() {
   // Chat UI
   return (
     <div className="flex flex-col h-full">
+      {/* Settings panel — collapsible via gear icon */}
+      <PMChatSettings />
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
         {messages.length === 0 && (

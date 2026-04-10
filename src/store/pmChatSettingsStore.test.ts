@@ -54,13 +54,13 @@ describe('pmChatSettingsStore', () => {
     expect(state.temperature).toBe(0.5);
   });
 
-  it('setSetting writes only 4 serializable fields to localStorage', async () => {
+  it('setSetting writes only serializable fields to localStorage', async () => {
     const { usePmChatSettingsStore, DEFAULT_SETTINGS } = await import('./pmChatSettingsStore');
     usePmChatSettingsStore.setState({ ...DEFAULT_SETTINGS });
     usePmChatSettingsStore.getState().setSetting('model', 'test-model');
     const stored = JSON.parse(localStorage.getItem('chat-overlay-pm-chat-settings')!);
     const keys = Object.keys(stored).sort();
-    expect(keys).toEqual(['endpoint', 'model', 'systemPrompt', 'temperature']);
+    expect(keys).toEqual(['endpoint', 'model', 'systemPrompt', 'temperature', 'terminalLines'].sort());
     // Must NOT contain store functions
     expect(stored.setSetting).toBeUndefined();
     expect(stored.resetSettings).toBeUndefined();
