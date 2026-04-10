@@ -18,7 +18,7 @@ export interface DispatchCallbacks {
   setPlanContent: (content: string | null, fileName: string | null) => void;
   setDiffs: (raw: string) => void;
   dispatchAskCodeResponse: (msg: ServerMessage) => void;
-  handleModeStatus: (msg: ServerMessage) => void;
+  handleModeStatus: (status: { active: boolean; modeId?: string; activatedAt?: number }) => void;
   handleCrashRecovery: () => void;
   handleHistoryMessage: (msg: ServerMessage) => void;
   // Context for pty-exit:
