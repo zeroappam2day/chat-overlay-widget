@@ -7,10 +7,24 @@ interface OverlayState {
   toggleOverlay: () => Promise<void>;
   hideOverlay: () => Promise<void>;
   showOverlay: () => Promise<void>;
+  handleFocusEvent: (event: 'show' | 'hide' | 'target-lost') => void;
 }
 
 export const useOverlayStore = create<OverlayState>((_set, get) => ({
   isVisible: false,
+
+  handleFocusEvent: (event) => {
+    if (event === 'show') {
+      get().showOverlay().catch((err) => {
+        console.error('[overlayStore] focus show error:', err);
+      });
+    } else {
+      // 'hide' and 'target-lost' both hide
+      get().hideOverlay().catch((err) => {
+        console.error('[overlayStore] focus hide error:', err);
+      });
+    }
+  },
 
   toggleOverlay: async () => {
     if (!useFeatureFlagStore.getState().annotationOverlay) return;

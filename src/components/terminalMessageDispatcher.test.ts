@@ -17,6 +17,7 @@ function makeCallbacks(overrides?: Partial<DispatchCallbacks>): DispatchCallback
     setPmChatHealth: vi.fn(),
     setAnnotations: vi.fn(),
     setWalkthroughStep: vi.fn(),
+    handleFocusEvent: vi.fn(),
     setPlanContent: vi.fn(),
     setDiffs: vi.fn(),
     dispatchAskCodeResponse: vi.fn(),
@@ -177,5 +178,23 @@ describe('dispatchServerMessage', () => {
     const msg = { type: 'history-sessions', sessions: [] } as any;
     dispatchServerMessage(msg, cb);
     expect(cb.handleHistoryMessage).toHaveBeenCalledWith(msg);
+  });
+
+  it('overlay-focus show → calls handleFocusEvent with "show"', () => {
+    const cb = makeCallbacks();
+    dispatchServerMessage({ type: 'overlay-focus', event: 'show' }, cb);
+    expect(cb.handleFocusEvent).toHaveBeenCalledWith('show');
+  });
+
+  it('overlay-focus hide → calls handleFocusEvent with "hide"', () => {
+    const cb = makeCallbacks();
+    dispatchServerMessage({ type: 'overlay-focus', event: 'hide' }, cb);
+    expect(cb.handleFocusEvent).toHaveBeenCalledWith('hide');
+  });
+
+  it('overlay-focus target-lost → calls handleFocusEvent with "target-lost"', () => {
+    const cb = makeCallbacks();
+    dispatchServerMessage({ type: 'overlay-focus', event: 'target-lost' }, cb);
+    expect(cb.handleFocusEvent).toHaveBeenCalledWith('target-lost');
   });
 });

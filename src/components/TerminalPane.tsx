@@ -25,6 +25,7 @@ import { BookmarkBar } from './BookmarkBar';
 import { PromptHistoryPanel } from './PromptHistoryPanel';
 import { usePromptHistoryStore } from '../store/promptHistoryStore';
 import { useModeStore } from '../store/modeStore';
+import { useOverlayStore } from '../store/overlayStore';
 import { ExitNotifier } from '../lib/exitNotifier';
 import { GitHubUrlBadge } from './GitHubUrlBadge';
 
@@ -114,6 +115,7 @@ export function TerminalPane({ paneId, droppedImagePath, onDroppedPathConsumed }
       setPmChatHealth: (ok, err) => usePmChatStore.getState().setHealth(ok, err),
       setAnnotations: (a) => useAnnotationBridgeStore.getState().setAnnotations(a),
       setWalkthroughStep: (s) => useAnnotationBridgeStore.getState().setWalkthroughStep(s),
+      handleFocusEvent: (e) => useOverlayStore.getState().handleFocusEvent(e),
       setPlanContent: (c, f) => usePlanStore.getState().setContent(c, f),
       setDiffs: (raw) => { const parsed = parseUnifiedDiff(raw); useDiffStore.getState().setDiffs(parsed, raw); },
       dispatchAskCodeResponse: (m) => document.dispatchEvent(new CustomEvent('ask-code-response', { detail: m })),

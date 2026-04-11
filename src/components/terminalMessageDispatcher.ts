@@ -15,6 +15,7 @@ export interface DispatchCallbacks {
   setPmChatHealth: (ok: boolean, error?: string) => void;
   setAnnotations: (annotations: Annotation[]) => void;
   setWalkthroughStep: (step: any) => void;
+  handleFocusEvent: (event: 'show' | 'hide' | 'target-lost') => void;
   setPlanContent: (content: string | null, fileName: string | null) => void;
   setDiffs: (raw: string) => void;
   dispatchAskCodeResponse: (msg: ServerMessage) => void;
@@ -112,6 +113,9 @@ export function dispatchServerMessage(msg: ServerMessage, cb: DispatchCallbacks)
       break;
     case 'walkthrough-step':
       cb.setWalkthroughStep(msg.step);
+      break;
+    case 'overlay-focus':
+      cb.handleFocusEvent(msg.event);
       break;
     case 'plan-update':
       cb.setPlanContent(msg.content, msg.fileName);
