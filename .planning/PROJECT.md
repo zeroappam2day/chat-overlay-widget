@@ -48,8 +48,8 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 ### Active
 
 - [ ] Focus-aware overlay visibility (auto-hide when target app not focused, auto-show when refocused)
-- [ ] Overlay auto-show/hide on walkthrough lifecycle (start → show, stop/cancel → hide)
-- [ ] Walkthrough target window association (bind walkthrough to specific hwnd)
+- [x] Overlay auto-show/hide on walkthrough lifecycle (start → show, stop/cancel → hide) — v1.9 (Phase 39)
+- [x] Walkthrough target window association (bind walkthrough to specific hwnd) — v1.9 (Phase 39)
 - [ ] Pixel-sample verification on external windows (retarget from self-capture)
 - [ ] DPI-aware coordinate mapping for screenshot verification
 - [ ] UI Automation state reading (TogglePattern, ValuePattern, IsEnabled, SelectionItemPattern, etc.)
