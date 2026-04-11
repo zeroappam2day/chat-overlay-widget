@@ -66,28 +66,28 @@ Requirements for Guided Desktop Walkthrough milestone. Each maps to roadmap phas
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OVRL-01 | — | Pending |
-| OVRL-02 | — | Pending |
-| OVRL-03 | — | Pending |
-| FOCUS-01 | — | Pending |
-| FOCUS-02 | — | Pending |
-| FOCUS-03 | — | Pending |
-| VRFY-01 | — | Pending |
-| VRFY-02 | — | Pending |
-| VRFY-03 | — | Pending |
-| VRFY-04 | — | Pending |
-| UIA-01 | — | Pending |
-| UIA-02 | — | Pending |
-| UIA-03 | — | Pending |
-| UIA-04 | — | Pending |
-| UIA-05 | — | Pending |
-| SAFE-01 | — | Pending |
+| OVRL-01 | Phase 39 | Pending |
+| OVRL-02 | Phase 39 | Pending |
+| OVRL-03 | Phase 39 | Pending |
+| FOCUS-01 | Phase 40 | Pending |
+| FOCUS-02 | Phase 40 | Pending |
+| FOCUS-03 | Phase 40 | Pending |
+| VRFY-01 | Phase 41 | Pending |
+| VRFY-02 | Phase 41 | Pending |
+| VRFY-03 | Phase 41 | Pending |
+| VRFY-04 | Phase 41 | Pending |
+| SAFE-01 | Phase 41 | Pending |
+| UIA-01 | Phase 42 | Pending |
+| UIA-02 | Phase 42 | Pending |
+| UIA-03 | Phase 42 | Pending |
+| UIA-04 | Phase 42 | Pending |
+| UIA-05 | Phase 42 | Pending |
 
 **Coverage:**
 - v1.9 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-10 after initial definition*
+*Last updated: 2026-04-10 after roadmap creation*

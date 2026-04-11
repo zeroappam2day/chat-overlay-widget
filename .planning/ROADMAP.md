@@ -11,6 +11,7 @@
 - ✅ **v1.6 Agent Hooks & MCP Integration** — Phases 26-29 (shipped 2026-04-07)
 - ❌ **v1.7 PM Voice Chat** — Phases 30-33 (abandoned 2026-04-09; Phase 31 sidecar backend shipped)
 - ✅ **v1.8 Ship & Harden** — Phases 34-38 (shipped 2026-04-10)
+- 🔄 **v1.9 Guided Desktop Walkthrough** — Phases 39-42 (in progress)
 
 ## Phases
 
@@ -106,9 +107,62 @@
 
 </details>
 
+### v1.9 Guided Desktop Walkthrough
+
+- [ ] **Phase 39: Overlay Lifecycle & Target Binding** — Walkthrough auto-manages overlay visibility and binds to a target hwnd
+- [ ] **Phase 40: Focus-Aware Overlay** — Overlay hides/shows based on target app focus state
+- [ ] **Phase 41: External Window Verification** — Pixel-sample, screenshot-diff, and visual polling target external windows with DPI-correct coordinates and safety timeout
+- [ ] **Phase 42: UI Automation State Reading** — Query element state, TogglePattern, ValuePattern, SelectionItemPattern and poll for changes on external app elements
+
 ## Phase Details
 
-> All phase details archived to `.planning/milestones/`
+> All shipped phase details archived to `.planning/milestones/`
+
+### Phase 39: Overlay Lifecycle & Target Binding
+**Goal**: Walkthrough lifecycle reliably auto-manages overlay visibility and the walkthrough is bound to a specific external window at start
+**Depends on**: Phase 38 (previous milestone complete)
+**Requirements**: OVRL-01, OVRL-02, OVRL-03
+**Success Criteria** (what must be TRUE):
+  1. Starting a walkthrough causes the overlay to appear without the user manually toggling it
+  2. Completing or cancelling a walkthrough causes the overlay to disappear without the user manually toggling it
+  3. A walkthrough start call accepts a target hwnd and the system stores that association for subsequent phases to use
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 40: Focus-Aware Overlay
+**Goal**: Overlay visibility tracks whether the user is focused on the walkthrough's target window, hiding when they switch away and reappearing when they return
+**Depends on**: Phase 39
+**Requirements**: FOCUS-01, FOCUS-02, FOCUS-03
+**Success Criteria** (what must be TRUE):
+  1. Switching focus away from the target app (e.g., clicking another window) causes the overlay to hide automatically
+  2. Switching focus back to the target app causes the overlay to reappear automatically
+  3. Focus transitions are detected within 500ms of the actual window switch
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 41: External Window Verification
+**Goal**: Pixel-sample and screenshot-diff verification target an external window by hwnd with DPI-correct coordinates, visual change polling drives auto-advance, and a timeout prevents indefinite hangs
+**Depends on**: Phase 39
+**Requirements**: VRFY-01, VRFY-02, VRFY-03, VRFY-04, SAFE-01
+**Success Criteria** (what must be TRUE):
+  1. Pixel-sample verification reads pixels from an external window (by hwnd) rather than the overlay's own window
+  2. Logical pixel coordinates passed to verification are correctly scaled to physical device pixels so samples land on the intended screen location across DPI scales
+  3. Screenshot-diff comparison captures a baseline, then a runtime screenshot, and returns a meaningful diff result (not a stub)
+  4. Visual change polling starts automatically after a walkthrough step and advances when the target window's appearance changes, backing off from 500ms up to 2s between checks
+  5. Walkthrough verification stops and reports a timeout error after maxWaitMs rather than running indefinitely
+**Plans**: TBD
+
+### Phase 42: UI Automation State Reading
+**Goal**: Users can query UI Automation element state on external app elements and poll for state changes, enabling walkthroughs that react to checkbox state, text field values, list selections, and enabled/offscreen status
+**Depends on**: Phase 39
+**Requirements**: UIA-01, UIA-02, UIA-03, UIA-04, UIA-05
+**Success Criteria** (what must be TRUE):
+  1. A walkthrough step can query whether an external app element is enabled or offscreen
+  2. A walkthrough step can read the on/off/indeterminate toggle state of a checkbox in an external app
+  3. A walkthrough step can read the current text value and read-only status of a text field in an external app
+  4. A walkthrough step can read whether a list item is selected in an external app
+  5. A walkthrough step can wait for an element's state to change within a configured timeout and interval, returning success when the condition is met or a timeout error when it is not
+**Plans**: TBD
 
 ## Progress
 
@@ -124,6 +178,10 @@
 | 29 | v1.6 | 0/TBD | Deferred | - |
 | 30-33 | v1.7 | 1/2 | Abandoned | - |
 | 34-38 | v1.8 | 8/8 | Complete | 2026-04-10 |
+| 39 | v1.9 | 0/TBD | Not started | - |
+| 40 | v1.9 | 0/TBD | Not started | - |
+| 41 | v1.9 | 0/TBD | Not started | - |
+| 42 | v1.9 | 0/TBD | Not started | - |
 
 ---
 *Full phase details archived in `.planning/milestones/`*
