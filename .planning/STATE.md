@@ -1,45 +1,45 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Guided Desktop Walkthrough
+milestone: v1.8
+milestone_name: Ship & Harden
 status: executing
-last_updated: "2026-04-11T11:54:42.340Z"
-last_activity: 2026-04-11 -- Phase 40 planning complete
+stopped_at: Phase 38 context gathered
+last_updated: "2026-04-10T17:41:36.613Z"
+last_activity: 2026-04-10
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-10)
+See: .planning/PROJECT.md (updated 2026-04-09)
 
 **Core value:** The CLI must think GUI input is real keyboard input — the PTY bridge is the heart
-**Current focus:** Phase 39 — Overlay Lifecycle & Target Binding
+**Current focus:** Phase 38 — test-infrastructure
 
 ## Current Position
 
-Phase: 40
+Phase: 38
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-11 -- Phase 40 planning complete
+Status: Executing Phase 38
+Last activity: 2026-04-10
 
-```
-v1.9 progress: [░░░░░░░░░░] 0% (0/4 phases)
-```
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-| Metric | Value |
-|--------|-------|
-| Phases this milestone | 4 |
-| Requirements mapped | 16/16 |
-| Plans complete | 0/TBD |
+**Velocity:**
+
+- Total plans completed (v1.8): 0
+- Prior milestone velocity: ~2-3 plans/day
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
@@ -47,21 +47,41 @@ v1.9 progress: [░░░░░░░░░░] 0% (0/4 phases)
 
 Baseline decisions: see PROJECT.md Key Decisions table.
 
-v1.8 milestone decisions archived to `.planning/milestones/v1.8-ROADMAP.md`.
+v1.8 milestone decisions:
 
-**v1.9 architectural notes:**
+- Cleanup before building: Phase 34 resolves half-wired v1.7 state before PM Chat phases build on it
+- Settings before context: Phase 35 (settings store) must wire the frontend before Phase 36 can inject terminal context
+- Discoverability independent: Phase 37 does not block or depend on PM Chat phases
+- Tests last: Phase 38 verifies final shipped state of all features
 
-- Focus tracking (Phase 40) requires target hwnd from Phase 39 — strict dependency
-- External window verification (Phase 41) requires target hwnd from Phase 39 — strict dependency
-- UI Automation (Phase 42) requires target hwnd from Phase 39 — strict dependency
-- Phases 41 and 42 are independent of each other and can be planned in any order after Phase 40
-- DPI fix for VRFY-02 should coordinate with existing DPI-aware capture logic from Phase 22
+Carried from v1.7:
 
-### Blockers/Concerns
+- WS messages over HTTP POST for pm-chat: frontend lacks sidecar auth token, WS already authenticated
+- Separate pmChat.ts module from server.ts: keeps routing concerns separated
+- wsSend stored in Zustand pmChatStore: avoids prop-drilling through portal-rendered AgentSidebar
+- setActiveTab sets collapsed:false: tab icon click expands sidebar in one action
+- [Phase 35]: loadSettings() at create() time for instant hydration; setSetting serializes only data fields; useEffect deps [open, endpoint] for model re-fetch
+- [Phase 35]: Plan 02 wiring was pre-completed during plan 01 — plan 02 served as verification-only pass
+
+### Todos
 
 None.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260409-ly6 | Phase 34: Orphan & Dead Code Cleanup | 2026-04-09 | (audit clean — no changes) | [260409-ly6-phase-34-orphan-and-dead-code-cleanup](./quick/260409-ly6-phase-34-orphan-and-dead-code-cleanup/) |
+| Phase 35 P01 | 6min | 2 tasks | 4 files |
+| Phase 35 P02 | 1min | 2 tasks | 4 files |
+
+### Blockers/Concerns
+
+- Playwright CDP to WebView2 is "likely compatible" not "battle-tested with Tauri v1" — validate in Phase 38 early
+- Ollama must be running locally for PM Chat health check to show "healthy"
+
 ## Session Continuity
 
-Last session: 2026-04-11T11:05:30.997Z
-Next action: `/gsd-plan-phase 39` — Overlay Lifecycle & Target Binding (OVRL-01, OVRL-02, OVRL-03)
+Last session: 2026-04-10T11:22:23.927Z
+Stopped at: Phase 38 context gathered
+Next action: `/gsd:plan-phase 35`

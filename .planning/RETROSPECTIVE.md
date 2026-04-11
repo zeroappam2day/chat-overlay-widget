@@ -2,49 +2,6 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
-## Milestone: v1.8 — Ship & Harden
-
-**Shipped:** 2026-04-10
-**Phases:** 4 | **Plans:** 8 | **Files changed:** 44 | **Lines:** +4,081 / -455
-
-### What Was Built
-- PM Chat Settings UI — Zustand store with localStorage persistence, gear-toggled collapsible panel (model, temperature, prompt, endpoint)
-- Multi-turn conversational context — 20-turn FIFO cap, automatic terminal context injection per message, streaming guard
-- Endpoint threading — custom Ollama endpoint threaded through protocol types, sidecar handler, and UI with zero hardcoded values
-- Keyboard shortcut overlay — Ctrl+/ toggles categorized shortcut help with Escape/click-outside dismiss
-- Test infrastructure — Playwright CDP to WebView2, Vitest component tests for 3 high-churn files, E2E PTY smoke test
-- Dead code cleanup — orphaned v1.7 modules wired end-to-end organically during phases 35-36
-
-### What Worked
-- Carrying v1.7 partial work forward was efficient — Phase 31 sidecar backend was already solid, phases 35-36 just completed the frontend and extended it
-- Phase 34 (dead code cleanup) resolved itself organically during phases 35-36 — no separate execution needed
-- 4-direction stress test (CEO/Eng/Design/DX × 6 perspectives) correctly scoped v1.8 and cut TTS to backlog
-- Playwright CDP connection to WebView2 worked on first attempt — research paid off
-
-### What Was Inefficient
-- SUMMARY one_liner frontmatter still missing from phases 36-38 — automated extraction returned nulls (same issue as v1.5)
-- Phase 36 VERIFICATION.md has 6 human_needed items that were never manually tested — verification debt carried
-- v1.7 abandonment left scattered phase directories (30-33) that weren't cleaned up
-
-### Patterns Established
-- `Zustand getState()` for live reads inside async callbacks (avoids stale closure captures)
-- `FIFO cap slice` pattern: `messages.slice(-MAX)` before sending to keep history bounded
-- `dispatchServerMessage()` extraction pattern for testability — pure function separated from WebSocket event handler
-- `chat-input-textarea` class targeting to disambiguate from xterm.js textarea in Playwright
-
-### Key Lessons
-1. SUMMARY one_liner frontmatter needs enforcement — 3 milestones in a row have had extraction failures
-2. Carrying partial work forward (v1.7 → v1.8) is faster than rewriting — the sidecar backend was reusable as-is
-3. Playwright CDP to Tauri WebView2 is production-ready — no hacks needed, just `--remote-debugging-port`
-4. Phase 34 "organic completion" pattern works when cleanup is prerequisite for subsequent build phases
-
-### Cost Observations
-- Model mix: opus for planning, sonnet for execution
-- Sessions: ~3 sessions across 2 days
-- Notable: 8 plans completed in 2 days — high velocity from reusing v1.7 partial work
-
----
-
 ## Milestone: v1.5 — Self-Observation & Agent Visibility
 
 **Shipped:** 2026-04-01
@@ -140,9 +97,6 @@
 | v1.3 | 5 | 7 | 2 days | Protocol-first, TDD patterns mature |
 | v1.4 | 2 | 4 | 1 day | HWND stability, stale detection |
 | v1.5 | 3 | 7 | 1 day | HTTP API layering, secret scrubbing, stress-test-driven scope |
-| v1.6 | 4 | 5 | ~6 days | Hook adapters, MCP server, sidebar UI |
-| v1.7 | 4 | 1 | — | Abandoned — TTS cut, PM Chat carried forward |
-| v1.8 | 4 | 8 | 2 days | Carried v1.7 work forward, test infrastructure, organic cleanup |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -150,6 +104,4 @@
 2. PowerShell inline C# via template literals works reliably for Windows system calls — no .ps1 file management needed (v1.2, v1.3)
 3. Export script-building functions for testability — test the PS script content without spawning PowerShell (v1.2 Phase 13, v1.3 Phase 17/18)
 4. Safe defaults with explicit opt-out (?scrub=true, ?blur=true) prevent accidental data exposure (v1.5)
-5. Stress testing before planning prevents scope creep — adversarial reviews correctly identified milestone boundaries (v1.5, v1.8)
-6. SUMMARY one_liner frontmatter needs enforcement — extraction failures in v1.5, v1.8 (3 milestones running)
-7. Carrying partial work forward is faster than rewriting — v1.7→v1.8 reused sidecar backend as-is (v1.8)
+5. Stress testing before planning prevents scope creep — adversarial reviews correctly identified milestone boundaries (v1.5)
