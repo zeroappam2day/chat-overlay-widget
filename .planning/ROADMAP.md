@@ -126,7 +126,10 @@
   1. Starting a walkthrough causes the overlay to appear without the user manually toggling it
   2. Completing or cancelling a walkthrough causes the overlay to disappear without the user manually toggling it
   3. A walkthrough start call accepts a target hwnd and the system stores that association for subsequent phases to use
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 39-01-PLAN.md -- Overlay auto-show/hide wiring
+- [ ] 39-02-PLAN.md -- targetHwnd schema extension and MCP update
 **UI hint**: yes
 
 ### Phase 40: Focus-Aware Overlay
@@ -178,7 +181,7 @@
 | 29 | v1.6 | 0/TBD | Deferred | - |
 | 30-33 | v1.7 | 1/2 | Abandoned | - |
 | 34-38 | v1.8 | 8/8 | Complete | 2026-04-10 |
-| 39 | v1.9 | 0/TBD | Not started | - |
+| 39 | v1.9 | 0/2 | Not started | - |
 | 40 | v1.9 | 0/TBD | Not started | - |
 | 41 | v1.9 | 0/TBD | Not started | - |
 | 42 | v1.9 | 0/TBD | Not started | - |
