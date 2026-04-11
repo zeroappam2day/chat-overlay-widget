@@ -47,7 +47,27 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Focus-aware overlay visibility (auto-hide when target app not focused, auto-show when refocused)
+- [ ] Overlay auto-show/hide on walkthrough lifecycle (start → show, stop/cancel → hide)
+- [ ] Walkthrough target window association (bind walkthrough to specific hwnd)
+- [ ] Pixel-sample verification on external windows (retarget from self-capture)
+- [ ] DPI-aware coordinate mapping for screenshot verification
+- [ ] UI Automation state reading (TogglePattern, ValuePattern, IsEnabled, SelectionItemPattern, etc.)
+- [ ] Visual change polling for walkthrough auto-advance (UIA property + pixel-hash with backoff)
+- [ ] Screenshot-diff endpoint unstub (baseline capture + runtime comparison)
+- [ ] Verification timeout (maxWaitMs to prevent hung walkthroughs)
+
+## Current Milestone: v1.9 Guided Desktop Walkthrough
+
+**Goal:** Make the overlay + walkthrough system production-ready for guiding users through workflows on external apps.
+
+**Target features:**
+- Focus-aware overlay that hides/shows based on target app focus
+- Walkthrough lifecycle auto-manages overlay visibility
+- External window verification (pixel-sample, screenshot-diff, UI Automation state)
+- DPI-correct coordinate mapping across all verification paths
+- Visual change polling with exponential backoff for auto-advance
+- Verification timeout safety net
 
 ### Validated (v1.8)
 
@@ -105,6 +125,7 @@ v1.5 shipped: Terminal buffer, secret scrubbing, self-screenshot — HTTP APIs f
 v1.6 shipped: Hook receiver, MCP server, adapter layer, sidebar — Phases 26-28 (Phase 29 auto-config deferred).
 v1.7 abandoned: PM Voice Chat scope was too broad. Phase 31 sidecar backend shipped (pmChat.ts). Frontend partially wired. TTS never started. Carried PM Chat forward to v1.8; TTS moved to backlog.
 v1.8 shipped: PM Chat settings UI + multi-turn conversation with terminal context, Ctrl+/ shortcut overlay, Playwright CDP + Vitest tests, dead code cleanup. 4 phases, 8 plans, 44 files changed, +4081/-455 lines.
+v1.9 in progress: Guided Desktop Walkthrough — focus-aware overlay, external window verification, UI Automation state reading, DPI-correct coordinates.
 
 ## Key Decisions
 
@@ -145,4 +166,4 @@ Updates at phase transitions: invalidate/validate requirements, log decisions, c
 Updates at milestones: full review, core value check, out-of-scope audit.
 
 ---
-*Last updated: 2026-04-10 after v1.8 milestone completion*
+*Last updated: 2026-04-10 after v1.9 milestone start*
