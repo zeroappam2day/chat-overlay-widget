@@ -109,7 +109,7 @@
 
 ### v1.9 Guided Desktop Walkthrough
 
-- [ ] **Phase 39: Overlay Lifecycle & Target Binding** — Walkthrough auto-manages overlay visibility and binds to a target hwnd
+- [x] **Phase 39: Overlay Lifecycle & Target Binding** — Walkthrough auto-manages overlay visibility and binds to a target hwnd (completed 2026-04-11)
 - [ ] **Phase 40: Focus-Aware Overlay** — Overlay hides/shows based on target app focus state
 - [ ] **Phase 41: External Window Verification** — Pixel-sample, screenshot-diff, and visual polling target external windows with DPI-correct coordinates and safety timeout
 - [ ] **Phase 42: UI Automation State Reading** — Query element state, TogglePattern, ValuePattern, SelectionItemPattern and poll for changes on external app elements
@@ -128,8 +128,8 @@
   3. A walkthrough start call accepts a target hwnd and the system stores that association for subsequent phases to use
 **Plans**: 2 plans
 Plans:
-- [ ] 39-01-PLAN.md -- Overlay auto-show/hide wiring
-- [ ] 39-02-PLAN.md -- targetHwnd schema extension and MCP update
+- [x] 39-01-PLAN.md -- Overlay auto-show/hide wiring
+- [x] 39-02-PLAN.md -- targetHwnd schema extension and MCP update
 **UI hint**: yes
 
 ### Phase 40: Focus-Aware Overlay
@@ -181,7 +181,7 @@ Plans:
 | 29 | v1.6 | 0/TBD | Deferred | - |
 | 30-33 | v1.7 | 1/2 | Abandoned | - |
 | 34-38 | v1.8 | 8/8 | Complete | 2026-04-10 |
-| 39 | v1.9 | 0/2 | Not started | - |
+| 39 | v1.9 | 2/2 | Complete    | 2026-04-11 |
 | 40 | v1.9 | 0/TBD | Not started | - |
 | 41 | v1.9 | 0/TBD | Not started | - |
 | 42 | v1.9 | 0/TBD | Not started | - |
