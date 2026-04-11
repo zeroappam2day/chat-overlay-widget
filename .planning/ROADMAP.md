@@ -140,7 +140,10 @@ Plans:
   1. Switching focus away from the target app (e.g., clicking another window) causes the overlay to hide automatically
   2. Switching focus back to the target app causes the overlay to reappear automatically
   3. Focus transitions are detected within 500ms of the actual window switch
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 40-01-PLAN.md — Persistent PowerShell Win32 bridge + FocusTracker + server.ts wiring
+- [ ] 40-02-PLAN.md — Frontend overlay-focus event handling + visual UAT
 **UI hint**: yes
 
 ### Phase 41: External Window Verification
@@ -182,7 +185,7 @@ Plans:
 | 30-33 | v1.7 | 1/2 | Abandoned | - |
 | 34-38 | v1.8 | 8/8 | Complete | 2026-04-10 |
 | 39 | v1.9 | 2/2 | Complete    | 2026-04-11 |
-| 40 | v1.9 | 0/TBD | Not started | - |
+| 40 | v1.9 | 0/2 | Not started | - |
 | 41 | v1.9 | 0/TBD | Not started | - |
 | 42 | v1.9 | 0/TBD | Not started | - |
 
