@@ -14,10 +14,10 @@ Overlay visibility tracks whether the user is focused on the walkthrough's targe
 ## Implementation Decisions
 
 ### Focus Detection Method
-- **D-01:** Use `koffi` npm package for direct FFI to `user32.dll!GetForegroundWindow` from the Node.js sidecar. No PowerShell spawning for focus checks.
+- **D-01:** Use a persistent PowerShell process for Win32 focus calls. Spawn one `powershell.exe -NoProfile -NoExit -Command -` at sidecar startup, send the `Add-Type` C# block once, then query via stdin/stdout JSON line protocol. Eliminates per-call process spawn overhead (300-500ms → 1-5ms). Zero new npm dependencies. Reuses existing C# DllImport patterns from `windowFocusManager.ts`.
 - **D-02:** Poll at 250ms intervals via `setTimeout` chains (not `setInterval`, to avoid post-wake bursts).
-- **D-03:** Create `sidecar/src/win32.ts` module that loads user32.dll via koffi and exports `getForegroundWindow(): number`. This module can later replace all PowerShell P/Invoke calls across the codebase.
-- **D-04:** Verify caxa bundling works with koffi (koffi ships prebuilt N-API .node binaries, same pattern as node-pty and better-sqlite3).
+- **D-03:** Create `sidecar/src/win32Bridge.ts` module that manages the persistent PowerShell process and exports `getForegroundWindow(): Promise<number>`, `getWindowThreadProcessId(hwnd): Promise<{threadId, pid}>`, `isWindow(hwnd): Promise<boolean>`, `isIconic(hwnd): Promise<boolean>`, `getOwnerWindow(hwnd): Promise<number>`. Request-ID based JSON framing for stdin/stdout correlation.
+- **D-04:** Include health-check heartbeat (3s timeout per request). Auto-restart the persistent process on crash/hang. Warmup the Add-Type block on sidecar startup so first focus check is fast.
 
 ### Overlay Visibility Rules (Affiliated Set Model)
 - **D-05:** Use hybrid hwnd-tree + PID matching. Walk `GetWindow(fgHwnd, GW_OWNER)` up to 5 levels first. PID fallback only if no ownership chain found. Exclude `ApplicationFrameHost.exe` from PID matching (shared PID across UWP apps).
@@ -38,10 +38,9 @@ Overlay visibility tracks whether the user is focused on the walkthrough's targe
 - **D-16:** Elevated/admin windows work out of the box — `GetForegroundWindow()` works cross-privilege on Windows 11. No mitigation needed.
 
 ### Claude's Discretion
-- Exact koffi API usage patterns (sync vs async, type definitions)
-- Whether to also export `getWindowThreadProcessId` and `isIconic` from win32.ts or keep those in PowerShell initially
+- Exact PowerShell stdin/stdout framing protocol details (delimiter choice, error format)
 - FocusTracker internal implementation details (class structure, event emission pattern)
-- Whether to migrate existing `windowFocusManager.ts` to koffi in this phase or defer to a follow-up
+- Whether to consolidate other PowerShell callers (windowEnumerator, spatial_engine) into the persistent process in this phase or defer
 
 </decisions>
 
@@ -56,7 +55,7 @@ Overlay visibility tracks whether the user is focused on the walkthrough's targe
 - `src-tauri/tauri.conf.json` lines 79-91 — Overlay window config (fullscreen, transparent, alwaysOnTop, click-through)
 
 ### Focus & window management
-- `sidecar/src/windowFocusManager.ts` — Existing GetForegroundWindow/SetForegroundWindow via PowerShell (reference pattern, not to be used for polling)
+- `sidecar/src/windowFocusManager.ts` — Existing GetForegroundWindow/SetForegroundWindow via PowerShell (Add-Type C# blocks to reuse in persistent process)
 - `sidecar/src/windowCapture.ts` — HWND-02 stale hwnd detection via GetWindowThreadProcessId (reuse this pattern)
 - `sidecar/src/windowEnumerator.ts` — Window enumeration with PID, processName, GetParent infrastructure
 
@@ -96,9 +95,10 @@ Overlay visibility tracks whether the user is focused on the walkthrough's targe
 <specifics>
 ## Specific Ideas
 
-- koffi's `win32.ts` module should be designed as a general-purpose Win32 FFI layer — future phases can add more exports without architectural changes
+- The persistent PowerShell `win32Bridge.ts` should be designed as a general-purpose Win32 bridge — future phases can add more commands without architectural changes. The Add-Type C# block compiles once; adding new DllImport functions is just adding to the class.
 - The affiliated set should be built dynamically on each poll (resolve PID of foreground window, walk ownership chain) rather than cached — windows can be created/destroyed at any time
 - Primary monitor only — no multi-monitor overlay positioning needed
+- If persistent PowerShell proves unreliable (stdout buffering, process hangs), koffi-cream (3.6MB, platform-specific prebuilts) is the drop-in replacement with 0.01ms/call and synchronous API
 
 </specifics>
 
@@ -107,7 +107,8 @@ Overlay visibility tracks whether the user is focused on the walkthrough's targe
 
 - Multi-monitor overlay repositioning — separate phase if ever needed (primary monitor only for now)
 - App restart with new hwnd (re-binding walkthrough to new window after target app closes and reopens) — future phase
-- Migration of existing `windowFocusManager.ts` and `spatial_engine.ts` from PowerShell to koffi — good follow-up but not Phase 40 scope
+- Consolidating other PowerShell callers (windowEnumerator, spatial_engine, windowCapture) into the persistent process — good follow-up but not Phase 40 scope
+- koffi-cream as a future upgrade if persistent PowerShell proves unreliable — 0.01ms/call, synchronous, 3.6MB platform-specific
 - SetWinEventHook (event-driven focus detection) — evaluate during Phase 41/42 research if event-driven hooks are needed for visual change detection and UI Automation
 
 </deferred>
