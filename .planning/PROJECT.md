@@ -44,24 +44,37 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 - Hook receiver normalizing Claude Code/Windsurf/Cursor events into shared AgentEvent schema — v1.6 (Phase 26)
 - MCP server (stdio) wrapping HTTP APIs for autonomous LLM tool access — v1.6 (Phase 27)
 - Adapter layer for LLM-specific integrations with sidebar event panel — v1.6 (Phase 28)
+- PM Chat multi-turn conversation with terminal context injection — v1.8 (Phase 36)
+- LLM settings UI: model dropdown, system prompt, temperature — persisted — v1.8 (Phase 35)
+- Playwright CDP test foundation for WebView2 + component tests — v1.8 (Phase 38)
+- Keyboard shortcut help overlay for discoverability — v1.8 (Phase 37)
+- Orphaned v1.7 code cleanup and dead code removal — v1.8 (Phase 34)
+- Guided walkthrough engine with overlay lifecycle and target binding — v1.9 (Phase 39)
+- Focus-aware overlay: auto-hide on focus loss, auto-show on focus return, affiliated window detection — v1.9 (Phase 40)
 
 ### Active
 
-- [ ] PM Chat multi-turn conversation with terminal context injection
-- [ ] LLM settings UI: model dropdown, system prompt, temperature — persisted
-- [ ] Playwright CDP test foundation for WebView2 + component tests
-- [ ] Keyboard shortcut help overlay for discoverability
-- [ ] Orphaned v1.7 code cleanup and dead code removal
+(none — all current milestone requirements validated)
 
-## Current Milestone: v1.8 Ship & Harden
+## Current Milestone: v1.9 Guided Desktop Walkthrough (shipped 2026-04-11)
+
+**Goal:** Interactive walkthrough system that guides users through desktop apps with step-by-step annotations and a focus-aware overlay that hides when the user switches away from the target app.
+
+**Delivered:**
+- Walkthrough engine with step sequencing, annotation lifecycle, and target window binding (Phase 39)
+- Focus-aware overlay: persistent PowerShell Win32 bridge, FocusTracker with 250ms polling, affiliated-set logic (owner chain + PID), 150ms hide debounce, stale hwnd detection (Phase 40)
+- Frontend overlay-focus protocol wiring, dispatcher routing, overlayStore toggle (Phase 40)
+
+## Previous Milestone: v1.8 Ship & Harden (shipped 2026-04-10)
 
 **Goal:** Finish the half-built PM Chat assistant, establish frontend test infrastructure, and add keyboard shortcut discoverability — shipping what's 80% done while hardening what's already shipped.
 
-**Target features:**
-- Complete PM Chat sidebar (multi-turn conversation with terminal context, LLM settings UI)
+**Delivered:**
+- PM Chat sidebar with multi-turn conversation and terminal context injection
+- LLM settings UI with model dropdown, system prompt, temperature — all persisted
 - Playwright CDP test foundation for WebView2 + component tests for high-churn files
-- Keyboard shortcut help overlay for discoverability
-- Clean orphaned v1.7 state and dead code
+- Keyboard shortcut help overlay (Ctrl+/)
+- Orphaned v1.7 code cleaned up organically
 
 ## Previous Milestone: v1.7 PM Voice Chat (abandoned 2026-04-09)
 
@@ -94,11 +107,12 @@ v1.1 shipped: shell path quoting + input bar resize (Phase 6). HTTP API approach
 v1.2 shipped: split fix, capture infrastructure, window enumeration, window capture, CLI wrapper, Claude skill (Phases 10-15)
 v1.3 shipped: protocol extension, batch thumbnails, enriched capture, window picker UI, metadata injection (Phases 16-20)
 v1.4 shipped: HWND+PID protocol threading, direct HWND capture, stale detection, blank-bitmap warning, fallback (Phases 21-22)
-Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 25 phases shipped across 5 milestones.
+Codebase: ~190+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 40 phases shipped across 9 milestones.
 v1.5 shipped: Terminal buffer, secret scrubbing, self-screenshot — HTTP APIs for any caller. 3 phases, 7 plans, 140 sidecar tests, 9/9 requirements verified. Phases 23-25.
 v1.6 shipped: Hook receiver, MCP server, adapter layer, sidebar — Phases 26-28 (Phase 29 auto-config deferred).
 v1.7 abandoned: PM Voice Chat scope was too broad. Phase 31 sidecar backend shipped (pmChat.ts). Frontend partially wired. TTS never started. Carried PM Chat forward to v1.8; TTS moved to backlog.
-v1.8 scope: Ship & Harden — finish PM Chat (multi-turn + settings), Playwright CDP test foundation, keyboard shortcut discoverability, orphan cleanup. Evidence: 4-direction stress test (6 perspectives each) selected Hybrid as Strong For (highest confidence).
+v1.8 shipped: PM Chat multi-turn + settings UI, Playwright CDP tests, keyboard shortcut overlay, orphan cleanup — Phases 34-38.
+v1.9 shipped: Guided Desktop Walkthrough — walkthrough engine (Phase 39), focus-aware overlay with Win32 bridge + FocusTracker (Phase 40). 40 phases shipped across 9 milestones.
 
 ## Key Decisions
 
@@ -132,6 +146,9 @@ v1.8 scope: Ship & Harden — finish PM Chat (multi-turn + settings), Playwright
 | Playwright CDP over tauri-driver for E2E testing | WebView2 supports --remote-debugging-port; Playwright v1.59.1 confirmed compatible; tauri-driver is minimally maintained | — Pending (v1.8) |
 | Defer Midscene.js AI layer | Beta quality (v1.7.3), no Tauri-specific usage evidence; Playwright CDP sufficient for smoke tests | — Pending (v1.8) |
 | Cut TTS to backlog after 4-direction stress test | Zero implementation, deferred twice, high risk (persistent PS subprocess); 4 agents × 6 perspectives unanimously agreed | — Decided (v1.8) |
+| Persistent PowerShell for Win32 focus detection | Reuse Add-Type C# pattern from windowFocusManager; single process avoids per-call spawn overhead; JSON stdin/stdout protocol with request ID correlation | Validated (Phase 40) |
+| setTimeout chains over setInterval for focus polling | Prevents post-wake burst of stale callbacks; each poll schedules the next only after completion | Validated (Phase 40) |
+| Affiliated window set (owner chain + PID match) | Child dialogs and same-process windows should not trigger overlay hide; owner chain walk (5 levels) + PID fallback with ApplicationFrameHost exclusion | Validated (Phase 40) |
 
 ## Evolution
 
