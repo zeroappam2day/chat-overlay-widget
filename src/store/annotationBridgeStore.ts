@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { emit } from '@tauri-apps/api/event';
 import { useFeatureFlagStore } from './featureFlagStore';
+import { useOverlayStore } from './overlayStore';
 import type { Annotation } from '../protocol';
 
 interface StepInfo {
@@ -35,5 +36,14 @@ export const useAnnotationBridgeStore = create<AnnotationBridgeState>((set) => (
     emit('update-walkthrough-step', step).catch((err) => {
       console.warn('[annotation-bridge] Failed to emit walkthrough step:', err);
     });
+    if (step !== null) {
+      useOverlayStore.getState().showOverlay().catch((err) => {
+        console.warn('[annotation-bridge] Failed to show overlay:', err);
+      });
+    } else {
+      useOverlayStore.getState().hideOverlay().catch((err) => {
+        console.warn('[annotation-bridge] Failed to hide overlay:', err);
+      });
+    }
   },
 }));
