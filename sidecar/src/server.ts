@@ -52,6 +52,7 @@ import { ModeManager } from './modeManager.js';
 import { ActionCoordinator } from './actionCoordinator.js';
 import { skillDiscoveryBridge } from './skillDiscoveryBridge.js';
 import { streamOllamaChat, cancelOllamaChat, checkOllamaHealth } from './pmChat.js';
+import { FocusTracker } from './focusTracker.js';
 
 // Initialize SQLite and mark orphaned sessions from previous crashes (D-17)
 openDb();
@@ -190,6 +191,17 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         if (sidecarFlags.conditionalAdvance) {
           updateWalkthroughWatcherPattern();
         }
+        // Phase 40: Start focus tracking if walkthrough has a target window
+        const targetHwnd = walkthroughEngine.getTargetHwnd();
+        if (targetHwnd !== null) {
+          if (focusTracker) focusTracker.stop();
+          focusTracker = new FocusTracker({
+            onShow: () => broadcastFocusEvent('show'),
+            onHide: () => broadcastFocusEvent('hide'),
+            onTargetLost: () => broadcastFocusEvent('target-lost'),
+          });
+          focusTracker.start(targetHwnd);
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
       } catch (err) {
@@ -212,6 +224,8 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
           if (sidecarFlags.conditionalAdvance) {
             updateWalkthroughWatcherPattern();
           }
+          // Phase 40: Stop focus tracking when walkthrough completes
+          if (focusTracker) { focusTracker.stop(); focusTracker = null; }
         } else {
           broadcastWalkthroughStep(result);
           // Agent Runtime Phase 2: Set watcher pattern for next step
@@ -240,6 +254,8 @@ function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse):
         if (sidecarFlags.conditionalAdvance) {
           updateWalkthroughWatcherPattern();
         }
+        // Phase 40: Stop focus tracking
+        if (focusTracker) { focusTracker.stop(); focusTracker = null; }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
@@ -1179,6 +1195,15 @@ walkthroughEngine.onAnnotationsChanged = (annotations) => {
   broadcastAnnotations(annotations);
 };
 
+// Focus-aware overlay — tracks which app has focus during a walkthrough (Phase 40)
+let focusTracker: FocusTracker | null = null;
+
+function broadcastFocusEvent(event: 'show' | 'hide' | 'target-lost'): void {
+  for (const client of wss.clients) {
+    sendMsg(client, { type: 'overlay-focus', event } as any);
+  }
+}
+
 // Heartbeat: ping every 30s, terminate if no pong within 10s (Phase 5 hardening)
 const HEARTBEAT_INTERVAL = 30_000;
 const HEARTBEAT_TIMEOUT = 10_000;
@@ -1311,6 +1336,8 @@ const modeManager = new ModeManager({
       }
       // Broadcast walkthrough-step null to clear the walkthrough panel in frontend
       broadcastWalkthroughStep(null);
+      // Phase 40: Stop focus tracking on mode deactivation
+      if (focusTracker) { focusTracker.stop(); focusTracker = null; }
 
       // Work With Me cleanup: disable action coordinator and cancel pending actions
       actionCoordinator.enabled = false;

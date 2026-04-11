@@ -47,49 +47,23 @@ The CLI must think GUI input is real keyboard input — the PTY bridge is the he
 
 ### Active
 
-- [ ] Focus-aware overlay visibility (auto-hide when target app not focused, auto-show when refocused)
-- [x] Overlay auto-show/hide on walkthrough lifecycle (start → show, stop/cancel → hide) — v1.9 (Phase 39)
-- [x] Walkthrough target window association (bind walkthrough to specific hwnd) — v1.9 (Phase 39)
-- [ ] Pixel-sample verification on external windows (retarget from self-capture)
-- [ ] DPI-aware coordinate mapping for screenshot verification
-- [ ] UI Automation state reading (TogglePattern, ValuePattern, IsEnabled, SelectionItemPattern, etc.)
-- [ ] Visual change polling for walkthrough auto-advance (UIA property + pixel-hash with backoff)
-- [ ] Screenshot-diff endpoint unstub (baseline capture + runtime comparison)
-- [ ] Verification timeout (maxWaitMs to prevent hung walkthroughs)
+- [ ] PM Chat multi-turn conversation with terminal context injection
+- [ ] LLM settings UI: model dropdown, system prompt, temperature — persisted
+- [ ] Playwright CDP test foundation for WebView2 + component tests
+- [ ] Keyboard shortcut help overlay for discoverability
+- [ ] Orphaned v1.7 code cleanup and dead code removal
 
-## Current Milestone: v1.9 Guided Desktop Walkthrough
+## Current Milestone: v1.8 Ship & Harden
 
-**Goal:** Make the overlay + walkthrough system production-ready for guiding users through workflows on external apps.
+**Goal:** Finish the half-built PM Chat assistant, establish frontend test infrastructure, and add keyboard shortcut discoverability — shipping what's 80% done while hardening what's already shipped.
 
 **Target features:**
-- Focus-aware overlay that hides/shows based on target app focus
-- Walkthrough lifecycle auto-manages overlay visibility
-- External window verification (pixel-sample, screenshot-diff, UI Automation state)
-- DPI-correct coordinate mapping across all verification paths
-- Visual change polling with exponential backoff for auto-advance
-- Verification timeout safety net
-
-### Validated (v1.8)
-
-- PM Chat multi-turn conversation with terminal context injection — v1.8
-- LLM settings UI: model dropdown, system prompt, temperature — persisted — v1.8
-- Playwright CDP test foundation for WebView2 + component tests — v1.8
-- Keyboard shortcut help overlay for discoverability — v1.8
-- Orphaned v1.7 code cleanup and dead code removal — v1.8
-
-## Previous Milestone: v1.8 Ship & Harden (shipped 2026-04-10)
-
-**Goal:** Finish the half-built PM Chat assistant, establish frontend test infrastructure, and add keyboard shortcut discoverability.
-
-**Delivered:**
-- PM Chat Settings UI — model dropdown, temperature slider, system prompt, endpoint (all localStorage-persisted)
-- Conversational context — multi-turn Ollama chat with 20-turn FIFO cap, automatic terminal context injection
-- Keyboard shortcut overlay — Ctrl+/ toggles categorized help
-- Test infrastructure — Playwright CDP to WebView2, Vitest component tests (ChatInputBar, PaneContainer, TerminalPane), E2E PTY smoke test
-- Dead code cleanup — orphaned v1.7 modules wired end-to-end organically
+- Complete PM Chat sidebar (multi-turn conversation with terminal context, LLM settings UI)
+- Playwright CDP test foundation for WebView2 + component tests for high-churn files
+- Keyboard shortcut help overlay for discoverability
+- Clean orphaned v1.7 state and dead code
 
 ## Previous Milestone: v1.7 PM Voice Chat (abandoned 2026-04-09)
-
 
 **Goal:** PM assistant with local Ollama LLM summarization + Windows SAPI5 TTS.
 
@@ -120,12 +94,11 @@ v1.1 shipped: shell path quoting + input bar resize (Phase 6). HTTP API approach
 v1.2 shipped: split fix, capture infrastructure, window enumeration, window capture, CLI wrapper, Claude skill (Phases 10-15)
 v1.3 shipped: protocol extension, batch thumbnails, enriched capture, window picker UI, metadata injection (Phases 16-20)
 v1.4 shipped: HWND+PID protocol threading, direct HWND capture, stale detection, blank-bitmap warning, fallback (Phases 21-22)
-Codebase: ~50+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 38 phases shipped across 8 milestones.
+Codebase: ~40+ files. TypeScript frontend (React/Vite) + TypeScript sidecar (node-pty/ws). 25 phases shipped across 5 milestones.
 v1.5 shipped: Terminal buffer, secret scrubbing, self-screenshot — HTTP APIs for any caller. 3 phases, 7 plans, 140 sidecar tests, 9/9 requirements verified. Phases 23-25.
 v1.6 shipped: Hook receiver, MCP server, adapter layer, sidebar — Phases 26-28 (Phase 29 auto-config deferred).
 v1.7 abandoned: PM Voice Chat scope was too broad. Phase 31 sidecar backend shipped (pmChat.ts). Frontend partially wired. TTS never started. Carried PM Chat forward to v1.8; TTS moved to backlog.
-v1.8 shipped: PM Chat settings UI + multi-turn conversation with terminal context, Ctrl+/ shortcut overlay, Playwright CDP + Vitest tests, dead code cleanup. 4 phases, 8 plans, 44 files changed, +4081/-455 lines.
-v1.9 in progress: Guided Desktop Walkthrough — focus-aware overlay, external window verification, UI Automation state reading, DPI-correct coordinates.
+v1.8 scope: Ship & Harden — finish PM Chat (multi-turn + settings), Playwright CDP test foundation, keyboard shortcut discoverability, orphan cleanup. Evidence: 4-direction stress test (6 perspectives each) selected Hybrid as Strong For (highest confidence).
 
 ## Key Decisions
 
@@ -156,8 +129,8 @@ v1.9 in progress: Guided Desktop Walkthrough — focus-aware overlay, external w
 | PowerShell SAPI5 over Python pyttsx3 for TTS | Eliminates Python dependency; persistent process avoids per-utterance cold start | Deferred to backlog (v1.7 abandoned, zero implementation) |
 | Ollama chat over cloud LLM for PM summaries | Local-only, no API keys, privacy-preserving, user already runs Ollama | Validated (v1.7 Phase 31 backend) |
 | LLM output piped via stdin (never shell-interpolated) | Adversarial review found RCE via shell injection if LLM text embedded in command strings | Validated (v1.7 Phase 31 backend) |
-| Playwright CDP over tauri-driver for E2E testing | WebView2 supports --remote-debugging-port; Playwright v1.59.1 confirmed compatible; tauri-driver is minimally maintained | Validated (v1.8 Phase 38) |
-| Defer Midscene.js AI layer | Beta quality (v1.7.3), no Tauri-specific usage evidence; Playwright CDP sufficient for smoke tests | Validated (v1.8) |
+| Playwright CDP over tauri-driver for E2E testing | WebView2 supports --remote-debugging-port; Playwright v1.59.1 confirmed compatible; tauri-driver is minimally maintained | — Pending (v1.8) |
+| Defer Midscene.js AI layer | Beta quality (v1.7.3), no Tauri-specific usage evidence; Playwright CDP sufficient for smoke tests | — Pending (v1.8) |
 | Cut TTS to backlog after 4-direction stress test | Zero implementation, deferred twice, high risk (persistent PS subprocess); 4 agents × 6 perspectives unanimously agreed | — Decided (v1.8) |
 
 ## Evolution
@@ -166,4 +139,4 @@ Updates at phase transitions: invalidate/validate requirements, log decisions, c
 Updates at milestones: full review, core value check, out-of-scope audit.
 
 ---
-*Last updated: 2026-04-10 after v1.9 milestone start*
+*Last updated: 2026-04-09 after v1.8 milestone start (v1.7 abandoned)*

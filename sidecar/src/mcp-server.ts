@@ -385,12 +385,10 @@ Example with auto-advance:
         pattern: z.string().min(1).max(500).describe('Regex pattern to match against terminal output'),
       }).optional().describe('Auto-advance when terminal output matches this pattern. Requires conditionalAdvance feature flag.'),
     })).min(1).max(50).describe('Ordered list of walkthrough steps'),
-    targetHwnd: z.number().int().positive().optional()
-      .describe('Windows HWND of the target application window. Binds the walkthrough to this window for focus tracking and verification in subsequent phases.'),
   },
-  async ({ id, title, steps, targetHwnd }) => {
+  async ({ id, title, steps }) => {
     try {
-      const body = JSON.stringify({ id, title, steps, targetHwnd });
+      const body = JSON.stringify({ id, title, steps });
       const discovery = readDiscovery();
       const resp = await sidecarPost('/walkthrough/start', discovery.token, discovery.port, body);
       if (resp.status !== 200) {
