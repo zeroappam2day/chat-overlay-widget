@@ -40,6 +40,7 @@ export const WalkthroughSchema = z.object({
   id: z.string().min(1).max(200),
   title: z.string().max(300),
   steps: z.array(WalkthroughStepSchema).min(1).max(50),
+  targetHwnd: z.number().int().positive().optional(),
 });
 
 export type Walkthrough = z.infer<typeof WalkthroughSchema>;
@@ -47,6 +48,7 @@ export type Walkthrough = z.infer<typeof WalkthroughSchema>;
 interface ActiveWalkthrough {
   walkthrough: Walkthrough;
   currentIndex: number;
+  targetHwnd?: number;
 }
 
 class WalkthroughEngine {
@@ -55,7 +57,7 @@ class WalkthroughEngine {
   onAnnotationsChanged: ((annotations: Annotation[]) => void) | undefined;
 
   start(walkthrough: Walkthrough): { stepId: string; title: string; instruction: string; totalSteps: number; currentStep: number } {
-    this.active = { walkthrough, currentIndex: 0 };
+    this.active = { walkthrough, currentIndex: 0, targetHwnd: walkthrough.targetHwnd };
     const step = walkthrough.steps[0];
     // Group all walkthrough annotations for easy clearing
     const grouped = step.annotations.map(a => ({ ...a, group: `walkthrough-${walkthrough.id}` }));
@@ -113,6 +115,10 @@ class WalkthroughEngine {
     } catch {
       return null;
     }
+  }
+
+  getTargetHwnd(): number | null {
+    return this.active?.targetHwnd ?? null;
   }
 
   getStatus(): { active: boolean; walkthroughId?: string; currentStep?: number; totalSteps?: number } {
